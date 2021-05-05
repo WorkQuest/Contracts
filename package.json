@@ -1,0 +1,29 @@
+{
+  "name": "work_quest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "hardhat compile": "npx hardhat compile",
+    "hardhat test": "npx hardhat --network development test",
+    "hardhat console": "npx hardhat console --network development",
+    "hardhat deploy token": "npx hardhat run --network development scripts/deploy_token.js",
+    "hardhat deploy worklabor": "npx hardhat run --network development scripts/deploy_work_labor.js",
+    "truffle deploy": "npx truffle migrate --network development"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-ganache": "^2.0.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.3.0",
+    "ethers": "^5.0.32",
+    "hardhat": "^2.1.1",
+    "hardhat-waffle": "0.0.1-security",
+    "mocha": "^8.3.2",
+    "@openzeppelin/contracts": "^3.4.1",
+    "hardhat-deploy": "^0.7.0-beta.48"
+  }
+}
