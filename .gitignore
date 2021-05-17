@@ -51,7 +51,6 @@ Thumbs.db
 build
 artifacts
 cache
-migrations
 .env
 *.addr
 .secret
