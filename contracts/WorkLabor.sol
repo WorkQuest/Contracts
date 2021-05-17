@@ -7,6 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract WorkLabor is AccessControl {
     using SafeMath for uint256;
+
+    event Received(address sender, uint256 amount);
+
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant ARBITER_ROLE = keccak256("ARBITER_ROLE");
     string constant errMsg = "WorkLabor: Access denied or invalid status";
@@ -44,7 +47,6 @@ contract WorkLabor is AccessControl {
      * @dev Job offer information
      * @param jobHash keccak256 hash of contract offer
      * @param cost
-     * @param currency
      * @param employer
      * @param worker
      * @param status
@@ -54,7 +56,6 @@ contract WorkLabor is AccessControl {
         uint256 jobHash;
         uint256 cost;
         uint256 forfeit;
-        IERC20 currency;
         address employer;
         address worker;
         JobStatus status;
@@ -63,6 +64,7 @@ contract WorkLabor is AccessControl {
 
     /// @dev Mapping of jobId to JobOffer
     mapping(uint256 => JobOffer) jobOffers;
+    mapping(address => uint256) lastWork;
 
     constructor(uint256 _fee, address _feeReceiver) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -143,27 +145,37 @@ contract WorkLabor is AccessControl {
     }
 
     /**
-     * @notice Employer publish job
+     * @notice Employer created new job
      * @param jobId Job ID
      * @param currency ERC20 token address or 0 if default
      */
-    function publishJob(
+    function newJob(
         uint256 jobId,
         uint256 jobHash,
-        IERC20 currency,
         uint256 amount
     ) public {
-        require(currency != IERC20(0), "WorkLabor: invalid currency");
+        require(lastWork[msg.sender] == 0, "WorkLabor: Job with given id already exist");
         JobOffer storage offer = jobOffers[jobId];
         require(offer.status == JobStatus.New, errMsg);
-        uint256 comission = amount.mul(fee).div(fee.add(1e18));
-        currency.transferFrom(msg.sender, address(this), amount.sub(comission));
-        currency.transferFrom(msg.sender, feeReceiver, comission);
+        lastWork[msg.sender] = jobId;
+        //uint256 comission = amount.mul(fee).div(fee.add(1e18));
+        //currency.transferFrom(msg.sender, address(this), amount.sub(comission));
+        //currency.transferFrom(msg.sender, feeReceiver, comission);
         offer.employer = msg.sender;
         offer.jobHash = jobHash;
-        offer.currency = currency;
-        offer.cost = amount.sub(comission);
+        offer.cost = amount; //.sub(comission);
+    }
+
+    // Employer publish job
+    receive() external payable {
+        require(lastWork[msg.sender] != 0, "WorkLabor: Job with given id not found");
+        uint256 cost = jobOffers[lastWork[msg.sender]].cost;
+        cost = cost.add(cost.mul(fee).div(1e18));
+        require(msg.value>= cost, "WorkLabor: Insuffience amount");
+        JobOffer storage offer = jobOffers[lastWork[msg.sender]];
         offer.status = JobStatus.Published;
+        lastWork[msg.sender] = 0;
+        emit Received(msg.sender, msg.value);
     }
 
     /**

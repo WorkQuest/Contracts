@@ -1,4 +1,4 @@
-var MyContract = artifacts.require("WUSDToken");
+var MyContract = artifacts.require("WQToken");
 const { parseEther } = require("ethers/utils");
 
 
