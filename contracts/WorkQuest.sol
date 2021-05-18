@@ -3,18 +3,20 @@ pragma solidity ^0.7.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./PensionWalletFactory.sol";
 
-contract WorkLabor is AccessControl {
+
+contract WorkQuest is AccessControl {
     using SafeMath for uint256;
 
-    event Received(address sender, uint256 amount);
+    event Received(address sender, uint256 _cost);
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant ARBITER_ROLE = keccak256("ARBITER_ROLE");
     string constant errMsg = "WorkLabor: Access denied or invalid status";
     uint256 public fee;
-    address public feeReceiver;
+    address payable public feeReceiver;
+    PensionWalletFactory pension;
 
     /**
      * @dev Job offer statuses
@@ -45,7 +47,7 @@ contract WorkLabor is AccessControl {
 
     /**
      * @dev Job offer information
-     * @param jobHash keccak256 hash of contract offer
+     * @param _hash keccak256 hash of contract offer
      * @param cost
      * @param employer
      * @param worker
@@ -53,20 +55,20 @@ contract WorkLabor is AccessControl {
      * @param deadline Unix timestamp of deadline
      */
     struct JobOffer {
-        uint256 jobHash;
+        uint256 _hash;
         uint256 cost;
         uint256 forfeit;
-        address employer;
-        address worker;
+        address payable employer;
+        address payable worker;
         JobStatus status;
         uint256 deadline;
     }
 
-    /// @dev Mapping of jobId to JobOffer
+    /// @dev Mapping of _id to JobOffer
     mapping(uint256 => JobOffer) jobOffers;
     mapping(address => uint256) lastWork;
 
-    constructor(uint256 _fee, address _feeReceiver) {
+    constructor(uint256 _fee, address payable _feeReceiver) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
@@ -76,54 +78,46 @@ contract WorkLabor is AccessControl {
 
     /**
      * @notice Job status getter
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function getJobStatus(uint256 jobId)
+    function getJobStatus(uint256 _id)
         public
         view
         returns (JobStatus status)
     {
-        return jobOffers[jobId].status;
+        return jobOffers[_id].status;
     }
 
     /**
      * @notice Job cost and forfeit getter
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function getJobCostForfeit(uint256 jobId)
+    function getJobCostForfeit(uint256 _id)
         public
         view
-        returns (
-            uint256 cost,
-            uint256 forfeit,
-            IERC20 currency
-        )
+        returns (uint256 cost, uint256 forfeit)
     {
-        return (
-            jobOffers[jobId].cost,
-            jobOffers[jobId].forfeit,
-            jobOffers[jobId].currency
-        );
+        return (jobOffers[_id].cost, jobOffers[_id].forfeit);
     }
 
     /**
      * @notice Worker and employer addresses getter
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function getMemberAddresses(uint256 jobId)
+    function getMemberAddresses(uint256 _id)
         public
         view
         returns (address employer, address worker)
     {
-        return (jobOffers[jobId].employer, jobOffers[jobId].worker);
+        return (jobOffers[_id].employer, jobOffers[_id].worker);
     }
 
     /**
      * @notice Job hash getter
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function getJobHash(uint256 jobId) public view returns (uint256 jobHash) {
-        return jobOffers[jobId].jobHash;
+    function getJobHash(uint256 _id) public view returns (uint256 _hash) {
+        return jobOffers[_id]._hash;
     }
 
     /**
@@ -139,67 +133,83 @@ contract WorkLabor is AccessControl {
      * @notice Set fee receiver
      * @param _feeReceiver Address of fee receiver
      */
-    function setFeeReceiver(address _feeReceiver) public {
+    function setFeeReceiver(address payable _feeReceiver) public {
         require(hasRole(ADMIN_ROLE, msg.sender), errMsg);
         feeReceiver = _feeReceiver;
     }
 
     /**
      * @notice Employer created new job
-     * @param jobId Job ID
-     * @param currency ERC20 token address or 0 if default
+     * @param _id Job ID
+     * @param _hash Job hash
+     * @param _cost Job _cost
      */
     function newJob(
-        uint256 jobId,
-        uint256 jobHash,
-        uint256 amount
+        uint256 _id,
+        uint256 _hash,
+        uint256 _cost
     ) public {
-        require(lastWork[msg.sender] == 0, "WorkLabor: Job with given id already exist");
-        JobOffer storage offer = jobOffers[jobId];
+        require(
+            lastWork[msg.sender] == 0,
+            "WorkLabor: There is unpublished job"
+        );
+        JobOffer storage offer = jobOffers[_id];
         require(offer.status == JobStatus.New, errMsg);
-        lastWork[msg.sender] = jobId;
-        //uint256 comission = amount.mul(fee).div(fee.add(1e18));
-        //currency.transferFrom(msg.sender, address(this), amount.sub(comission));
-        //currency.transferFrom(msg.sender, feeReceiver, comission);
+        lastWork[msg.sender] = _id;
         offer.employer = msg.sender;
-        offer.jobHash = jobHash;
-        offer.cost = amount; //.sub(comission);
+        offer._hash = _hash;
+        offer.cost = _cost;
     }
 
-    // Employer publish job
-    receive() external payable {
-        require(lastWork[msg.sender] != 0, "WorkLabor: Job with given id not found");
-        uint256 cost = jobOffers[lastWork[msg.sender]].cost;
-        cost = cost.add(cost.mul(fee).div(1e18));
-        require(msg.value>= cost, "WorkLabor: Insuffience amount");
-        JobOffer storage offer = jobOffers[lastWork[msg.sender]];
-        offer.status = JobStatus.Published;
+    function cleanUnpublishJob(uint256 _id) public {
+        require(jobOffers[_id].status == JobStatus.New, errMsg);
+        require(msg.sender == jobOffers[_id].employer, errMsg);
+        delete jobOffers[_id];
         lastWork[msg.sender] = 0;
+    }
+
+    /**
+     * @notice Employer publish job by transfer funds to contract
+     */
+    receive() external payable {
+        uint256 _id = lastWork[msg.sender];
+        require(_id != 0, "WorkLabor: Employer don't have unpublished job");
+        require(jobOffers[_id].status == JobStatus.New, errMsg);
+        uint256 cost = jobOffers[_id].cost;
+        uint256 comission = cost.mul(fee).div(1e18);
+        cost = cost.add(comission);
+        require(msg.value >= cost, "WorkLabor: Insuffience cost");
+        jobOffers[_id].status = JobStatus.Published;
+        lastWork[msg.sender] = 0;
+        if (msg.value > cost) {
+            msg.sender.transfer(msg.value.sub(cost));
+        }
+        feeReceiver.transfer(comission);
         emit Received(msg.sender, msg.value);
     }
 
     /**
      * @notice Employer assigned worker to job
-     * @param jobId Job ID
+     * @param _id Job ID
      * @param worker Workers wallet address
      */
-    function assignJob(uint256 jobId, address worker) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function assignJob(uint256 _id, address payable worker) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             msg.sender == offer.employer && offer.status == JobStatus.Published,
             errMsg
         );
         require(worker != address(0), "WorkLabor: Invalid address");
-        offer.worker = worker;
         offer.status = JobStatus.Assigned;
+        offer.worker = worker;
     }
 
     /**
      * @notice Worker process job
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function processJob(uint256 jobId) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function processJob(uint256 _id) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             msg.sender == offer.worker &&
                 (offer.status == JobStatus.Assigned ||
@@ -211,10 +221,10 @@ contract WorkLabor is AccessControl {
 
     /**
      * @notice Worker send job to verification
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function verificationJob(uint256 jobId) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function verificationJob(uint256 _id) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             msg.sender == offer.worker && offer.status == JobStatus.InProcess,
             errMsg
@@ -224,10 +234,10 @@ contract WorkLabor is AccessControl {
 
     /**
      * @notice Employer decreased jobs cost
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function decreaseCostJob(uint256 jobId, uint256 forfeit) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function decreaseCostJob(uint256 _id, uint256 forfeit) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             (msg.sender == offer.employer &&
                 (offer.status == JobStatus.Verification ||
@@ -240,16 +250,16 @@ contract WorkLabor is AccessControl {
             forfeit <= offer.cost,
             "WorkLabor: forfeit must be least or equal job cost"
         );
-        offer.forfeit = forfeit;
         offer.status = JobStatus.DecreasedCost;
+        offer.forfeit = forfeit;
     }
 
     /**
      * @notice Employer or arbiter send job to rework
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function reworkJob(uint256 jobId) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function reworkJob(uint256 _id) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             (msg.sender == offer.employer &&
                 offer.status == JobStatus.Verification) ||
@@ -262,10 +272,10 @@ contract WorkLabor is AccessControl {
 
     /**
      * @notice Employer or worker send job to arbitration
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function arbitrationJob(uint256 jobId) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function arbitrationJob(uint256 _id) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             (msg.sender == offer.employer &&
                 offer.status == JobStatus.Verification) ||
@@ -279,10 +289,10 @@ contract WorkLabor is AccessControl {
 
     /**
      * @notice Employer accepted job
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function acceptJob(uint256 jobId) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function acceptJob(uint256 _id) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             (msg.sender == offer.employer &&
                 offer.status == JobStatus.Verification) ||
@@ -292,36 +302,32 @@ contract WorkLabor is AccessControl {
                     offer.status == JobStatus.Arbitration),
             errMsg
         );
-        //FIXME: add transfer default currency
-        //comission = (cost-forfeit)*fee
-        //reward = cost-forfeit - comission
-        uint256 comission = (offer.cost.sub(offer.forfeit)).mul(fee).div(1e18);
-        offer.currency.transfer(
-            offer.worker,
-            offer.cost.sub(offer.forfeit).sub(comission)
-        );
-        if (offer.forfeit > 0) {
-            offer.currency.transfer(offer.employer, offer.forfeit);
-        }
-        offer.currency.transfer(feeReceiver, comission);
         offer.status = JobStatus.Accepted;
+        //comission = (cost - forfeit)*fee
+        //reward = cost - forfeit - comission
+        uint256 cost = offer.cost.sub(offer.forfeit);
+        uint256 comission = cost.mul(fee).div(1e18);
+        offer.worker.transfer(cost.sub(comission));
+        if (offer.forfeit > 0) {
+            offer.employer.transfer(offer.forfeit);
+        }
+        feeReceiver.transfer(comission);
     }
 
     /**
      * @notice Arbiter declined job
-     * @param jobId Job ID
+     * @param _id Job ID
      */
-    function declineJob(uint256 jobId) public {
-        JobOffer storage offer = jobOffers[jobId];
+    function declineJob(uint256 _id) public {
+        JobOffer storage offer = jobOffers[_id];
         require(
             hasRole(ARBITER_ROLE, msg.sender) &&
                 offer.status == JobStatus.Arbitration,
             errMsg
         );
-        //FIXME: add transfer default currency
-        uint256 comission = offer.cost.mul(fee).div(1e18);
-        offer.currency.transfer(offer.employer, offer.cost.sub(comission));
-        offer.currency.transfer(feeReceiver, comission);
         offer.status = JobStatus.Declined;
+        uint256 comission = offer.cost.mul(fee).div(1e18);
+        offer.employer.transfer(offer.cost.sub(comission));
+        feeReceiver.transfer(comission);
     }
 }
