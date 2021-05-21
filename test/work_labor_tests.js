@@ -133,7 +133,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
       for (let val of call_flow) {
         await val.func(...val.args);
         try {
-          await work_labor.connect(employer).newJob(...call_flow[setStatus.newJob].args);
+          await call_flow[setStatus.publishJob].func(...call_flow[setStatus.publishJob].args);
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }

@@ -307,7 +307,9 @@ contract WorkQuest is AccessControl {
         //reward = cost - forfeit - comission
         uint256 cost = offer.cost.sub(offer.forfeit);
         uint256 comission = cost.mul(fee).div(1e18);
-        offer.worker.transfer(cost.sub(comission));
+        offer.worker.transfer(cost.sub(comission).sub(pensionFee));
+        address[] wallets = pension.getWallets(offer.worker);
+
         if (offer.forfeit > 0) {
             offer.employer.transfer(offer.forfeit);
         }

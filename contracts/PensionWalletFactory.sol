@@ -7,7 +7,7 @@ import "./PensionWallet.sol";
 contract PensionWalletFactory {
     mapping(address => address[]) wallets;
 
-    function getWallets(address _user) public view returns (address [] memory) {
+    function getWallets(address _user) public view returns (address[] memory) {
         return wallets[_user];
     }
 
@@ -21,8 +21,8 @@ contract PensionWalletFactory {
 
         wallets[_owner].push(wallet);
 
-        // Emit event.
-        Created(
+        // Emit event
+        emit Created(
             wallet,
             msg.sender,
             _owner,
