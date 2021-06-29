@@ -178,7 +178,7 @@ contract WorkQuest is AccessControl {
         uint256 cost = jobOffers[_id].cost;
         uint256 comission = cost.mul(fee).div(1e18);
         cost = cost.add(comission);
-        require(msg.value >= cost, "WorkLabor: Insuffience cost");
+        require(msg.value >= cost, "WorkLabor: Insuffience amount");
         jobOffers[_id].status = JobStatus.Published;
         lastWork[msg.sender] = 0;
         if (msg.value > cost) {
@@ -307,8 +307,8 @@ contract WorkQuest is AccessControl {
         //reward = cost - forfeit - comission
         uint256 cost = offer.cost.sub(offer.forfeit);
         uint256 comission = cost.mul(fee).div(1e18);
-        offer.worker.transfer(cost.sub(comission).sub(pensionFee));
-        address[] wallets = pension.getWallets(offer.worker);
+        // offer.worker.transfer(cost.sub(comission).sub(pensionFee));
+        address[] memory wallets = pension.getWallets(offer.worker);
 
         if (offer.forfeit > 0) {
             offer.employer.transfer(offer.forfeit);

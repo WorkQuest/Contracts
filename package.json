@@ -4,12 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "hardhat compile": "npx hardhat compile",
-    "hardhat test": "npx hardhat --network development test",
-    "hardhat console": "npx hardhat console --network development",
-    "hardhat deploy token": "npx hardhat run --network development scripts/deploy_token.js",
-    "hardhat deploy worklabor": "npx hardhat run --network development scripts/deploy_work_labor.js",
-    "truffle deploy": "npx truffle migrate --network development"
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat --network development test",
+    "console": "npx hardhat console --network development",
+    "deploy wusd testnet": "npx hardhat run scripts/deploy_token.js --network testnet",
+    "deploy worklabor testnet": "npx hardhat run scripts/deploy_work_labor.js --network testnet"
   },
   "author": "",
   "license": "ISC",
