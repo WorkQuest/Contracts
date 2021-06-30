@@ -22,13 +22,13 @@ contract PensionWallet {
     }
 
     receive() external payable {
-        Received(msg.sender, msg.value);
+        emit Received(msg.sender, msg.value);
     }
 
     function withdraw() public onlyOwner {
         require(block.timestamp >= unlockDate);
         msg.sender.transfer(address(this).balance);
-        Withdrew(msg.sender, address(this).balance);
+        emit Withdrew(msg.sender, address(this).balance);
     }
 
     function info()

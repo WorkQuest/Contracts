@@ -3,7 +3,6 @@ pragma solidity ^0.7.6;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./PensionWalletFactory.sol";
 
 
 contract WorkQuest is AccessControl {
@@ -16,7 +15,7 @@ contract WorkQuest is AccessControl {
     string constant errMsg = "WorkLabor: Access denied or invalid status";
     uint256 public fee;
     address payable public feeReceiver;
-    PensionWalletFactory pension;
+    // PensionWalletFactory pension;
 
     /**
      * @dev Job offer statuses
@@ -308,7 +307,7 @@ contract WorkQuest is AccessControl {
         uint256 cost = offer.cost.sub(offer.forfeit);
         uint256 comission = cost.mul(fee).div(1e18);
         // offer.worker.transfer(cost.sub(comission).sub(pensionFee));
-        address[] memory wallets = pension.getWallets(offer.worker);
+        // address[] memory wallets = pension.getWallets(offer.worker);
 
         if (offer.forfeit > 0) {
             offer.employer.transfer(offer.forfeit);
