@@ -1,4 +1,4 @@
-task("transfer_wusd", "Transfer WUSD tokens to recipient")
+task("transfer_wqt", "Transfer WQT tokens to recipient")
     .addParam("to", "The recipient address")
     .addParam("amount", "Amount of tokens")
     .setAction(async function (args, hre, runSuper) {

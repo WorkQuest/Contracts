@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.6;
+pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract WUSDToken is ERC20 {
-    constructor(uint256 initialSupply) ERC20("Work USD Token", "WUSD") {
+contract WQToken is ERC20 {
+    constructor(uint256 initialSupply) ERC20("WorkQuest Token", "WQT") {
         _mint(msg.sender, initialSupply);
     }
 }

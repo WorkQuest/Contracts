@@ -7,8 +7,9 @@
     "compile": "npx hardhat compile",
     "test": "npx hardhat --network development test",
     "console": "npx hardhat console --network development",
-    "deploy wusd testnet": "npx hardhat run scripts/deploy_token.js --network testnet",
-    "deploy worklabor testnet": "npx hardhat run scripts/deploy_work_labor.js --network testnet"
+    "deploy contracts development": "npx hardhat run scripts/deploy_workquest.js --network development",
+    "deploy wqt testnet": "npx hardhat run scripts/deploy_token.js --network testnet",
+    "deploy contracts testnet": "npx hardhat run scripts/deploy_workquest.js --network testnet"
   },
   "author": "",
   "license": "ISC",

@@ -1,1 +1,1 @@
-require('./transfer_wusd.js');
+require('./transfer_wqt.js');
