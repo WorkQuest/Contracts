@@ -5,45 +5,35 @@ pragma solidity ^0.7.0;
 import "./PensionWallet.sol";
 
 contract PensionWalletFactory {
-    mapping(address => address[]) wallets;
+    event Created(
+        address wallet,
+        address owner,
+        uint256 createdAt,
+        uint256 unlockDate
+    );
+
+    mapping(address => address[]) public wallets;
+    mapping(address => address) public currentWallet;
 
     function getWallets(address _user) public view returns (address[] memory) {
         return wallets[_user];
     }
 
-    function newWallet(address _owner, uint256 _unlockDate)
-        public
-        payable
-        returns (address)
-    {
-        // Create new wallet.
-        address wallet = address(new PensionWallet(_owner, _unlockDate));
+    /**
+     * @dev Create a new pension wallet
+     * `fee` fee of a cost of a workquest
+     */
+    function newWallet(uint256 fee, uint256 unlockDate) public returns (address) {
+        address wallet = address(new PensionWallet(msg.sender, fee, unlockDate));
 
-        wallets[_owner].push(wallet);
+        wallets[msg.sender].push(wallet);
+        currentWallet[msg.sender] = wallet;
 
-        // Emit event
-        emit Created(
-            wallet,
-            msg.sender,
-            _owner,
-            block.timestamp,
-            _unlockDate,
-            msg.value
-        );
+        emit Created(wallet, msg.sender, block.timestamp, unlockDate);
         return wallet;
     }
 
-    // Prevents accidental sending of ether to the factory
-    receive() external payable {
-        revert();
+    function setCurrentWallet(address wallet) public {
+        currentWallet[msg.sender] = wallet;
     }
-
-    event Created(
-        address wallet,
-        address from,
-        address to,
-        uint256 createdAt,
-        uint256 unlockDate,
-        uint256 amount
-    );
 }

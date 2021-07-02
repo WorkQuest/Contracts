@@ -7,6 +7,7 @@ contract PensionWallet {
     event Withdrew(address to, uint256 amount);
 
     address public owner;
+    uint256 public fee;
     uint256 public unlockDate;
     uint256 public createdAt;
 
@@ -15,8 +16,9 @@ contract PensionWallet {
         _;
     }
 
-    constructor(address _owner, uint256 _unlockDate) {
+    constructor(address _owner, uint256 _fee, uint256 _unlockDate) {
         owner = _owner;
+        fee = _fee;
         unlockDate = _unlockDate;
         createdAt = block.timestamp;
     }
