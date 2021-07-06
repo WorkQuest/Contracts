@@ -5,7 +5,7 @@ import "./PensionFund.sol";
 
 contract WorkQuest {
     event Received(address sender, uint256 _cost);
-    string constant errMsg = "WorkLabor: Access denied or invalid status";
+    string constant errMsg = "WorkQuest: Access denied or invalid status";
 
     /**
      * @dev Job offer statuses
@@ -119,7 +119,7 @@ contract WorkQuest {
             errMsg
         );
         uint256 comission = (cost * fee) / 1e18;
-        require(msg.value >= cost + comission, "WorkLabor: Insuffience amount");
+        require(msg.value >= cost + comission, "WorkQuest: Insuffience amount");
         status = JobStatus.Published;
         if (msg.value > (cost + comission)) {
             payable(msg.sender).transfer(msg.value - cost - comission);
@@ -137,7 +137,7 @@ contract WorkQuest {
             msg.sender == employer && status == JobStatus.Published,
             errMsg
         );
-        require(_worker != address(0), "WorkLabor: Invalid address");
+        require(_worker != address(0), "WorkQuest: Invalid address");
         status = JobStatus.Assigned;
         worker = _worker;
     }
@@ -176,7 +176,7 @@ contract WorkQuest {
         );
         require(
             _forfeit <= cost,
-            "WorkLabor: forfeit must be least or equal job cost"
+            "WorkQuest: forfeit must be least or equal job cost"
         );
         status = JobStatus.DecreasedCost;
         forfeit = _forfeit;

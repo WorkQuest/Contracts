@@ -11,23 +11,25 @@ contract WorkQuestFactory is AccessControl {
     address payable[] arbiterList;
     uint256 lastArbiter;
     uint256 public immutable fee;
-    address payable public immutable feeReciever;
+    address payable public feeReceiver;
     address payable public immutable pensionFund;
 
     constructor(
         uint256 _fee,
-        address payable _feeReciever,
+        address payable _feeReceiver,
         address payable _pensionFund
     ) {
         fee = _fee;
-        feeReciever = _feeReciever;
+        feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
     }
 
     modifier onlyAdmin {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WorkQuestFactory: You should have a admin role"
+            "WorkQuestFactory: You should have an admin role"
         );
         _;
     }
@@ -50,7 +52,7 @@ contract WorkQuestFactory is AccessControl {
                 jobHash,
                 fee,
                 cost,
-                feeReciever,
+                feeReceiver,
                 pensionFund,
                 payable(msg.sender),
                 getArbiter()
@@ -64,6 +66,10 @@ contract WorkQuestFactory is AccessControl {
     function updateArbiter(address arbiter, bool enabled) public onlyAdmin {
         arbiters[arbiter] = enabled;
         arbiterList.push(payable(arbiter));
+    }
+
+    function updateFeeReceiver(address payable _feeReceiver) public onlyAdmin {
+        feeReceiver = _feeReceiver;
     }
 
     // Prevents accidental sending of ether to the factory
