@@ -7,14 +7,13 @@ async function main() {
   console.log("Sender address: ", sender);
 
   console.log("Deploying...");
-  const PensionWalletFactory = await hre.ethers.getContractFactory("PensionWalletFactory");
-  const pension_wallet_factory = await PensionWalletFactory.deploy();
-  await pension_wallet_factory.deployed();
-  console.log("PensionWalletFactory has been deployed to:", pension_wallet_factory.address);
-
+  const PensionFund = await hre.ethers.getContractFactory("PensionFund");
+  const pension_fund = await PensionFund.deploy();
+  await pension_fund.deployed();
+  console.log("PensionFund has been deployed to:", pension_fund.address);
 
   const WorkQuestFactory = await hre.ethers.getContractFactory("WorkQuestFactory");
-  const work_quest_factory = await WorkQuestFactory.deploy(process.env.WORKQUEST_FEE, process.env.WORKQUEST_FEE_RECEIVER, pension_wallet_factory.address);
+  const work_quest_factory = await WorkQuestFactory.deploy(process.env.WORKQUEST_FEE, process.env.WORKQUEST_FEE_RECEIVER, pension_fund.address);
   await work_quest_factory.deployed();
   console.log("WorkQuestFactory has been deployed to:", work_quest_factory.address);
 }

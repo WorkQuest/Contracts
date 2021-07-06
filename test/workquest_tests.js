@@ -3,7 +3,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 const { expect, assert } = require("chai");
 const { ethers, waffle } = require("hardhat");
 require("@nomiclabs/hardhat-waffle");
-const { parseEther } = require("ethers/utils");
+const { parseEther, solidityKeccak256 } = require("ethers/utils");
 //ethers.provider.send("evm_setNextBlockTimestamp", [time + 10000]);
 
 const nullstr = "0x0000000000000000000000000000000000000000"
@@ -20,6 +20,8 @@ const reward_after_forfeit = parseEther("891");
 const comission_after_forfeit = parseEther("9");
 const duble_comission_after_forfeit = parseEther("19");
 const acces_denied_err = "WorkLabor: Access denied or invalid status"
+const job_hash = soliditySha3("JOBHASH");
+
 
 const JobStatus = Object.freeze({
   New: 0,
@@ -57,20 +59,30 @@ ethers.getSigners().then(val => {
   [work_quest_owner, employer, worker, arbiter, feeReceiver] = val;
 });
 
-describe("Work Quest (Employer-Worker) contract", () => {
+describe("Work Quest contract", () => {
   let work_labor;
   let call_flow;
 
   beforeEach(async () => {
     require('dotenv').config();
 
-    WorkLabor = await ethers.getContractFactory("WorkLabor", work_quest_owner);
-    work_labor = await WorkLabor.deploy(process.env.WORKLABOR_FEE, feeReceiver.address);
-    await work_labor.connect(work_quest_owner).grantRole(await work_labor.ARBITER_ROLE(), arbiter.address);
+    const PensionFund = await hre.ethers.getContractFactory("PensionFund");
+    const pension_fund = await PensionFund.deploy();
+    await pension_fund.deployed();
+
+    const WorkQuestFactory = await hre.ethers.getContractFactory("WorkQuestFactory");
+    const work_quest_factory = await WorkQuestFactory.deploy(process.env.WORKQUEST_FEE, feeReceiver.address, pension_fund.address);
+    await work_quest_factory.deployed();
+    await work_quest_factory.connect(worker).newWorkQuest(job_hash, cost);
+    let work_quest_address = await work_quest_factory.getWorkQuests(worker.address)[0];
+
+    const work_quest = await hre.ethers.getContractAt("WorkQuestFactory", work_quest_address);
+
+
 
     call_flow = [
-      { func: work_labor.connect(employer).newJob, args: [job_id, job_hash, cost] },
-      { func: web3.eth.sendTransaction, args: [{from: employer.address, to: work_labor.address, value: cost_comission}]},
+      { func: work_labor.connect(employer).newJob, args: [job_id, , cost] },
+      { func: web3.eth.sendTransaction, args: [{ from: employer.address, to: work_quest.address, value: cost_comission }] },
       { func: work_labor.connect(employer).assignJob, args: [job_id, worker.address] },
       { func: work_labor.connect(worker).processJob, args: [job_id] },
       { func: work_labor.connect(worker).verificationJob, args: [job_id] },
@@ -144,7 +156,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
   describe("Assign worker to job", () => {
     it("Assigning job: success", async () => {
       //Assign job
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.assignJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.assignJob + 1)) {
         await val.func(...val.args);
       }
 
@@ -209,7 +221,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
   describe("Process job", () => {
     it("Job status set InProcess from Assigned: success", async () => {
       //Set InProcess job
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob + 1)) {
         await val.func(...val.args);
       }
 
@@ -257,7 +269,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Job status set InProcess by not worker: fail", async () => {
       //Assign job
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.assignJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.assignJob + 1)) {
         await val.func(...val.args);
       }
       try {
@@ -268,16 +280,16 @@ describe("Work Quest (Employer-Worker) contract", () => {
     });
 
     it("Job status set InProcess from non Assigned or Rework statuses: fail", async () => {
-        await call_flow[setStatus.newJob].func(...call_flow[setStatus.newJob].args);
-        try {
-          await call_flow[setStatus.processJob].func(...call_flow[setStatus.processJob].args);
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
+      await call_flow[setStatus.newJob].func(...call_flow[setStatus.newJob].args);
+      try {
+        await call_flow[setStatus.processJob].func(...call_flow[setStatus.processJob].args);
+      } catch (e) {
+        await expect(e.message).to.include(acces_denied_err);
+      }
 
       await call_flow[setStatus.assignJob].func(...call_flow[setStatus.assignJob].args); //Assign job
 
-      for (let val of call_flow.slice(setStatus.processJob, setStatus.reworkJob+1)) {
+      for (let val of call_flow.slice(setStatus.processJob, setStatus.reworkJob + 1)) {
         await val.func(...val.args);
         try {
           await call_flow[setStatus.processJob].func(...call_flow[setStatus.processJob].args);
@@ -291,7 +303,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
   describe("Verification job", () => {
     it("Set verification status: success", async () => {
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob + 1)) {
         await val.func(...val.args);
       }
 
@@ -314,7 +326,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Job status set Verificatiion by not worker: fail", async () => {
       //Process job
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob + 1)) {
         await val.func(...val.args);
       }
       try {
@@ -326,7 +338,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Job status set Verificatiion from non InProcess status: fail", async () => {
       //Assign job
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.assignJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.assignJob + 1)) {
         await val.func(...val.args);
         try {
           await call_flow[setStatus.verificationJob].func(...call_flow[setStatus.verificationJob].args);
@@ -352,7 +364,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
   describe("Decrease cost of job", () => {
     it("Decrease cost of job: success", async () => {
       //Decrease cost job
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob + 1)) {
         await val.func(...val.args);
       }
 
@@ -374,7 +386,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
     });
 
     it("Decrease cost from not Verification or DecreasedCost statuses by employer: fail", async () => {
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob + 1)) {
         await val.func(...val.args);
         try {
           await call_flow[setStatus.decreaseCostJob].func(...call_flow[setStatus.decreaseCostJob].args); //Decrease cost
@@ -398,7 +410,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Decrease cost from not Arbitration status by arbiter: fail", async () => {
       //from Publish to DecreaseCost
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(arbiter).decreaseCostJob(...call_flow[setStatus.decreaseCostJob].args);
@@ -441,7 +453,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Rework from not Verification status by employer: fail", async () => {
       //from Publish to InProcess
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(employer).reworkJob(...call_flow[setStatus.reworkJob].args); //Rework
@@ -464,7 +476,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Rework from not Arbitration status by arbiter: fail", async () => {
       //from Publish to DecreasedCost
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob + 1)) {
         await val.func(...val.args);
         try {
           await call_flow[setStatus.reworkJob].func(...call_flow[setStatus.reworkJob].args); //Rework by arbiter
@@ -486,7 +498,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
   describe("Arbitration job", () => {
     it("Set job to arbitration: success", async () => {
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.arbitrationJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.arbitrationJob + 1)) {
         await val.func(...val.args);
       }
 
@@ -509,7 +521,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Set job to arbitration from not Verification status by employer: fail", async () => {
       //from Publish to Process
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(employer).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
@@ -532,7 +544,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Set job to arbitration from not Rework or DecreasedCost statuses by worker: fail", async () => {
       //from Publish to Verification
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(worker).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
@@ -559,7 +571,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
   describe("Accept job", () => {
     it("Accept job by employer: success", async () => {
       //to Verification
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob + 1)) {
         await val.func(...val.args);
       }
       expect(
@@ -588,7 +600,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Accept job by worker after decrease cost: success", async () => {
       //Decrease cost
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob + 1)) {
         await val.func(...val.args);
       }
 
@@ -627,7 +639,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Accept job from not Verification status by employer: fail", async () => {
       //from Publish to InProcess
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.processJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(employer).acceptJob(job_id);
@@ -649,7 +661,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
     });
 
     it("Accept job from not DecreasedCost status by worker: fail", async () => {
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(worker).acceptJob(job_id);
@@ -672,7 +684,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Accept job from not Arbitration status by arbiter: fail", async () => {
       //from Publish to DecreasedCost
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(arbiter).acceptJob(job_id);
@@ -695,7 +707,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
   describe("Decline job", () => {
     it("Decline job: success", async () => {
       //set Verification
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.verificationJob + 1)) {
         await val.func(...val.args);
       }
       await work_labor.connect(employer).arbitrationJob(job_id);
@@ -716,7 +728,7 @@ describe("Work Quest (Employer-Worker) contract", () => {
 
     it("Decline job from non Arbitration status by arbiter: fail", async () => {
       //from Publish to DecreasedCost
-      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob+1)) {
+      for (let val of call_flow.slice(setStatus.newJob, setStatus.decreaseCostJob + 1)) {
         await val.func(...val.args);
         try {
           await work_labor.connect(arbiter).declineJob(job_id);

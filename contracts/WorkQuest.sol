@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./PensionWalletFactory.sol";
+import "./PensionFund.sol";
 
 contract WorkQuest {
-    using SafeMath for uint256;
-
     event Received(address sender, uint256 _cost);
     string constant errMsg = "WorkLabor: Access denied or invalid status";
 
@@ -42,7 +39,9 @@ contract WorkQuest {
     // Fee receiver address
     address payable public immutable feeReceiver;
     // Pension wallet factory contract address
-    address public immutable pensionWalletFactory;
+    address payable public immutable pensionFund;
+    address payable public immutable employer;
+    address payable public immutable arbiter;
 
     /**
      * @dev Job offer information
@@ -51,22 +50,38 @@ contract WorkQuest {
     bytes32 public jobHash;
     uint256 public cost;
     uint256 public forfeit;
-    address payable public employer;
     address payable public worker;
-    address payable public arbiter;
     JobStatus public status;
     uint256 public deadline;
 
+    /**
+     * @dev Create new WorkQuest contract
+     * Requirements:
+     * `_jobHash` - Hash of job agreement
+     * `_fee` - Fee coefficient, from 0 to 1, 18 decimals
+     * `_cost` - Cost of a job
+     * `_feeReceiver` - Address of a fee reciever
+     * `_pensionFund` - Address of a pension fund contract
+     * `_employer` - External address of employer
+     * `_arbiter` - External address of arbiter
+     */
+
     constructor(
+        bytes32 _jobHash,
         uint256 _fee,
+        uint256 _cost,
         address payable _feeReceiver,
-        address _pensionWalletFactory,
-        address payable _employer
+        address payable _pensionFund,
+        address payable _employer,
+        address payable _arbiter
     ) {
+        jobHash = _jobHash;
         fee = _fee;
+        cost = _cost;
         feeReceiver = _feeReceiver;
-        pensionWalletFactory = _pensionWalletFactory;
+        pensionFund = _pensionFund;
         employer = _employer;
+        arbiter = _arbiter;
     }
 
     function getInfo()
@@ -96,27 +111,18 @@ contract WorkQuest {
     }
 
     /**
-     * @notice Employer created new job
-     * @param _jobHash Job hash
-     * @param _cost Job _cost
-     */
-    function newJob(bytes32 _jobHash, uint256 _cost) public {
-        require(status == JobStatus.New, errMsg);
-        employer = msg.sender;
-        jobHash = _jobHash;
-        cost = _cost;
-    }
-
-    /**
      * @notice Employer publish job by transfer funds to contract
      */
     receive() external payable {
-        uint256 comission = cost.mul(fee).div(1e18);
-        cost = cost.add(comission);
-        require(msg.value >= cost, "WorkLabor: Insuffience amount");
+        require(
+            status == JobStatus.New || status == JobStatus.Published,
+            errMsg
+        );
+        uint256 comission = (cost * fee) / 1e18;
+        require(msg.value >= cost + comission, "WorkLabor: Insuffience amount");
         status = JobStatus.Published;
-        if (msg.value > cost) {
-            msg.sender.transfer(msg.value.sub(cost));
+        if (msg.value > (cost + comission)) {
+            payable(msg.sender).transfer(msg.value - cost - comission);
         }
         feeReceiver.transfer(comission);
         emit Received(msg.sender, msg.value);
@@ -213,18 +219,16 @@ contract WorkQuest {
             errMsg
         );
         status = JobStatus.Accepted;
-        //comission = (cost - forfeit)*fee
-        //reward = cost - forfeit - comission
-        uint256 _cost = cost.sub(forfeit);
-        uint256 comission = _cost.mul(fee).div(1e18);
-        uint256 pensionFee = 0;
-        address pensionWallet = PensionWalletFactory(payable(pensionWalletFactory)).currentWallet(worker);
-        if (pensionWallet != address(0)) {
-            //TODO: check pensionWallet is contract
-            pensionFee = _cost.mul(PensionWallet(payable(pensionWallet)).fee()).div(1e18);
+        uint256 _cost = cost - forfeit;
+        uint256 comission = (_cost * fee) / 1e18;
+        (, uint256 pensionFee, , ) = PensionFund(pensionFund).wallets(worker);
+        uint256 pensionContribute = (_cost * pensionFee) / 1e18;
+        worker.transfer(_cost - comission - pensionFee);
+        if (pensionFee > 0) {
+            PensionFund(pensionFund).contribute{value: pensionContribute}(
+                worker
+            );
         }
-        worker.transfer(_cost.sub(comission).sub(pensionFee));
-        payable(pensionWallet).transfer(pensionFee);
         if (forfeit > 0) {
             employer.transfer(forfeit);
         }
@@ -240,8 +244,8 @@ contract WorkQuest {
             errMsg
         );
         status = JobStatus.Declined;
-        uint256 comission = cost.mul(fee).div(1e18);
-        employer.transfer(cost.sub(comission));
+        uint256 comission = (cost * fee) / 1e18;
+        employer.transfer(cost - comission);
         feeReceiver.transfer(comission);
     }
 }
