@@ -63,9 +63,9 @@ contract WorkQuestFactory is AccessControl {
         return workquest;
     }
 
-    function updateArbiter(address arbiter, bool enabled) public onlyAdmin {
+    function updateArbiter(address payable arbiter, bool enabled) public onlyAdmin {
         arbiters[arbiter] = enabled;
-        arbiterList.push(payable(arbiter));
+        arbiterList.push(arbiter);
     }
 
     function updateFeeReceiver(address payable _feeReceiver) public onlyAdmin {

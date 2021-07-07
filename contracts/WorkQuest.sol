@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./PensionFund.sol";
 
 contract WorkQuest {
-    event Received(address sender, uint256 _cost);
+    event Received(address sender, uint256 amount);
     string constant errMsg = "WorkQuest: Access denied or invalid status";
 
     /**
@@ -219,11 +219,11 @@ contract WorkQuest {
             errMsg
         );
         status = JobStatus.Accepted;
-        uint256 _cost = cost - forfeit;
-        uint256 comission = (_cost * fee) / 1e18;
+        uint256 newCost = cost - forfeit;
+        uint256 comission = (newCost * fee) / 1e18;
         (, uint256 pensionFee, , ) = PensionFund(pensionFund).wallets(worker);
-        uint256 pensionContribute = (_cost * pensionFee) / 1e18;
-        worker.transfer(_cost - comission - pensionFee);
+        uint256 pensionContribute = (newCost * pensionFee) / 1e18;
+        worker.transfer(newCost - comission - pensionFee);
         if (pensionFee > 0) {
             PensionFund(pensionFund).contribute{value: pensionContribute}(
                 worker

@@ -5,9 +5,8 @@
   "main": "index.js",
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "npx hardhat --network development test",
-    "console": "npx hardhat console --network development",
-    "deploy contracts development": "npx hardhat run scripts/deploy_workquest.js --network development",
+    "test": "npx hardhat test --network development",
+    "console": "npx hardhat console",
     "deploy wqt testnet": "npx hardhat run scripts/deploy_token.js --network testnet",
     "deploy contracts testnet": "npx hardhat run scripts/deploy_workquest.js --network testnet"
   },

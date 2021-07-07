@@ -4,14 +4,14 @@ require('./tasks');
 require('dotenv').config();
 
 module.exports = {
-  defaultNetwork: "development",
+  defaultNetwork: "hardhat",
   networks: {
     development: {
-      url: "http://127.0.0.1:8545"
+      url: "http://127.0.0.1:8545/"
     },
     testnet: {
       url: "https://dev-node-ams3.workquest.co/",
-      accounts: [process.env.SECRET_KEY],
+      accounts: {mnemonic: process.env.MNEMONIC},
       gasPrice: 10000000000
     }
   },
