@@ -7,8 +7,8 @@ task("transfer_wqt", "Transfer WQT tokens to recipient")
         const sender = accounts[0].address;
         console.log("Sender address: ", sender);
 
-        const WUSDToken = await hre.ethers.getContractFactory("WUSDToken");
-        const wusd_token = await WUSDToken.attach(process.env.WUSD_TOKEN);
-        console.log("Token address:", wusd_token.address);
-        await wq_token.transfer(args.to, args.amount, { gasLimit: 500000 });
+        const WQToken = await hre.ethers.getContractFactory("WQToken");
+        const wq_token = await WQToken.attach(process.env.WORK_QUEST_TOKEN);
+        console.log("Token address:", wq_token.address);
+        await wq_token.transfer(args.to, args.amount);
     });
