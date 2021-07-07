@@ -7,8 +7,8 @@ import "./WorkQuest.sol";
 contract WorkQuestFactory is AccessControl {
     bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
     mapping(address => address[]) public workquests;
-    mapping(address => bool) arbiters;
-    address payable[] arbiterList;
+    mapping(address => bool) public arbiters;
+    address payable[] public arbiterList;
     uint256 lastArbiter;
     uint256 public immutable fee;
     address payable public feeReceiver;
