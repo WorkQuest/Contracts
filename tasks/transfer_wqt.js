@@ -11,4 +11,5 @@ task("transfer_wqt", "Transfer WQT tokens to recipient")
         const wq_token = await WQToken.attach(process.env.WORK_QUEST_TOKEN);
         console.log("Token address:", wq_token.address);
         await wq_token.transfer(args.to, args.amount);
+        console.log("Success!");
     });
