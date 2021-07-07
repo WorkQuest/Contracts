@@ -6,7 +6,7 @@ task("update_arbiter", "Update arbiter in workquest factory")
         const accounts = await ethers.getSigners();
         const sender = accounts[0].address;
         console.log("Sender address: ", sender);
-        const work_quest_factory = await hre.ethers.getContractAt("WorkQuestFactory");
+        const work_quest_factory = await hre.ethers.getContractAt("WorkQuestFactory", process.env.WORK_QUEST_FACTORY);
         await work_quest_factory.updateArbiter(args.arbiter, args.enabled);
-        
+
     });
