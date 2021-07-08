@@ -4,23 +4,14 @@ pragma solidity ^0.8.0;
 import "./PensionFund.sol";
 
 contract WorkQuest {
+    /// @notice Event emitted when employer publish job by transfer funds to contract
     event Received(address sender, uint256 amount);
+
     string constant errMsg = "WorkQuest: Access denied or invalid status";
 
     /**
-     * @dev Job offer statuses
-     * @param New
-     * @param Published
-     * @param Assigned
-     * @param InProcess
-     * @param Verification
-     * @param Rework
-     * @param DecreasedCost
-     * @param Arbitration
-     * @param Accepted
-     * @param Declined
+     * @notice Job offer statuses
      */
-
     enum JobStatus {
         New,
         Published,
@@ -34,36 +25,39 @@ contract WorkQuest {
         Declined
     }
 
-    // Fee coefficient of workquest
+    /// @notice Fee coefficient of workquest
     uint256 public immutable fee;
-    // Fee receiver address
+    /// @notice Fee receiver address
     address payable public immutable feeReceiver;
-    // Pension wallet factory contract address
+    /// @notice Pension wallet factory contract address
     address payable public immutable pensionFund;
+    /// @notice Address of employer
     address payable public immutable employer;
+    /// @notice Address of arbiter
     address payable public immutable arbiter;
 
-    /**
-     * @dev Job offer information
-     * jobHash
-     */
+    /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
+    /// @notice Cost of job
     uint256 public cost;
+    /// @notice Forfeit amount if worker didn't  job
     uint256 public forfeit;
+    /// @notice Address of worker
     address payable public worker;
+    /// @notice Current status of job
     JobStatus public status;
+    /// @notice Deadline timestamp
     uint256 public deadline;
 
     /**
-     * @dev Create new WorkQuest contract
-     * Requirements:
-     * `_jobHash` - Hash of job agreement
-     * `_fee` - Fee coefficient, from 0 to 1, 18 decimals
-     * `_cost` - Cost of a job
-     * `_feeReceiver` - Address of a fee reciever
-     * `_pensionFund` - Address of a pension fund contract
-     * `_employer` - External address of employer
-     * `_arbiter` - External address of arbiter
+     * @notice Create new WorkQuest contract
+     * @param _jobHash Hash of job agreement
+     * @param _fee Fee coefficient, from 0 to 1, 18 decimals
+     * @param _cost Cost of a job
+     * @param _feeReceiver Address of a fee reciever
+     * @param _pensionFund Address of a pension fund contract
+     * @param _employer External address of employer
+     * @param _arbiter External address of arbiter
      */
 
     constructor(
@@ -84,6 +78,10 @@ contract WorkQuest {
         arbiter = _arbiter;
     }
 
+    /**
+     * @notice Get info about contract state
+     * @dev Return parameters jobHash, cost, forfeit, employer, worker, arbiter, status, deadline
+     */
     function getInfo()
         public
         view
@@ -164,7 +162,7 @@ contract WorkQuest {
 
     /**
      * @notice Employer decreased jobs cost
-     * `_forfeit`
+     * @param _forfeit Forfeit amount
      */
     function decreaseCostJob(uint256 _forfeit) public {
         require(

@@ -2,6 +2,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('./tasks');
 require('dotenv').config();
+require('hardhat-docgen');
 
 module.exports = {
   defaultNetwork: "hardhat",
@@ -26,6 +27,11 @@ module.exports = {
   },
   mocha: {
     timeout: 20000
+  },
+  docgen: {
+    path: './doc',
+    clear: true,
+    runOnCompile: true,
   }
 }
 
