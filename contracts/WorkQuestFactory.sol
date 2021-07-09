@@ -5,10 +5,19 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WorkQuest.sol";
 
 contract WorkQuestFactory is AccessControl {
-    event Created(bytes32 jobHash);
+    /**
+     * @notice Event emited when new workquest contract created
+     */
+    event WorkQuestCreated(
+        bytes32 jobHash,
+        address employer,
+        address workquest,
+        uint256 createdAt
+    );
 
     bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
+    /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
 
     /// @notice Mapping of arbiters adresses to boolean enabled
@@ -75,10 +84,11 @@ contract WorkQuestFactory is AccessControl {
      * @param cost Job cost amount
      * @return workquest Address of workquest contract
      */
-    function newWorkQuest(bytes32 jobHash, uint256 cost, uint256 deadline)
-        public
-        returns (address workquest)
-    {
+    function newWorkQuest(
+        bytes32 jobHash,
+        uint256 cost,
+        uint256 deadline
+    ) public returns (address workquest) {
         workquest = address(
             new WorkQuest(
                 jobHash,
@@ -92,7 +102,7 @@ contract WorkQuestFactory is AccessControl {
             )
         );
         workquests[msg.sender].push(workquest);
-        emit Created(msg.sender, workquest, block.timestamp);
+        emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp);
         return workquest;
     }
 
@@ -135,9 +145,4 @@ contract WorkQuestFactory is AccessControl {
         }
         return arbiterList[lastArbiter];
     }
-
-    /**
-     * @notice Event emited when new workquest contract created
-     */
-    event Created(address employer, address workquest, uint256 createdAt);
 }
