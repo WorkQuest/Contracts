@@ -4,8 +4,47 @@ pragma solidity ^0.8.0;
 import "./PensionFund.sol";
 
 contract WorkQuest {
+    /// @notice Event emitted when job created
+    event WorkQuestCreated(bytes32 jobHash);
+
+    /// @notice Event emitted when employer cancel job
+    event JobCancelled();
+
     /// @notice Event emitted when employer publish job by transfer funds to contract
     event Received(address sender, uint256 amount);
+
+    /// @notice Event emitted when employer assign worker to job
+    event Assigned(address worker);
+
+    /// @notice Event emitted when worker accepted job to work
+    event JobAccepted();
+
+    /// @notice Event emitted when worker declined job
+    event JobDeclined();
+
+    /// @notice Event emitted when worker set job status InProcess
+    event JobStarted();
+
+    /// @notice Event emitted when worker set job to Verification
+    event JobDone();
+
+    /// @notice Event emitted when
+    event JobFinished();
+
+    /// @notice Event emitted when
+    event ArbitrationStarted();
+
+    /// @notice Event emitted when
+    event ArbitrationRework();
+
+    /// @notice Event emitted when
+    event ArbitrationDecreaseCost();
+
+    /// @notice Event emitted when
+    event ArbitrationAcceptWork();
+
+    /// @notice Event emitted when
+    event ArbitrationRejectWork();
 
     string constant errMsg = "WorkQuest: Access denied or invalid status";
 
@@ -14,15 +53,15 @@ contract WorkQuest {
      */
     enum JobStatus {
         New,
+        Cancelled,
         Published,
-        Assigned,
-        InProcess,
-        Verification,
-        Rework,
+        WaitWorker,
+        WaitJobStart,
+        InProgress,
+        WaitJobVerify,
         DecreasedCost,
         Arbitration,
-        Accepted,
-        Declined
+        Finished
     }
 
     /// @notice Fee coefficient of workquest
@@ -49,6 +88,8 @@ contract WorkQuest {
     /// @notice Deadline timestamp
     uint256 public deadline;
 
+    uint256 public timeDone;
+
     /**
      * @notice Create new WorkQuest contract
      * @param _jobHash Hash of job agreement
@@ -64,6 +105,7 @@ contract WorkQuest {
         bytes32 _jobHash,
         uint256 _fee,
         uint256 _cost,
+        uint256 _deadline,
         address payable _feeReceiver,
         address payable _pensionFund,
         address payable _employer,
@@ -72,10 +114,12 @@ contract WorkQuest {
         jobHash = _jobHash;
         fee = _fee;
         cost = _cost;
+        deadline = _deadline;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
         employer = _employer;
         arbiter = _arbiter;
+        emit WorkQuestCreated(jobHash);
     }
 
     /**
@@ -108,14 +152,17 @@ contract WorkQuest {
         );
     }
 
+    function cancelJob() public {
+        require(status == JobStatus.New && msg.sender == employer, errMsg);
+        status = JobStatus.Cancelled;
+        emit JobCancelled();
+    }
+
     /**
      * @notice Employer publish job by transfer funds to contract
      */
     receive() external payable {
-        require(
-            status == JobStatus.New || status == JobStatus.Published,
-            errMsg
-        );
+        require(status == JobStatus.New, errMsg);
         uint256 comission = (cost * fee) / 1e18;
         require(msg.value >= cost + comission, "WorkQuest: Insuffience amount");
         status = JobStatus.Published;
@@ -136,8 +183,27 @@ contract WorkQuest {
             errMsg
         );
         require(_worker != address(0), "WorkQuest: Invalid address");
-        status = JobStatus.Assigned;
+        status = JobStatus.WaitWorker;
         worker = _worker;
+        emit Assigned(worker);
+    }
+
+    /**
+     * @notice Worker accepted job to work
+     */
+    function acceptJob() public {
+        require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
+        status = JobStatus.WaitJobStart;
+        emit JobAccepted();
+    }
+
+    /**
+     * @notice Worker decline job
+     */
+    function declineJob() public {
+        require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
+        status = JobStatus.Published;
+        emit JobDeclined();
     }
 
     /**
@@ -145,83 +211,122 @@ contract WorkQuest {
      */
     function processJob() public {
         require(
-            msg.sender == worker &&
-                (status == JobStatus.Assigned || status == JobStatus.Rework),
+            msg.sender == worker && status == JobStatus.WaitJobStart,
             errMsg
         );
-        status = JobStatus.InProcess;
+        status = JobStatus.InProgress;
+        emit JobStarted();
     }
 
     /**
      * @notice Worker send job to verification
      */
     function verificationJob() public {
-        require(msg.sender == worker && status == JobStatus.InProcess, errMsg);
-        status = JobStatus.Verification;
+        require(msg.sender == worker && status == JobStatus.InProgress, errMsg);
+        status = JobStatus.WaitJobVerify;
+        timeDone = block.timestamp;
+        emit JobDone();
+    }
+
+    /**
+     * @notice Employer accepted job
+     */
+    function acceptJobResult() public {
+        require(
+            msg.sender == employer && status == JobStatus.WaitJobVerify,
+            errMsg
+        );
+        status = JobStatus.Finished;
+        _transferFunds();
+        emit JobFinished();
+    }
+
+    /**
+     * @notice Employer or worker send job to arbitration
+     */
+    function arbitration() public {
+        require(
+            (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
+                (msg.sender == worker &&
+                    status == JobStatus.WaitJobVerify &&
+                    block.timestamp > timeDone + 3 days),
+            errMsg
+        );
+        status = JobStatus.Arbitration;
+        emit ArbitrationStarted();
+    }
+
+    /**
+     * @notice Arbiter send job to rework
+     */
+    function arbitrationRework(uint256 _deadline) public {
+        require(
+            msg.sender == arbiter && status == JobStatus.Arbitration,
+            errMsg
+        );
+        require(
+            _deadline > deadline,
+            "WorkQuest: New deadline time is less then old"
+        );
+        deadline = _deadline;
+        status = JobStatus.InProgress;
+        emit ArbitrationRework();
     }
 
     /**
      * @notice Employer decreased jobs cost
      * @param _forfeit Forfeit amount
      */
-    function decreaseCostJob(uint256 _forfeit) public {
+
+    function arbitrationDecreaseCost(uint256 _forfeit) public {
         require(
-            (msg.sender == employer &&
-                (status == JobStatus.Verification ||
-                    status == JobStatus.DecreasedCost)) ||
-                (msg.sender == arbiter && status == JobStatus.Arbitration),
+            msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
         );
         require(
             _forfeit <= cost,
             "WorkQuest: forfeit must be least or equal job cost"
         );
-        status = JobStatus.DecreasedCost;
+        status = JobStatus.Finished;
         forfeit = _forfeit;
+        _transferFunds();
+        emit ArbitrationDecreaseCost();
     }
 
     /**
-     * @notice Employer or arbiter send job to rework
+     * @notice Arbiter accepted job result
      */
-    function reworkJob() public {
+    function arbitrationAcceptWork() public {
         require(
-            (msg.sender == employer && status == JobStatus.Verification) ||
-                (msg.sender == arbiter && status == JobStatus.Arbitration),
+            msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
         );
-        status = JobStatus.Rework;
+        status = JobStatus.Finished;
+        _transferFunds();
+        emit ArbitrationAcceptWork();
     }
 
     /**
-     * @notice Employer or worker send job to arbitration
+     * @notice Arbiter declined job
      */
-    function arbitrationJob() public {
+    function arbitrationRejectWork() public {
         require(
-            (msg.sender == employer && status == JobStatus.Verification) ||
-                (msg.sender == worker &&
-                    (status == JobStatus.Rework ||
-                        status == JobStatus.DecreasedCost)),
+            msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
         );
-        status = JobStatus.Arbitration;
+        status = JobStatus.Finished;
+        uint256 comission = (cost * fee) / 1e18;
+        employer.transfer(cost - comission);
+        feeReceiver.transfer(comission);
+        emit ArbitrationRejectWork();
     }
 
-    /**
-     * @notice Employer accepted job
-     */
-    function acceptJob() public {
-        require(
-            (msg.sender == employer && status == JobStatus.Verification) ||
-                (msg.sender == worker && status == JobStatus.DecreasedCost) ||
-                (msg.sender == arbiter && status == JobStatus.Arbitration),
-            errMsg
-        );
-        status = JobStatus.Accepted;
+    function _transferFunds() internal {
         uint256 newCost = cost - forfeit;
         uint256 comission = (newCost * fee) / 1e18;
         (, uint256 pensionFee, , ) = PensionFund(pensionFund).wallets(worker);
         uint256 pensionContribute = (newCost * pensionFee) / 1e18;
-        worker.transfer(newCost - comission - pensionFee);
+        worker.transfer(newCost - comission - pensionContribute);
         if (pensionFee > 0) {
             PensionFund(pensionFund).contribute{value: pensionContribute}(
                 worker
@@ -230,20 +335,6 @@ contract WorkQuest {
         if (forfeit > 0) {
             employer.transfer(forfeit);
         }
-        feeReceiver.transfer(comission);
-    }
-
-    /**
-     * @notice Arbiter declined job
-     */
-    function declineJob() public {
-        require(
-            msg.sender == arbiter && status == JobStatus.Arbitration,
-            errMsg
-        );
-        status = JobStatus.Declined;
-        uint256 comission = (cost * fee) / 1e18;
-        employer.transfer(cost - comission);
         feeReceiver.transfer(comission);
     }
 }

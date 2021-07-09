@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WorkQuest.sol";
 
 contract WorkQuestFactory is AccessControl {
+    event Created(bytes32 jobHash);
+
     bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     mapping(address => address[]) public workquests;
@@ -73,7 +75,7 @@ contract WorkQuestFactory is AccessControl {
      * @param cost Job cost amount
      * @return workquest Address of workquest contract
      */
-    function newWorkQuest(bytes32 jobHash, uint256 cost)
+    function newWorkQuest(bytes32 jobHash, uint256 cost, uint256 deadline)
         public
         returns (address workquest)
     {
@@ -82,6 +84,7 @@ contract WorkQuestFactory is AccessControl {
                 jobHash,
                 fee,
                 cost,
+                deadline,
                 feeReceiver,
                 pensionFund,
                 payable(msg.sender),
