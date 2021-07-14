@@ -15,13 +15,18 @@ contract WorkQuestFactory is AccessControl {
         uint256 createdAt
     );
 
+    struct ArbiterInfo {
+        uint256 index;
+        bool enabled;
+    }
+
     bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
 
     /// @notice Mapping of arbiters adresses to boolean enabled
-    mapping(address => bool) public arbiters;
+    mapping(address => ArbiterInfo) public arbiters;
 
     /// @notice List of arbiters adresses
     address payable[] public arbiterList;
@@ -115,9 +120,16 @@ contract WorkQuestFactory is AccessControl {
         public
         onlyAdmin
     {
-        arbiters[arbiter] = enabled;
-        if (enabled) {
+        if (enabled && !arbiters[arbiter].enabled) {
+            arbiters[arbiter] = ArbiterInfo({
+                index: arbiterList.length,
+                enabled: enabled
+            });
             arbiterList.push(arbiter);
+        }
+        if (!enabled && arbiters[arbiter].enabled) {
+            delete arbiterList[arbiters[arbiter].index];
+            delete arbiters[arbiter];
         }
     }
 
@@ -141,7 +153,7 @@ contract WorkQuestFactory is AccessControl {
         for (uint256 i = 0; i < arbiterList.length; i++) {
             lastArbiter++;
             if (lastArbiter >= arbiterList.length) lastArbiter = 0;
-            if (arbiters[arbiterList[lastArbiter]]) break;
+            if (arbiters[arbiterList[lastArbiter]].enabled) break;
         }
         return arbiterList[lastArbiter];
     }

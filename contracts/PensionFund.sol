@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 contract PensionFund {
     uint256 constant DEFAULT_FEE = 1e16; // 1%
+    uint256 lockTime;
 
     /// @notice Event emitted when funds transferred to contract
     event Received(address from, uint256 amount);
@@ -20,7 +21,9 @@ contract PensionFund {
     /// @notice Pension wallet info of worker
     mapping(address => PensionWallet) public wallets;
 
-    constructor() {}
+    constructor(uint256 _lockTime) {
+        lockTime = _lockTime;
+    }
 
     /**
      * @notice Contribute native moneys to contract on 3 years

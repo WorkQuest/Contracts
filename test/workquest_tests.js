@@ -3,7 +3,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 require("@nomiclabs/hardhat-waffle");
-const { parseEther } = require("ethers/utils");
+const { parseEther } = require("ethers/lib/utils");
 
 const nullstr = "0x0000000000000000000000000000000000000000"
 const job_hash = web3.utils.keccak256("JOBHASH");
@@ -18,29 +18,27 @@ const reward_after_forfeit = parseEther("0.891");
 const comission_after_forfeit = "8999999999967232";
 const double_comission_after_forfeit = parseEther("0.019");
 const acces_denied_err = "WorkQuest: Access denied or invalid status";
-const WORKQUEST_FEE="10000000000000000";
+const WORKQUEST_FEE = "10000000000000000";
 
 const JobStatus = Object.freeze({
   New: 0,
   Published: 1,
-  Assigned: 2,
-  InProcess: 3,
-  Verification: 4,
-  Rework: 5,
-  DecreasedCost: 6,
-  Arbitration: 7,
-  Accepted: 8,
-  Declined: 9
+  WaitWorker: 2,
+  WaitJobStart: 3,
+  InProgress: 4,
+  WaitJobVerify: 5,
+  Arbitration: 6,
+  Finished: 7
 });
 
 const setStatus = Object.freeze({
-  publishJob: 0,
-  assignJob: 1,
-  processJob: 2,
-  verificationJob: 3,
-  decreaseCostJob: 4,
-  arbitrationJob: 5,
-  reworkJob: 6,
+  Published: 0,
+  WaitWorker: 1,
+  WaitJobStart: 2,
+  InProgress: 3,
+  WaitJobVerify: 4,
+  Arbitration: 5,
+  Finished: 6
 });
 
 let work_quest_owner;
@@ -59,7 +57,7 @@ describe("Work Quest contract", () => {
     [work_quest_owner, employer, worker, arbiter, feeReceiver] = await ethers.getSigners();
 
     const PensionFund = await hre.ethers.getContractFactory("PensionFund");
-    const pension_fund = await PensionFund.deploy();
+    const pension_fund = await PensionFund.deploy(60);
     await pension_fund.deployed();
 
     const WorkQuestFactory = await hre.ethers.getContractFactory("WorkQuestFactory");
@@ -68,18 +66,18 @@ describe("Work Quest contract", () => {
 
     await work_quest_factory.updateArbiter(arbiter.address, true);
 
-    await work_quest_factory.connect(employer).newWorkQuest(job_hash, cost);
+    await work_quest_factory.connect(employer).newWorkQuest(job_hash, cost, 0);
     let work_quest_address = (await work_quest_factory.getWorkQuests(employer.address))[0];
     work_quest = await hre.ethers.getContractAt("WorkQuest", work_quest_address);
 
     call_flow = [
       { func: web3.eth.sendTransaction, args: [{ from: employer.address, to: work_quest.address, value: cost_comission }] },
       { func: work_quest.connect(employer).assignJob, args: [worker.address] },
+      { func: work_quest.connect(worker).acceptJob, args: [] },
       { func: work_quest.connect(worker).processJob, args: [] },
       { func: work_quest.connect(worker).verificationJob, args: [] },
-      { func: work_quest.connect(employer).decreaseCostJob, args: [forfeit] },
-      { func: work_quest.connect(worker).arbitrationJob, args: [] },
-      { func: work_quest.connect(arbiter).reworkJob, args: [] }
+      { func: work_quest.connect(employer).arbitration, args: [] },
+      { func: work_quest.connect(arbiter).arbitrationAcceptWork, args: [] }
     ];
   });
 
@@ -120,7 +118,7 @@ describe("Work Quest contract", () => {
 
   describe("Publish job", () => {
     it("Publish job: success", async () => {
-      await call_flow[setStatus.publishJob].func(...call_flow[setStatus.publishJob].args);
+      await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
       let info = await work_quest.connect(employer).getInfo();
       expect(info[6]).to.be.equal(JobStatus.Published);
     });
@@ -129,7 +127,7 @@ describe("Work Quest contract", () => {
       for (let val of call_flow) {
         await val.func(...val.args);
         try {
-          await call_flow[setStatus.publishJob].func(...call_flow[setStatus.publishJob].args);
+          await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -140,7 +138,7 @@ describe("Work Quest contract", () => {
   describe("Assign worker to job", () => {
     it("Assigning job: success", async () => {
       //Assign job
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.assignJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitWorker + 1)) {
         await val.func(...val.args);
       }
 
@@ -150,14 +148,14 @@ describe("Work Quest contract", () => {
       expect(info[2]).to.be.equal(0);
       expect(info[3]).to.be.equal(employer.address);
       expect(info[4]).to.be.equal(worker.address);
-      expect(info[6]).to.be.equal(JobStatus.Assigned);
+      expect(info[6]).to.be.equal(JobStatus.WaitWorker);
     });
 
     it("Assigning worker to job from not employer: fail", async () => {
       //Publish job
-      await call_flow[setStatus.publishJob].func(...call_flow[setStatus.publishJob].args);
+      await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
       try {
-        await work_quest.connect(worker).assignJob(...call_flow[setStatus.assignJob].args);
+        await work_quest.connect(worker).assignJob(...call_flow[setStatus.WaitWorker].args);
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -165,7 +163,7 @@ describe("Work Quest contract", () => {
 
     it("Assigning invalid worker: fail", async () => {
       //Publish job
-      await call_flow[setStatus.publishJob].func(...call_flow[setStatus.publishJob].args);
+      await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
       try {
         await work_quest.connect(employer).assignJob(nullstr);
       } catch (e) {
@@ -175,17 +173,17 @@ describe("Work Quest contract", () => {
 
     it("Assign job from non Public statuses: fail", async () => {
       try {
-        await work_quest.connect(employer).assignJob(...call_flow[setStatus.assignJob].args);
+        await work_quest.connect(employer).assignJob(...call_flow[setStatus.WaitWorker].args);
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
 
-      await call_flow[setStatus.publishJob].func(...call_flow[setStatus.publishJob].args);
+      await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
 
-      for (let val of call_flow.slice(setStatus.assignJob)) {
+      for (let val of call_flow.slice(setStatus.WaitWorker)) {
         await val.func(...val.args);
         try {
-          await work_quest.connect(employer).assignJob(...call_flow[setStatus.assignJob].args);
+          await work_quest.connect(employer).assignJob(...call_flow[setStatus.WaitWorker].args);
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -193,11 +191,54 @@ describe("Work Quest contract", () => {
     });
   });
 
+  describe("Worker accepted job", () => {
+    it("Worker accepted job from status WaitWorker: success", async () => {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobStart + 1)) {
+        await val.func(...val.args);
+      }
+      let info = await work_quest.connect(employer).getInfo();
+      expect(info[0]).to.be.equal(job_hash);
+      expect(info[1]).to.be.equal(cost);
+      expect(info[2]).to.be.equal(0);
+      expect(info[3]).to.be.equal(employer.address);
+      expect(info[4]).to.be.equal(worker.address);
+      expect(info[6]).to.be.equal(JobStatus.WaitJobStart);
+    });
+
+    it("Worker accepted job from not WaitWorker status: fail", async () => {
+      //New status
+      try {
+        await work_quest.connect(worker).acceptJob();
+      } catch (e) {
+        await expect(e.message).to.include(acces_denied_err);
+      }
+
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitWorker + 1)) {
+        await val.func(...val.args);
+        try {
+          await work_quest.connect(worker).acceptJob();
+        } catch (e) {
+          await expect(e.message).to.include(acces_denied_err);
+        }
+      }
+
+      // await work_quest.connect(worker).acceptJob();
+
+      // for (let val of call_flow.slice(setStatus.InProgress)) {
+      //   await val.func(...val.args);
+      //   try {
+      //     await work_quest.connect(worker).acceptJob();
+      //   } catch (e) {
+      //     await expect(e.message).to.include(acces_denied_err);
+      //   }
+      // }
+    });
+  });
 
   describe("Process job", () => {
-    it("Job status set InProcess from Assigned: success", async () => {
-      //Set InProcess job
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.processJob + 1)) {
+    it("Job status set InProgress from WaitJobStart: success", async () => {
+      //Set InProgress job
+      for (let val of call_flow.slice(setStatus.Published, setStatus.InProgress + 1)) {
         await val.func(...val.args);
       }
 
@@ -208,53 +249,35 @@ describe("Work Quest contract", () => {
       expect(info[3]).to.be.equal(employer.address);
       expect(info[4]).to.be.equal(worker.address);
       expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.InProcess);
+      expect(info[6]).to.be.equal(JobStatus.InProgress);
     });
 
-    it("Job status set InProcess from Rework: success", async () => {
-      //Set Rework status
-      for (let val of call_flow) {
-        await val.func(...val.args);
-      }
-
-      await call_flow[setStatus.processJob].func(...call_flow[setStatus.processJob].args);//Set InProcess
-
-      let info = await work_quest.connect(employer).getInfo();
-      expect(info[0]).to.be.equal(job_hash);
-      expect(info[1]).to.be.equal(cost);
-      expect(info[2]).to.be.equal(forfeit);
-      expect(info[3]).to.be.equal(employer.address);
-      expect(info[4]).to.be.equal(worker.address);
-      expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.InProcess);
-    });
-
-    it("Job status set InProcess by not worker: fail", async () => {
+    it("Job status set InProgress by not worker: fail", async () => {
       //Assign job
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.assignJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobStart + 1)) {
         await val.func(...val.args);
       }
       try {
-        await work_quest.connect(employer).processJob(...call_flow[setStatus.processJob].args);
+        await work_quest.connect(employer).processJob(...call_flow[setStatus.InProgress].args);
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
     });
 
-    it("Job status set InProcess from non Assigned or Rework statuses: fail", async () => {
-      await call_flow[setStatus.publishJob].func(...call_flow[setStatus.publishJob].args);
+    it("Job status set InProgress from non WaitWorker: fail", async () => {
+      await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
       try {
-        await call_flow[setStatus.processJob].func(...call_flow[setStatus.processJob].args);
+        await call_flow[setStatus.InProgress].func(...call_flow[setStatus.InProgress].args);
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
 
-      await call_flow[setStatus.assignJob].func(...call_flow[setStatus.assignJob].args); //Assign job
+      await call_flow[setStatus.WaitWorker].func(...call_flow[setStatus.WaitWorker].args); //Assign job
 
-      for (let val of call_flow.slice(setStatus.processJob, setStatus.reworkJob + 1)) {
+      for (let val of call_flow.slice(setStatus.InProgress, setStatus.reworkJob + 1)) {
         await val.func(...val.args);
         try {
-          await call_flow[setStatus.processJob].func(...call_flow[setStatus.processJob].args);
+          await call_flow[setStatus.InProgress].func(...call_flow[setStatus.InProgress].args);
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -263,9 +286,9 @@ describe("Work Quest contract", () => {
   });
 
 
-  describe("Verification job", () => {
+  describe("WaitJobVerify job", () => {
     it("Set verification status: success", async () => {
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.verificationJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobVerify + 1)) {
         await val.func(...val.args);
       }
 
@@ -276,172 +299,130 @@ describe("Work Quest contract", () => {
       expect(info[3]).to.be.equal(employer.address);
       expect(info[4]).to.be.equal(worker.address);
       expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.Verification);
+      expect(info[6]).to.be.equal(JobStatus.WaitJobVerify);
     });
 
     it("Job status set Verificatiion by not worker: fail", async () => {
       //Process job
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.processJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.InProgress + 1)) {
         await val.func(...val.args);
       }
       try {
-        await work_quest.connect(employer).verificationJob(...call_flow[setStatus.verificationJob].args);
+        await work_quest.connect(employer).verificationJob();
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
     });
 
-    it("Job status set Verificatiion from non InProcess status: fail", async () => {
+    it("Job status set Verificatiion from non InProgress status: fail", async () => {
       //Assign job
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.assignJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobStart + 1)) {
         await val.func(...val.args);
         try {
-          await call_flow[setStatus.verificationJob].func(...call_flow[setStatus.verificationJob].args);
+          await work_quest.connect(worker).verificationJob();
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
       }
 
-      await call_flow[setStatus.processJob].func(...call_flow[setStatus.processJob].args); //Process job
+      await await work_quest.connect(worker).processJob();
 
-      for (let val of call_flow.slice(setStatus.verificationJob)) {
+      for (let val of call_flow.slice(setStatus.WaitJobVerify)) {
         await val.func(...val.args);
         try {
-          await call_flow[setStatus.verificationJob].func(...call_flow[setStatus.verificationJob].args);
+          await work_quest.connect(worker).verificationJob();
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
-      }
-    });
-  });
-
-
-  describe("Decrease cost of job", () => {
-    it("Decrease cost of job: success", async () => {
-      //Decrease cost job
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.decreaseCostJob + 1)) {
-        await val.func(...val.args);
-      }
-
-      let info = await work_quest.connect(employer).getInfo();
-      expect(info[0]).to.be.equal(job_hash);
-      expect(info[1]).to.be.equal(cost);
-      expect(info[2]).to.be.equal(forfeit);
-      expect(info[3]).to.be.equal(employer.address);
-      expect(info[4]).to.be.equal(worker.address);
-      expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.DecreasedCost);
-    });
-
-    it("Decrease cost from not Verification or DecreasedCost statuses by employer: fail", async () => {
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.processJob + 1)) {
-        await val.func(...val.args);
-        try {
-          await call_flow[setStatus.decreaseCostJob].func(...call_flow[setStatus.decreaseCostJob].args); //Decrease cost
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-
-      await call_flow[setStatus.verificationJob].func(...call_flow[setStatus.verificationJob].args); //Verification
-      await call_flow[setStatus.decreaseCostJob].func(...call_flow[setStatus.decreaseCostJob].args); //Decrease cost
-
-      for (let val of call_flow.slice(setStatus.arbitrationJob)) {
-        await val.func(...val.args);
-        try {
-          await call_flow[setStatus.decreaseCostJob].func(...call_flow[setStatus.decreaseCostJob].args); //Decrease cost
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-    });
-
-    it("Decrease cost from not Arbitration status by arbiter: fail", async () => {
-      //from Publish to DecreaseCost
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.decreaseCostJob + 1)) {
-        await val.func(...val.args);
-        try {
-          await work_quest.connect(arbiter).decreaseCostJob(...call_flow[setStatus.decreaseCostJob].args);
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-      await call_flow[setStatus.arbitrationJob].func(...call_flow[setStatus.arbitrationJob].args); //Arbitration
-      await call_flow[setStatus.reworkJob].func(...call_flow[setStatus.reworkJob].args); //Rework
-      try {
-        await work_quest.connect(arbiter).decreaseCostJob(...call_flow[setStatus.decreaseCostJob].args);
-      } catch (e) {
-        await expect(e.message).to.include(acces_denied_err);
-      }
-    });
-  });
-
-  describe("Rework job", () => {
-    it("Set job to rework: success", async () => {
-      for (let val of call_flow) {
-        await val.func(...val.args);
-      }
-
-      let info = await work_quest.connect(employer).getInfo();
-      expect(info[0]).to.be.equal(job_hash);
-      expect(info[1]).to.be.equal(cost);
-      expect(info[2]).to.be.equal(forfeit);
-      expect(info[3]).to.be.equal(employer.address);
-      expect(info[4]).to.be.equal(worker.address);
-      expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.Rework);
-    });
-
-    it("Rework from not Verification status by employer: fail", async () => {
-      //from Publish to InProcess
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.processJob + 1)) {
-        await val.func(...val.args);
-        try {
-          await work_quest.connect(employer).reworkJob(...call_flow[setStatus.reworkJob].args); //Rework
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-
-      await call_flow[setStatus.verificationJob].func(...call_flow[setStatus.verificationJob].args); //Verification
-
-      for (let val of call_flow.slice(setStatus.decreaseCostJob)) {
-        await val.func(...val.args);
-        try {
-          await work_quest.connect(employer).reworkJob(...call_flow[setStatus.reworkJob].args); //Rework
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-    });
-
-    it("Rework from not Arbitration status by arbiter: fail", async () => {
-      //from Publish to DecreasedCost
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.decreaseCostJob + 1)) {
-        await val.func(...val.args);
-        try {
-          await call_flow[setStatus.reworkJob].func(...call_flow[setStatus.reworkJob].args); //Rework by arbiter
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-
-      await call_flow[setStatus.arbitrationJob].func(...call_flow[setStatus.arbitrationJob].args); //Arbitration
-      await call_flow[setStatus.reworkJob].func(...call_flow[setStatus.reworkJob].args); //Rework
-
-      try {
-        await work_quest.connect(employer).reworkJob(...call_flow[setStatus.reworkJob].args); //Rework
-      } catch (e) {
-        await expect(e.message).to.include(acces_denied_err);
       }
     });
   });
 
   describe("Arbitration job", () => {
     it("Set job to arbitration: success", async () => {
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.arbitrationJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.Arbitration + 1)) {
         await val.func(...val.args);
       }
+
+      let info = await work_quest.connect(employer).getInfo();
+      expect(info[0]).to.be.equal(job_hash);
+      expect(info[1]).to.be.equal(cost);
+      expect(info[2]).to.be.equal(0);
+      expect(info[3]).to.be.equal(employer.address);
+      expect(info[4]).to.be.equal(worker.address);
+      expect(info[5]).to.be.equal(arbiter.address);
+      expect(info[6]).to.be.equal(JobStatus.Arbitration);
+    });
+
+    it("Set job to arbitration from not WaitJobVerify status by employer: fail", async () => {
+      //from Publish to Process
+      for (let val of call_flow.slice(setStatus.Published, setStatus.InProgress + 1)) {
+        await val.func(...val.args);
+        try {
+          await work_quest.connect(employer).arbitration(); //Arbitration
+        } catch (e) {
+          await expect(e.message).to.include(acces_denied_err);
+        }
+      }
+
+      await work_quest.connect(worker).verificationJob(); //WaitJobVerify
+
+      for (let val of call_flow.slice(setStatus.Arbitration)) {
+        await val.func(...val.args);
+        try {
+          await work_quest.connect(employer).arbitration(); //Arbitration
+        } catch (e) {
+          await expect(e.message).to.include(acces_denied_err);
+        }
+      }
+    });
+  });
+
+  describe("Rework job", () => {
+    it("Set job to rework: success", async () => {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.Arbitration + 1)) {
+        await val.func(...val.args);
+      }
+      await work_quest.connect(arbiter).arbitrationRework();
+
+      let info = await work_quest.connect(employer).getInfo();
+      expect(info[0]).to.be.equal(job_hash);
+      expect(info[1]).to.be.equal(cost);
+      expect(info[2]).to.be.equal(0);
+      expect(info[3]).to.be.equal(employer.address);
+      expect(info[4]).to.be.equal(worker.address);
+      expect(info[5]).to.be.equal(arbiter.address);
+      expect(info[6]).to.be.equal(JobStatus.InProgress);
+    });
+
+    it("Rework from not Arbitration status: fail", async () => {
+      //from Publish to InProgress
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobVerify + 1)) {
+        await val.func(...val.args);
+        try {
+          await work_quest.connect(arbiter).arbitrationRework(); //Rework
+        } catch (e) {
+          await expect(e.message).to.include(acces_denied_err);
+        }
+      }
+      await work_quest.connect(employer).arbitration();
+      await work_quest.connect(arbiter).arbitrationAcceptWork();
+      try {
+        await work_quest.connect(arbiter).arbitrationRework(); //Rework
+      } catch (e) {
+        await expect(e.message).to.include(acces_denied_err);
+      }
+    });
+  });
+
+  describe("Decrease cost of job", () => {
+    it("Decrease cost of job: success", async () => {
+      //Decrease cost job
+      for (let val of call_flow.slice(setStatus.Published, setStatus.Arbitration + 1)) {
+        await val.func(...val.args);
+      }
+
+      await work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit);
 
       let info = await work_quest.connect(employer).getInfo();
       expect(info[0]).to.be.equal(job_hash);
@@ -450,62 +431,33 @@ describe("Work Quest contract", () => {
       expect(info[3]).to.be.equal(employer.address);
       expect(info[4]).to.be.equal(worker.address);
       expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.Arbitration);
+      expect(info[6]).to.be.equal(JobStatus.Finished);
     });
 
-    it("Set job to arbitration from not Verification status by employer: fail", async () => {
-      //from Publish to Process
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.processJob + 1)) {
+    it("Decrease cost from not Arbitration status: fail", async () => {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.Arbitration)) {
         await val.func(...val.args);
         try {
-          await work_quest.connect(employer).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
+          await work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit);
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
       }
-
-      await call_flow[setStatus.verificationJob].func(...call_flow[setStatus.verificationJob].args); //Verification
-
-      for (let val of call_flow.slice(setStatus.decreaseCostJob)) {
+      for (let val of call_flow.slice(setStatus.Arbitration, setStatus.Finished)) {
         await val.func(...val.args);
-        try {
-          await work_quest.connect(employer).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
       }
-    });
-
-    it("Set job to arbitration from not Rework or DecreasedCost statuses by worker: fail", async () => {
-      //from Publish to Verification
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.verificationJob + 1)) {
-        await val.func(...val.args);
-        try {
-          await work_quest.connect(worker).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-
-      await call_flow[setStatus.decreaseCostJob].func(...call_flow[setStatus.decreaseCostJob].args); // DecreasedCost
-      await work_quest.connect(worker).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
-
       try {
-        await work_quest.connect(worker).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
+        work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit);
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
-
-      await call_flow[setStatus.reworkJob].func(...call_flow[setStatus.reworkJob].args); //Rework
-      await work_quest.connect(worker).arbitrationJob(...call_flow[setStatus.arbitrationJob].args); //Arbitration
     });
-
   });
 
   describe("Accept job", () => {
     it("Accept job by employer: success", async () => {
-      //to Verification
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.verificationJob + 1)) {
+      //to WaitJobVerify
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobVerify + 1)) {
         await val.func(...val.args);
       }
       expect(
@@ -515,7 +467,7 @@ describe("Work Quest contract", () => {
       let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address);
       let workerBalance = await web3.eth.getBalance(worker.address);
 
-      await work_quest.connect(employer).acceptJob();
+      await work_quest.connect(employer).acceptJobResult();
 
       // FIXME: different values for ever test
       // expect(
@@ -530,34 +482,30 @@ describe("Work Quest contract", () => {
       ).to.be.equal('0');
 
       let info = await work_quest.connect(employer).getInfo();
-      expect(info[6]).to.be.equal(JobStatus.Accepted);
+      expect(info[6]).to.be.equal(JobStatus.Finished);
 
     });
 
-    it("Accept job by worker after decrease cost: success", async () => {
-      //Decrease cost
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.decreaseCostJob + 1)) {
-        await val.func(...val.args);
-      }
-
+    it("Accept job by arbiter: success", async () => {
       // Contract balance before accept
-      expect(
-        (await web3.eth.getBalance(work_quest.address)).toString()
-      ).to.be.equal(cost.toString());
+      // expect(
+      //   (await web3.eth.getBalance(work_quest.address)).toString()
+      // ).to.be.equal(cost.toString());
 
       let info = await work_quest.connect(employer).getInfo();
       expect(info[1]).to.be.equal(cost);
-      expect(info[2]).to.be.equal(forfeit);
+
+      for (let val of call_flow.slice(setStatus.Published, setStatus.Finished + 1)) {
+        await val.func(...val.args);
+      }
 
       let employerBalance = await web3.eth.getBalance(employer.address);
       let workerBalance = await web3.eth.getBalance(worker.address);
       let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address);
 
-      await work_quest.connect(worker).acceptJob();
-
-      expect(
-        (await web3.eth.getBalance(employer.address) - employerBalance).toString()
-      ).to.equal(forfeit.toString());
+      // expect(
+      //   (await web3.eth.getBalance(employer.address) - employerBalance).toString()
+      // ).to.equal(forfeit.toString());
 
       //FIXME: different values for ever test
       // expect(
@@ -572,49 +520,27 @@ describe("Work Quest contract", () => {
       ).to.equal('0');
 
       info = await work_quest.connect(employer).getInfo();
-      expect(info[6]).to.be.equal(JobStatus.Accepted);
+      expect(info[6]).to.be.equal(JobStatus.Finished);
 
     });
 
-    it("Accept job from not Verification status by employer: fail", async () => {
-      //from Publish to InProcess
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.processJob + 1)) {
+    it("Accept job result from not WaitJobVerify status by employer: fail", async () => {
+      //from Publish to InProgress
+      for (let val of call_flow.slice(setStatus.Published, setStatus.InProgress + 1)) {
         await val.func(...val.args);
         try {
-          await work_quest.connect(employer).acceptJob();
+          await work_quest.connect(employer).acceptJobResult();
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
       }
 
-      await call_flow[setStatus.verificationJob].func(...call_flow[setStatus.verificationJob].args); //Verification
+      await work_quest.connect(worker).verificationJob(); //WaitJobVerify
 
-      for (let val of call_flow.slice(setStatus.decreaseCostJob)) {
+      for (let val of call_flow.slice(setStatus.Arbitration)) {
         await val.func(...val.args);
         try {
-          await work_quest.connect(employer).acceptJob();
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-    });
-
-    it("Accept job from not DecreasedCost status by worker: fail", async () => {
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.verificationJob + 1)) {
-        await val.func(...val.args);
-        try {
-          await work_quest.connect(worker).acceptJob();
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
-
-      await call_flow[setStatus.decreaseCostJob].func(...call_flow[setStatus.decreaseCostJob].args); //DecreasedCost
-
-      for (let val of call_flow.slice(setStatus.arbitrationJob)) {
-        await val.func(...val.args);
-        try {
-          await work_quest.connect(worker).acceptJob();
+          await work_quest.connect(employer).acceptJobResult();
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -622,39 +548,37 @@ describe("Work Quest contract", () => {
     });
 
     it("Accept job from not Arbitration status by arbiter: fail", async () => {
-      //from Publish to DecreasedCost
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.decreaseCostJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobVerify + 1)) {
         await val.func(...val.args);
         try {
-          await work_quest.connect(arbiter).acceptJob();
+          await work_quest.connect(arbiter).arbitrationAcceptWork();
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
       }
 
-      await call_flow[setStatus.arbitrationJob].func(...call_flow[setStatus.arbitrationJob].args); //Arbitration
-
-      await call_flow[setStatus.reworkJob].func(...call_flow[setStatus.reworkJob].args); //Rework
+      await work_quest.connect(employer).arbitration(); // Arbitration
+      await work_quest.connect(arbiter).arbitrationAcceptWork(); // Finished
       try {
-        await work_quest.connect(arbiter).acceptJob();
+        await work_quest.connect(worker).arbitrationAcceptWork();
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
     });
   });
 
-  describe("Decline job", () => {
-    it("Decline job: success", async () => {
-      //set Verification
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.verificationJob + 1)) {
+  describe("Reject job", () => {
+    it("Reject job by arbiter: success", async () => {
+      //set WaitJobVerify
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobVerify + 1)) {
         await val.func(...val.args);
       }
-      await work_quest.connect(employer).arbitrationJob();
+      await work_quest.connect(employer).arbitration();
 
       let employerBalance = await web3.eth.getBalance(employer.address);
       let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address)
 
-      await work_quest.connect(arbiter).declineJob();
+      await work_quest.connect(arbiter).arbitrationRejectWork();
 
       // FIXME: different values for ever test
       // expect(
@@ -672,25 +596,25 @@ describe("Work Quest contract", () => {
       expect(info[3]).to.be.equal(employer.address);
       expect(info[4]).to.be.equal(worker.address);
       expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.Declined);
+      expect(info[6]).to.be.equal(JobStatus.Finished);
     });
 
-    it("Decline job from non Arbitration status by arbiter: fail", async () => {
+    it("Reject work from non Arbitration status: fail", async () => {
       //from Publish to DecreasedCost
-      for (let val of call_flow.slice(setStatus.publishJob, setStatus.decreaseCostJob + 1)) {
+      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitJobVerify + 1)) {
         await val.func(...val.args);
         try {
-          await work_quest.connect(arbiter).declineJob();
+          await work_quest.connect(arbiter).arbitrationRejectWork();
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
       }
 
-      await call_flow[setStatus.arbitrationJob].func(...call_flow[setStatus.arbitrationJob].args); //Arbitration
+      await work_quest.connect(employer).arbitration();; //Arbitration
+      await work_quest.connect(arbiter).arbitrationAcceptWork(); //Finished
 
-      await call_flow[setStatus.reworkJob].func(...call_flow[setStatus.reworkJob].args); //Rework
       try {
-        await work_quest.connect(arbiter).declineJob();
+        await work_quest.connect(arbiter).arbitrationRejectWork();
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }

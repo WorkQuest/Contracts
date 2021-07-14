@@ -53,13 +53,11 @@ contract WorkQuest {
      */
     enum JobStatus {
         New,
-        Cancelled,
         Published,
         WaitWorker,
         WaitJobStart,
         InProgress,
         WaitJobVerify,
-        DecreasedCost,
         Arbitration,
         Finished
     }
@@ -154,7 +152,7 @@ contract WorkQuest {
 
     function cancelJob() public {
         require(status == JobStatus.New && msg.sender == employer, errMsg);
-        status = JobStatus.Cancelled;
+        status = JobStatus.Finished;
         emit JobCancelled();
     }
 
@@ -166,7 +164,7 @@ contract WorkQuest {
         uint256 comission = (cost * fee) / 1e18;
         require(msg.value >= cost + comission, "WorkQuest: Insuffience amount");
         status = JobStatus.Published;
-        if (msg.value > (cost + comission)) {
+        if (msg.value > cost + comission) {
             payable(msg.sender).transfer(msg.value - cost - comission);
         }
         feeReceiver.transfer(comission);
@@ -259,16 +257,12 @@ contract WorkQuest {
     /**
      * @notice Arbiter send job to rework
      */
-    function arbitrationRework(uint256 _deadline) public {
+    function arbitrationRework() public {
         require(
             msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
         );
-        require(
-            _deadline > deadline,
-            "WorkQuest: New deadline time is less then old"
-        );
-        deadline = _deadline;
+        deadline = block.timestamp + 3 days;
         status = JobStatus.InProgress;
         emit ArbitrationRework();
     }
