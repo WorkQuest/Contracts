@@ -4,6 +4,13 @@ require('./tasks');
 require('dotenv').config();
 require('hardhat-docgen');
 
+let mnemonic;
+if (!process.env.MNEMONIC) {
+  throw new Error('Please set your MNEMONIC in a .env file');
+} else {
+  mnemonic = process.env.MNEMONIC;
+}
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
@@ -12,12 +19,18 @@ module.exports = {
     },
     testnet: {
       url: "https://dev-node-ams3.workquest.co/",
-      accounts: {mnemonic: process.env.MNEMONIC},
+      accounts: { mnemonic: mnemonic },
       gasPrice: 10000000000
     }
   },
+  paths: {
+    artifacts: './artifacts',
+    cache: './cache',
+    sources: './contracts',
+    tests: './test',
+  },
   solidity: {
-    version: "0.8.6",
+    version: "0.8.4",
     settings: {
       optimizer: {
         enabled: true,
