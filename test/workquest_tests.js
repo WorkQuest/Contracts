@@ -128,6 +128,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -156,6 +157,7 @@ describe("Work Quest contract", () => {
       await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
       try {
         await work_quest.connect(worker).assignJob(...call_flow[setStatus.WaitWorker].args);
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -166,6 +168,7 @@ describe("Work Quest contract", () => {
       await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
       try {
         await work_quest.connect(employer).assignJob(nullstr);
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include('WorkQuest: Invalid address');
       }
@@ -174,6 +177,7 @@ describe("Work Quest contract", () => {
     it("Assign job from non Public statuses: fail", async () => {
       try {
         await work_quest.connect(employer).assignJob(...call_flow[setStatus.WaitWorker].args);
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -184,6 +188,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(employer).assignJob(...call_flow[setStatus.WaitWorker].args);
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -206,32 +211,35 @@ describe("Work Quest contract", () => {
     });
 
     it("Worker accepted job from not WaitWorker status: fail", async () => {
-      //New status
+      // New status
       try {
         await work_quest.connect(worker).acceptJob();
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
 
-      for (let val of call_flow.slice(setStatus.Published, setStatus.WaitWorker + 1)) {
+      // Published
+      await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
+      try {
+        await work_quest.connect(worker).acceptJob();
+        throw new Error('Not reverted');
+      } catch (e) {
+        await expect(e.message).to.include(acces_denied_err);
+      }
+      // WaitWorker
+      await call_flow[setStatus.WaitWorker].func(...call_flow[setStatus.WaitWorker].args);
+      await work_quest.connect(worker).acceptJob();
+
+      for (let val of call_flow.slice(setStatus.InProgress)) {
         await val.func(...val.args);
         try {
           await work_quest.connect(worker).acceptJob();
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
       }
-
-      // await work_quest.connect(worker).acceptJob();
-
-      // for (let val of call_flow.slice(setStatus.InProgress)) {
-      //   await val.func(...val.args);
-      //   try {
-      //     await work_quest.connect(worker).acceptJob();
-      //   } catch (e) {
-      //     await expect(e.message).to.include(acces_denied_err);
-      //   }
-      // }
     });
   });
 
@@ -259,6 +267,7 @@ describe("Work Quest contract", () => {
       }
       try {
         await work_quest.connect(employer).processJob(...call_flow[setStatus.InProgress].args);
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -268,6 +277,7 @@ describe("Work Quest contract", () => {
       await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
       try {
         await call_flow[setStatus.InProgress].func(...call_flow[setStatus.InProgress].args);
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -278,6 +288,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await call_flow[setStatus.InProgress].func(...call_flow[setStatus.InProgress].args);
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -309,6 +320,7 @@ describe("Work Quest contract", () => {
       }
       try {
         await work_quest.connect(employer).verificationJob();
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -320,6 +332,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(worker).verificationJob();
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -331,6 +344,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(worker).verificationJob();
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -360,6 +374,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(employer).arbitration(); //Arbitration
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -371,6 +386,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(employer).arbitration(); //Arbitration
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -401,6 +417,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(arbiter).arbitrationRework(); //Rework
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -409,6 +426,7 @@ describe("Work Quest contract", () => {
       await work_quest.connect(arbiter).arbitrationAcceptWork();
       try {
         await work_quest.connect(arbiter).arbitrationRework(); //Rework
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -439,15 +457,17 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit);
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
       }
-      for (let val of call_flow.slice(setStatus.Arbitration, setStatus.Finished)) {
+      for (let val of call_flow.slice(setStatus.Arbitration, setStatus.Finished + 1)) {
         await val.func(...val.args);
       }
       try {
-        work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit);
+        await work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit);
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -530,6 +550,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(employer).acceptJobResult();
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -541,6 +562,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(employer).acceptJobResult();
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -552,6 +574,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(arbiter).arbitrationAcceptWork();
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -561,6 +584,7 @@ describe("Work Quest contract", () => {
       await work_quest.connect(arbiter).arbitrationAcceptWork(); // Finished
       try {
         await work_quest.connect(worker).arbitrationAcceptWork();
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
@@ -605,6 +629,7 @@ describe("Work Quest contract", () => {
         await val.func(...val.args);
         try {
           await work_quest.connect(arbiter).arbitrationRejectWork();
+          throw new Error('Not reverted');
         } catch (e) {
           await expect(e.message).to.include(acces_denied_err);
         }
@@ -615,6 +640,7 @@ describe("Work Quest contract", () => {
 
       try {
         await work_quest.connect(arbiter).arbitrationRejectWork();
+        throw new Error('Not reverted');
       } catch (e) {
         await expect(e.message).to.include(acces_denied_err);
       }
