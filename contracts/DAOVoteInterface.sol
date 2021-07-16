@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
-pragma experimental ABIEncoderV2;
+pragma solidity =0.8.4;
 
-contract DAO_Events {
+contract DAOEvents {
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(
         uint256 id,
@@ -29,7 +28,7 @@ contract DAO_Events {
  * @title Storage for DAO
 
  */
-contract DAO_DelegateStorage {
+contract DAODelegateStorage {
     // The maximum setable proposal threshold
     uint256 public constant proposalThreshold = 10000e18; //10,000
 

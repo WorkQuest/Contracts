@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
-pragma experimental ABIEncoderV2;
+pragma solidity =0.8.4;
 
-import "./DAO_VoteI.sol";
+import "./DAOVoteInterface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract DAO_Ballot is DAO_DelegateStorage, DAO_Events, AccessControl {
+contract DAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
     /**
      * @notice Initializes the contract
      * @param _voteToken The address of the DAO token
@@ -14,7 +13,6 @@ contract DAO_Ballot is DAO_DelegateStorage, DAO_Events, AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(CHAIRPERSON_ROLE, chairPerson);
-        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
         token = TokenInterface(_voteToken);
     }
 

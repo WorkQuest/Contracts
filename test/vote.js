@@ -9,7 +9,7 @@ const envConfig = dotenv.parse(fs.readFileSync(".env"));
 for (const k in envConfig) {
     process.env[k] = envConfig[k]
 }
-/*
+
 describe('Governance token test', () => {
 
     let tokenFactory;
@@ -18,8 +18,8 @@ describe('Governance token test', () => {
     const today = new Date();
 
     beforeEach(async () => {
-        tokenFactory = await ethers.getContractFactory('DAO_Token');
-        voteFactory = await ethers.getContractFactory("DAO_Ballot");
+        tokenFactory = await ethers.getContractFactory('WQToken');
+        voteFactory = await ethers.getContractFactory("DAOBallot");
         [owner, user_one, user_two, user_three] = await ethers.getSigners();
         token = await tokenFactory.deploy(
         );
@@ -33,8 +33,8 @@ describe('Governance token test', () => {
         it("Token deploy", async () => {
             expect(await token.owner()).to.equal(owner.address);
             expect(await token._totalSupply()).to.equal(ethers.utils.parseEther("100000000"));
-            expect(await token.symbol()).to.equal("DOT");
-            expect(await token.name()).to.equal("DAO_Token");
+            expect(await token.symbol()).to.equal("WQT");
+            expect(await token.name()).to.equal("WorkQuest Token");
         })
         it("Vote deploy", async () => {
             expect(await vote.token()).to.equal(token.address);
@@ -44,22 +44,22 @@ describe('Governance token test', () => {
         })
     })
     describe("Token test", () => {
-        // describe("Base functions", () => {
-        //     it("BalanceOf", async () => {
-        //         expect(await token.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("100000000"));
-        //     });
-        //     it("votePowerOf", async () => {
-        //         expect(await token.votePowerOf(owner.address)).to.equal(0);
-        //     });
-        // });
+        describe("Base functions", () => {
+            it("BalanceOf", async () => {
+                expect(await token.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("100000000"));
+            });
+            it("votePowerOf", async () => {
+                expect(await token.votePowerOf(owner.address)).to.equal(0);
+            });
+        });
         describe("Allowance", () => {
             it("increaseAllowance", async () => {
-                token.increaseAllowance(user_one.address, ethers.utils.parseEther("50"));
+                await token.connect(owner).increaseAllowance(user_one.address, ethers.utils.parseEther("50"));
                 expect(await token.allowance(owner.address, user_one.address)).to.equal(ethers.utils.parseEther("50"));
             })
             it("decreaseAllowance", async () => {
-                token.increaseAllowance(user_one.address, ethers.utils.parseEther("50"));
-                token.decreaseAllowance(user_one.address, ethers.utils.parseEther("30"));
+                await token.connect(owner).increaseAllowance(user_one.address, ethers.utils.parseEther("50"));
+                await token.connect(owner).decreaseAllowance(user_one.address, ethers.utils.parseEther("30"));
                 expect(await token.allowance(owner.address, user_one.address)).to.equal(ethers.utils.parseEther("20"));
             })
             it("Shouldn't decrease allowance below zero", async () => {
@@ -185,4 +185,3 @@ describe('Governance token test', () => {
         })
     })
 })
-*/
