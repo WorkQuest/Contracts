@@ -3,7 +3,7 @@ const exp = require('constants');
 const dotenv = require('dotenv');
 // const { ethers } = require('ethers');
 const fs = require('fs');
-const { ethers } = require('hardhat');
+const { ethers, upgrades } = require('hardhat');
 const envConfig = dotenv.parse(fs.readFileSync(".env"));
 
 for (const k in envConfig) {
@@ -11,28 +11,26 @@ for (const k in envConfig) {
 }
 
 describe('Governance token test', () => {
-
-    let tokenFactory;
     let token;
     let owner;
-    const today = new Date();
+    let user_one;
+    let user_two;
+    let user_three;
 
     beforeEach(async () => {
-        tokenFactory = await ethers.getContractFactory('WQToken');
-        voteFactory = await ethers.getContractFactory("DAOBallot");
         [owner, user_one, user_two, user_three] = await ethers.getSigners();
-        token = await tokenFactory.deploy(
-        );
-        vote = await voteFactory.deploy(
-            owner.address,
-            token.address
-        )
+
+        const WQToken = await ethers.getContractFactory('WQToken');
+        token = await upgrades.deployProxy(WQToken, [ethers.utils.parseEther("100000000")], {initializer: 'initialize'});
+
+        const DAOBallot = await ethers.getContractFactory("DAOBallot");
+        vote = await DAOBallot.deploy(owner.address, token.address);
         await vote.addProposal("", 6000, 2);
     });
     describe("Deploy test", () => {
         it("Token deploy", async () => {
             expect(await token.owner()).to.equal(owner.address);
-            expect(await token._totalSupply()).to.equal(ethers.utils.parseEther("100000000"));
+            expect(await token.totalSupply()).to.equal(ethers.utils.parseEther("100000000"));
             expect(await token.symbol()).to.equal("WQT");
             expect(await token.name()).to.equal("WorkQuest Token");
         })
@@ -63,7 +61,7 @@ describe('Governance token test', () => {
                 expect(await token.allowance(owner.address, user_one.address)).to.equal(ethers.utils.parseEther("20"));
             })
             it("Shouldn't decrease allowance below zero", async () => {
-                await expect(token.decreaseAllowance(user_one.address, ethers.utils.parseEther("30"))).to.revertedWith("ERC20: decreased allowance below zero");
+                await expect(token.decreaseAllowance(user_one.address, ethers.utils.parseEther("30"))).to.revertedWith("WQT: decreased allowance below zero");
             })
         })
         describe("Transfer", () => {
@@ -78,14 +76,14 @@ describe('Governance token test', () => {
                 expect(await token.balanceOf(user_two.address)).to.equal(ethers.utils.parseEther("50"));
             })
             it("Shouldn't transfer more than balance", async () => {
-                await expect(token.connect(user_one).transfer(user_two.address, ethers.utils.parseEther("50"))).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+                await expect(token.connect(user_one).transfer(user_two.address, ethers.utils.parseEther("50"))).to.be.revertedWith("WQT: transfer amount exceeds balance");
             })
             it("Shouldn't transfer from user more than balance", async () => {
                 await token.connect(user_two).increaseAllowance(user_one.address, ethers.utils.parseEther("50"));
-                await expect(token.connect(user_one).transferFrom(user_two.address, user_one.address, ethers.utils.parseEther("50"))).to.revertedWith("ERC20: transfer amount exceeds balance");
+                await expect(token.connect(user_one).transferFrom(user_two.address, user_one.address, ethers.utils.parseEther("50"))).to.revertedWith("WQT: transfer amount exceeds balance");
             })
             it("Shouldn't transfer more than allowance", async () => {
-                await expect(token.connect(user_one).transferFrom(owner.address, user_two.address, ethers.utils.parseEther("50"))).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+                await expect(token.connect(user_one).transferFrom(owner.address, user_two.address, ethers.utils.parseEther("50"))).to.be.revertedWith("WQT: transfer amount exceeds allowance");
             })
         })
         describe("Delegate", () => {

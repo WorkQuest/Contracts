@@ -1,8 +1,8 @@
-
+require('@openzeppelin/hardhat-upgrades');
 require("@nomiclabs/hardhat-waffle");
 require('./tasks');
-require('dotenv').config();
 require('hardhat-docgen');
+require('dotenv').config();
 
 let mnemonic;
 if (!process.env.MNEMONIC) {

@@ -4,6 +4,48 @@ pragma solidity ^0.8.0;
 import "./PensionFund.sol";
 
 contract WorkQuest {
+    string constant errMsg = "WorkQuest: Access denied or invalid status";
+
+    /**
+     * @notice Job offer statuses
+     */
+    enum JobStatus {
+        New,
+        Published,
+        WaitWorker,
+        WaitJobStart,
+        InProgress,
+        WaitJobVerify,
+        Arbitration,
+        Finished
+    }
+
+    /// @notice Fee coefficient of workquest
+    uint256 public immutable fee;
+    /// @notice Fee receiver address
+    address payable public immutable feeReceiver;
+    /// @notice Pension wallet factory contract address
+    address payable public immutable pensionFund;
+    /// @notice Address of employer
+    address payable public immutable employer;
+    /// @notice Address of arbiter
+    address payable public immutable arbiter;
+
+    /// @notice Hash of a text of a job offer
+    bytes32 public jobHash;
+    /// @notice Cost of job
+    uint256 public cost;
+    /// @notice Forfeit amount if worker didn't  job
+    uint256 public forfeit;
+    /// @notice Address of worker
+    address payable public worker;
+    /// @notice Current status of job
+    JobStatus public status;
+    /// @notice Deadline timestamp
+    uint256 public deadline;
+    /// @notice Done timestamp of job
+    uint256 public timeDone;
+
     /// @notice Event emitted when job created
     event WorkQuestCreated(bytes32 jobHash);
 
@@ -45,48 +87,6 @@ contract WorkQuest {
 
     /// @notice Event emitted when
     event ArbitrationRejectWork();
-
-    string constant errMsg = "WorkQuest: Access denied or invalid status";
-
-    /**
-     * @notice Job offer statuses
-     */
-    enum JobStatus {
-        New,
-        Published,
-        WaitWorker,
-        WaitJobStart,
-        InProgress,
-        WaitJobVerify,
-        Arbitration,
-        Finished
-    }
-
-    /// @notice Fee coefficient of workquest
-    uint256 public immutable fee;
-    /// @notice Fee receiver address
-    address payable public immutable feeReceiver;
-    /// @notice Pension wallet factory contract address
-    address payable public immutable pensionFund;
-    /// @notice Address of employer
-    address payable public immutable employer;
-    /// @notice Address of arbiter
-    address payable public immutable arbiter;
-
-    /// @notice Hash of a text of a job offer
-    bytes32 public jobHash;
-    /// @notice Cost of job
-    uint256 public cost;
-    /// @notice Forfeit amount if worker didn't  job
-    uint256 public forfeit;
-    /// @notice Address of worker
-    address payable public worker;
-    /// @notice Current status of job
-    JobStatus public status;
-    /// @notice Deadline timestamp
-    uint256 public deadline;
-
-    uint256 public timeDone;
 
     /**
      * @notice Create new WorkQuest contract

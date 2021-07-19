@@ -5,28 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WorkQuest.sol";
 
 contract WorkQuestFactory is AccessControl {
-    /**
-     * @notice Event emited when new workquest contract created
-     */
-    event WorkQuestCreated(
-        bytes32 jobHash,
-        address employer,
-        address workquest,
-        uint256 createdAt
-    );
-
-    struct ArbiterInfo {
-        uint256 index;
-        bool enabled;
-    }
-
     bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    /// @notice Mapping of employer address to list of workquest addresses
-    mapping(address => address[]) public workquests;
-
-    /// @notice Mapping of arbiters adresses to boolean enabled
-    mapping(address => ArbiterInfo) public arbiters;
 
     /// @notice List of arbiters adresses
     address payable[] public arbiterList;
@@ -41,6 +20,26 @@ contract WorkQuestFactory is AccessControl {
 
     /// @notice Address of pension fund contract
     address payable public immutable pensionFund;
+
+    /// @notice Mapping of employer address to list of workquest addresses
+    mapping(address => address[]) public workquests;
+
+    struct ArbiterInfo {
+        uint256 index;
+        bool enabled;
+    }
+    /// @notice Mapping of arbiters adresses to boolean enabled
+    mapping(address => ArbiterInfo) public arbiters;
+
+    /**
+     * @notice Event emited when new workquest contract created
+     */
+    event WorkQuestCreated(
+        bytes32 jobHash,
+        address employer,
+        address workquest,
+        uint256 createdAt
+    );
 
     /**
      * @notice Create new WorkQuestFactory contract
@@ -76,7 +75,7 @@ contract WorkQuestFactory is AccessControl {
      * @param employer Address of employer
      */
     function getWorkQuests(address employer)
-        public
+        external
         view
         returns (address[] memory)
     {
@@ -93,7 +92,7 @@ contract WorkQuestFactory is AccessControl {
         bytes32 jobHash,
         uint256 cost,
         uint256 deadline
-    ) public returns (address workquest) {
+    ) external returns (address workquest) {
         workquest = address(
             new WorkQuest(
                 jobHash,
@@ -117,7 +116,7 @@ contract WorkQuestFactory is AccessControl {
      * @param enabled true - enable arbiter address, false - disable
      */
     function updateArbiter(address payable arbiter, bool enabled)
-        public
+        external
         onlyAdmin
     {
         if (enabled && !arbiters[arbiter].enabled) {
@@ -137,7 +136,10 @@ contract WorkQuestFactory is AccessControl {
      * @notice Update address of fee receiver
      * @param _feeReceiver Address of fee receiver
      */
-    function updateFeeReceiver(address payable _feeReceiver) public onlyAdmin {
+    function updateFeeReceiver(address payable _feeReceiver)
+        external
+        onlyAdmin
+    {
         feeReceiver = _feeReceiver;
     }
 

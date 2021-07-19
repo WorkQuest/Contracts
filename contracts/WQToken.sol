@@ -5,6 +5,12 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract WQToken {
+    /// @notice Checkpoint structure
+    struct Checkpoint {
+        uint32 fromBlock;
+        uint224 votes;
+    }
+
     /// @notice EIP-20 token name for this token
     string public constant name = "WorkQuest Token";
 
@@ -15,26 +21,50 @@ contract WQToken {
     uint8 public constant decimals = 18;
 
     /// @notice Total number of tokens in circulation
-    uint256 public _totalSupply = 100000000e18; // 100 million Comp
+    uint256 public totalSupply;
 
+    /// @notice Transfer token is locked while _locked is true
+    bool private _locked;
+
+    /// @notice Locking of transfer is impossible if _unlockFixed is true
+    bool private _unlockFixed;
+
+    /// @notice
+    address private _saleContract;
+
+    /// @notice Address of an owner
     address public owner;
 
-    struct Checkpoint {
-        uint32 fromBlock;
-        uint224 votes;
-    }
+    /// @notice
+    bool private _initialized;
 
+    /// @notice
     mapping(address => address) private _delegates;
 
+    /// @notice
     mapping(address => Checkpoint[]) private _checkpoints;
 
+    /// @notice
     mapping(address => uint256) private _balances;
 
+    /// @notice
     mapping(address => uint256) private _voteLockedTokenBalance; // maps user's address to voteToken balance
 
+    /// @notice
     mapping(address => mapping(address => uint256)) private _allowances;
 
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * another (`to`).
+     *
+     * Note that `value` may be zero.
+     */
     event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to {approve}. `value` is the new allowance.
+     */
     event Approval(
         address indexed owner,
         address indexed spender,
@@ -59,12 +89,19 @@ contract WQToken {
         uint256 newBalance
     );
 
-    constructor() {
+    function initialize(uint256 initialSupply) external {
+        require(
+            !_initialized,
+            "WQT: Contract instance has already been initialized"
+        );
+        _initialized = true;
         owner = msg.sender;
-        _balances[owner] = _totalSupply;
-        emit Transfer(address(0), owner, _totalSupply);
+        _mint(owner, initialSupply);
     }
 
+    /**
+     * @dev Returns the amount of tokens owned by `account`.
+     */
     function balanceOf(address account) public view returns (uint256) {
         return _balances[account];
     }
@@ -73,11 +110,25 @@ contract WQToken {
         return _voteLockedTokenBalance[account];
     }
 
+    /**
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     *
+     * @return A boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
     function transfer(address recipient, uint256 amount) public returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
 
+    /**
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `owner` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
+     */
     function allowance(address account, address spender)
         public
         view
@@ -86,11 +137,34 @@ contract WQToken {
         return _allowances[account][spender];
     }
 
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * IMPORTANT: Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an {Approval} event.
+     */
     function approve(address account, uint256 amount) public returns (bool) {
         _approve(msg.sender, account, amount);
         return true;
     }
 
+    /**
+     * @dev Moves `amount` tokens from `sender` to `recipient` using the
+     * allowance mechanism. `amount` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
     function transferFrom(
         address sender,
         address recipient,
@@ -101,7 +175,7 @@ contract WQToken {
         uint256 currentAllowance = _allowances[sender][msg.sender];
         require(
             currentAllowance >= amount,
-            "ERC20: transfer amount exceeds allowance"
+            "WQT: transfer amount exceeds allowance"
         );
         unchecked {
             _approve(sender, msg.sender, currentAllowance - amount);
@@ -110,6 +184,18 @@ contract WQToken {
         return true;
     }
 
+    /**
+     * @dev Atomically increases the allowance granted to `spender` by the caller.
+     *
+     * This is an alternative to {approve} that can be used as a mitigation for
+     * problems described in {IERC20-approve}.
+     *
+     * Emits an {Approval} event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     */
     function increaseAllowance(address spender, uint256 addedValue)
         public
         returns (bool)
@@ -122,6 +208,20 @@ contract WQToken {
         return true;
     }
 
+    /**
+     * @dev Atomically decreases the allowance granted to `spender` by the caller.
+     *
+     * This is an alternative to {approve} that can be used as a mitigation for
+     * problems described in {IERC20-approve}.
+     *
+     * Emits an {Approval} event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     * - `spender` must have allowance for the caller of at least
+     * `subtractedValue`.
+     */
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
         returns (bool)
@@ -129,7 +229,7 @@ contract WQToken {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(
             currentAllowance >= subtractedValue,
-            "ERC20: decreased allowance below zero"
+            "WQT: decreased allowance below zero"
         );
         unchecked {
             _approve(msg.sender, spender, currentAllowance - subtractedValue);
@@ -138,56 +238,12 @@ contract WQToken {
         return true;
     }
 
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal virtual {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
-
-        _beforeTokenTransfer(sender, recipient, amount);
-
-        uint256 senderBalance = _balances[sender];
-        require(
-            senderBalance >= amount,
-            "ERC20: transfer amount exceeds balance"
-        );
-        unchecked {
-            _balances[sender] = senderBalance - amount;
-        }
-        _balances[recipient] += amount;
-
-        emit Transfer(sender, recipient, amount);
-
-        _afterTokenTransfer(sender, recipient, amount);
-    }
-
-    function _approve(
-        address account,
-        address spender,
-        uint256 amount
-    ) internal virtual {
-        require(account != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
-
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
-    }
-
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal {}
-
     /**
      * @dev Get the `pos`-th checkpoint for `account`.
      */
     function checkpoints(address account, uint32 pos)
         public
         view
-        virtual
         returns (Checkpoint memory)
     {
         return _checkpoints[account][pos];
@@ -196,19 +252,14 @@ contract WQToken {
     /**
      * @dev Get number of checkpoints for `account`.
      */
-    function numCheckpoints(address account)
-        public
-        view
-        virtual
-        returns (uint32)
-    {
+    function numCheckpoints(address account) public view returns (uint32) {
         return SafeCast.toUint32(_checkpoints[account].length);
     }
 
     /**
      * @dev Get the address `account` is currently delegating to.
      */
-    function delegates(address account) public view virtual returns (address) {
+    function delegates(address account) public view returns (address) {
         return _delegates[account];
     }
 
@@ -230,7 +281,7 @@ contract WQToken {
         view
         returns (uint256)
     {
-        require(blockNumber < block.number, "ERC20Votes: block not yet mined");
+        require(blockNumber < block.number, "WQT: block not yet mined");
         return _checkpointsLookup(_checkpoints[account], blockNumber);
     }
 
@@ -243,20 +294,114 @@ contract WQToken {
 
     function withdrawVotingRights(address delegatee, uint256 amount) public {
         require(_voteLockedTokenBalance[delegatee] >= amount);
-        require(delegatee != address(0), "Cant't withdraw from the zero address");
+        require(
+            delegatee != address(0),
+            "WQT: Cant't withdraw from the zero address"
+        );
         _voteLockedTokenBalance[delegatee] -= amount;
         _balances[msg.sender] += amount;
-        _moveVotingPower(delegatee, msg.sender, _voteLockedTokenBalance[delegatee]);
+        _moveVotingPower(
+            delegatee,
+            msg.sender,
+            _voteLockedTokenBalance[delegatee]
+        );
     }
 
     /**
-     * @dev Move voting power when tokens are transferred.
+     * @dev Set the address of the sale contract.
+     * `saleContract` can make token transfers
+     * even when the token contract state is locked.
+     * Transfer lock serves the purpose of preventing
+     * the creation of fake Uniswap pools.
+     *
+     * Added by WorkQuest Team.
+     *
      */
-    function _afterTokenTransfer(
-        address from,
-        address to,
+    function setSaleContract(address saleContract) public {
+        require(
+            msg.sender == owner && _saleContract == address(0),
+            "WQT: Caller must be owner and _saleContract yet unset"
+        );
+        _saleContract = saleContract;
+    }
+
+    /**
+     * @dev Lock token transfers.
+     *
+     * Added by WorkQuest Team.
+     *
+     */
+    function lockTransfers() public {
+        require(
+            msg.sender == owner && !_unlockFixed,
+            "WQT: Caller must be owner and _unlockFixed false"
+        );
+        _locked = true;
+    }
+
+    /**
+     * @dev Unlock token transfers.
+     *
+     * Added by WorkQuest Team.
+     *
+     */
+    function unlockTransfers() public {
+        require(
+            msg.sender == owner && !_unlockFixed,
+            "WQT: Caller must be owner and _unlockFixed false"
+        );
+        _locked = false;
+    }
+
+    /**
+     * @dev Permanently unlock token transfers.
+     * After this, further locking is impossible.
+     *
+     * Added by WorkQuest Team.
+     *
+     */
+    function unlockTransfersPermanent() public {
+        require(
+            msg.sender == owner && !_unlockFixed,
+            "WQT: Caller must be owner and _unlockFixed false"
+        );
+        _locked = false;
+        _unlockFixed = true;
+    }
+
+    function _transfer(
+        address sender,
+        address recipient,
         uint256 amount
     ) internal {
+        require(sender != address(0), "WQT: transfer from the zero address");
+        require(recipient != address(0), "WQT: transfer to the zero address");
+
+        _beforeTokenTransfer();
+
+        uint256 senderBalance = _balances[sender];
+        require(
+            senderBalance >= amount,
+            "WQT: transfer amount exceeds balance"
+        );
+        unchecked {
+            _balances[sender] = senderBalance - amount;
+        }
+        _balances[recipient] += amount;
+
+        emit Transfer(sender, recipient, amount);
+    }
+
+    function _approve(
+        address account,
+        address spender,
+        uint256 amount
+    ) internal {
+        require(account != address(0), "WQT: approve from the zero address");
+        require(spender != address(0), "WQT: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
     }
 
     /**
@@ -267,9 +412,18 @@ contract WQToken {
         address delegatee,
         uint256 amount
     ) internal {
-        require(delegator != address(0), "Cant't delegate fromt the zero address");
-        require(delegatee != address(0), "Cant't delegate to the zero address");
-        require(amount <= _balances[delegator], "Not enough balance to delegate");
+        require(
+            delegator != address(0),
+            "WQT: Cant't delegate fromt the zero address"
+        );
+        require(
+            delegatee != address(0),
+            "WQT: Cant't delegate to the zero address"
+        );
+        require(
+            amount <= _balances[delegator],
+            "WQT: Not enough balance to delegate"
+        );
         address currentDelegate = delegates(delegator);
         _voteLockedTokenBalance[delegatee] += amount;
         _balances[delegator] -= amount;
@@ -277,7 +431,11 @@ contract WQToken {
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
 
-        _moveVotingPower(currentDelegate, delegatee, _voteLockedTokenBalance[delegatee]);
+        _moveVotingPower(
+            currentDelegate,
+            delegatee,
+            _voteLockedTokenBalance[delegatee]
+        );
     }
 
     function _moveVotingPower(
@@ -363,5 +521,86 @@ contract WQToken {
             chainId := chainid()
         }
         return chainId;
+    }
+
+    /**
+     * @dev Maximum token supply. Defaults to `type(uint224).max` (2^224^ - 1).
+     */
+    function _maxSupply() internal pure returns (uint224) {
+        return type(uint224).max;
+    }
+
+    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     */
+    function _mint(address account, uint256 amount) internal {
+        require(account != address(0), "WQT: mint to the zero address");
+        require(
+            totalSupply <= _maxSupply(),
+            "WQT: total supply risks overflowing votes"
+        );
+
+        _beforeTokenTransfer();
+
+        totalSupply += amount;
+        _balances[account] += amount;
+        emit Transfer(address(0), account, amount);
+    }
+
+    /**
+     * @dev Destroys `amount` tokens from `account`, reducing the
+     * total supply.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     * - `account` must have at least `amount` tokens.
+     */
+    function _burn(address account, uint256 amount) internal {
+        require(account != address(0), "WQT: burn from the zero address");
+
+        _beforeTokenTransfer();
+
+        uint256 accountBalance = _balances[account];
+        require(accountBalance >= amount, "WQT: burn amount exceeds balance");
+        unchecked {
+            _balances[account] = accountBalance - amount;
+        }
+        totalSupply -= amount;
+
+        emit Transfer(account, address(0), amount);
+    }
+
+    /**
+     * @dev Hook that is called before any transfer of tokens. This includes
+     * minting and burning.
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * will be transferred to `to`.
+     * - when `from` is zero, `amount` tokens will be minted for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     *
+     * address from,
+     * address to,
+     * uint256 amount
+     */
+    function _beforeTokenTransfer() internal view {
+        require(
+            !_locked || msg.sender == _saleContract,
+            "WQT: Transfers locked"
+        );
     }
 }

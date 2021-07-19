@@ -57,3 +57,7 @@ cache
 .solhint.json
 *.zip
 package-lock.json
+.openzeppelin
+*.txt
+*.docx
+oldContracts/
