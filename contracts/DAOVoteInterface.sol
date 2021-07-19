@@ -100,27 +100,3 @@ contract DAODelegateStorage {
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => VoteResult) public voteResults;
 }
-
-interface TokenInterface {
-    function getPastVotes(address account, uint256 blockNumber)
-        external
-        view
-        returns (uint256);
-
-    function getVotes(address account)
-        external
-        view
-        returns (uint256);
-
-    function balanceOf(address account) external view returns (uint256);
-
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-}

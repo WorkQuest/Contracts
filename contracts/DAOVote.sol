@@ -2,6 +2,7 @@
 pragma solidity =0.8.4;
 
 import "./DAOVoteInterface.sol";
+import "./WQTokenInterface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract DAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
@@ -13,7 +14,7 @@ contract DAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(CHAIRPERSON_ROLE, chairPerson);
-        token = TokenInterface(_voteToken);
+        token = WQTokenInterface(_voteToken);
     }
 
     /**
