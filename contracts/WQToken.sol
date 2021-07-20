@@ -47,11 +47,14 @@ contract WQToken {
     /// @notice
     mapping(address => uint256) private _balances;
 
-    /// @notice
-    mapping(address => uint256) private _voteLockedTokenBalance; // maps user's address to voteToken balance
+    /// @notice maps user's address to voteToken balance
+    mapping(address => uint256) private _voteLockedTokenBalance;
 
     /// @notice
     mapping(address => mapping(address => uint256)) private _allowances;
+
+    /// @notice Bridge address
+    address public bridge;
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
@@ -236,6 +239,40 @@ contract WQToken {
         }
 
         return true;
+    }
+
+    /**
+     * @notice Mint token, when swap redeemed in bridge
+     * @param account Address of an account
+     * @param amount Amount of tokens
+     *
+     * Requirements: msg.sender should be a bridge address
+     */
+    function mint(address account, uint256 amount) external {
+        require(msg.sender == bridge, "WQT: Sender should be a bridge");
+        _mint(account, amount);
+    }
+
+    /**
+     * @notice Burn token, when swap initialized in bridge
+     * @param account Address of an account
+     * @param amount Amount of tokens
+     *
+     * Requirements: msg.sender should be a bridge address
+     */
+    function burn(address account, uint256 amount) external {
+        require(msg.sender == bridge, "WQT: Sender should be a bridge");
+        _burn(account, amount);
+    }
+
+    /**
+     * @notice Set address of bridge for swap token
+     * @param _bridge Address of bridge  
+     * Requirements: msg.sender should be an owner
+     */
+    function setBridge(address _bridge) external {
+        require(msg.sender == owner, "WQT: Sender should be a owner");
+        bridge = _bridge;
     }
 
     /**

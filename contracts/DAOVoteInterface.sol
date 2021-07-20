@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
+import "./WQTokenInterface.sol";
+
 contract DAOEvents {
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(
@@ -59,7 +61,7 @@ contract DAODelegateStorage {
     uint256 public proposalCount;
 
     //The address of the Compound governance token
-    TokenInterface public token;
+    WQTokenInterface public token;
 
     //TODO
     struct Proposal {

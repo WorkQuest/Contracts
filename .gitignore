@@ -47,6 +47,7 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
+*.jpg
 
 build
 artifacts
