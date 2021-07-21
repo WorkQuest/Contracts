@@ -1,4 +1,4 @@
-const { ethers, upgrades } = require("hardhat");
+const hre = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
@@ -14,16 +14,17 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.TOKEN_TOTAL_SUPPLY) {
-    throw new Error(`Please set your TOKEN_TOTAL_SUPPLY in a .env-${network} file`);
+  if (!process.env.PENSION_LOCK_TIME) {
+    throw new Error(`Please set your PENSION_LOCK_TIME in a .env-${network} file`);
   }
 
   console.log("Deploying...");
-  const WQToken = await ethers.getContractFactory("WQToken");
-  const wqt_token = await upgrades.deployProxy(WQToken, [process.env.TOKEN_TOTAL_SUPPLY], { initializer: 'initialize' });
-  console.log("Proxy of WQT has been deployed to:", wqt_token.address);
+  const PensionFund = await hre.ethers.getContractFactory("PensionFund");
+  const pension_fund = await PensionFund.deploy(process.env.PENSION_LOCK_TIME);
+  await pension_fund.deployed();
+  console.log("PensionFund has been deployed to:", pension_fund.address);
 
-  envConfig["WORK_QUEST_TOKEN"] = wqt_token.address;
+  envConfig["PENSION_FUND"] = pension_fund.address;
   fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 
