@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 contract PensionFund {
     uint256 constant DEFAULT_FEE = 1e16; // 1%
-    uint256 lockTime;
+    uint256 public immutable lockTime;
 
     /// @notice Event emitted when funds transferred to contract
     event Received(address from, uint256 amount);
@@ -27,8 +27,8 @@ contract PensionFund {
 
     /**
      * @notice Contribute native moneys to contract on 3 years
-     * @dev First contributing set variable createdAt as current timestamp, 
-     * @dev unlockDate as current_timestamp + 3*365 days 
+     * @dev First contributing set variable createdAt as current timestamp,
+     * @dev unlockDate as current_timestamp + 3*365 days
      * @dev and fee as DEFAULT_FEE value (1%)
      * @param worker Address of worker
      */
@@ -36,7 +36,7 @@ contract PensionFund {
         PensionWallet storage wallet = wallets[worker];
         if (wallet.createdAt == 0) {
             wallet.createdAt = block.timestamp;
-            wallet.unlockDate = block.timestamp + (3 * 365 days);
+            wallet.unlockDate = block.timestamp + lockTime;
             wallet.fee = DEFAULT_FEE;
         }
         wallet.amount += msg.value;
@@ -59,14 +59,14 @@ contract PensionFund {
     /**
      * @notice Update fee of job cost
      * @param _fee Fee of job cost
-     * @dev First calling set variable createdAt as current timestamp and 
+     * @dev First calling set variable createdAt as current timestamp and
      * @dev unlockDate as current_timestamp + 3*365 days
      */
     function updateFee(uint256 _fee) public {
         PensionWallet storage wallet = wallets[msg.sender];
         if (wallet.createdAt == 0) {
             wallet.createdAt = block.timestamp;
-            wallet.unlockDate = block.timestamp + (3 * 365 days);
+            wallet.unlockDate = block.timestamp + lockTime;
         }
         wallet.fee = _fee;
     }
