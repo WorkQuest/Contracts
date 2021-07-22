@@ -20,7 +20,10 @@ contract WQBridge is AccessControl {
     }
 
     /**
-     * @notice settings of chain - wrapped token address and enable
+     * @notice Settings of tokens
+     * @return token Address of token
+     * @return enabled Is true if enabled, is false if disabled
+     * @return naive Is true if native coin, is false if ERC20 token
      */
     struct TokenSettings {
         address token;
@@ -28,12 +31,13 @@ contract WQBridge is AccessControl {
         bool native;
     }
 
+    /// @notice Admin role constant
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
+    /// @notice Validator role constant
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
 
-    address payable public vault;
-
-    /// @notice 1 - WorkQuest, 2 - ETH, 3 - BSC
+    /// @notice 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
     uint256 public immutable chainId;
 
     bool private _initialized;
@@ -41,14 +45,20 @@ contract WQBridge is AccessControl {
     /// @notice List of enabled chain ID's
     mapping(uint256 => bool) public chains;
 
-    /// @notice
+    /// @notice Settings of tokens
     mapping(string => TokenSettings) public tokens;
 
-    // Map of message hash to swap state
+    /// @notice Map of message hash to swap state
     mapping(bytes32 => SwapData) public swaps;
 
     /**
      * @dev Emitted when swap created
+     * @param timestamp Current block timestamp
+     * @param nonce Transaction number
+     * @param initiator Initiator of transaction
+     * @param recipient Recipient address
+     * @param amount Amount of tokens
+     * @param chainTo Destination chain id
      */
     event SwapInitialized(
         uint256 timestamp,
@@ -60,7 +70,10 @@ contract WQBridge is AccessControl {
     );
 
     /**
-     * @dev Emitted when swap redeemed.
+     * @dev Emitted when swap redeemed
+     * @param timestamp Current block timestamp
+     * @param nonce Transaction number
+     * @param initiator Initiator of transaction
      */
     event SwapRedeemed(
         uint256 timestamp,
@@ -68,6 +81,9 @@ contract WQBridge is AccessControl {
         address indexed initiator
     );
 
+    /** @notice Bridge constructor
+     * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
+     */
     constructor(uint256 _chainId) {
         // Grant the contract deployer the default admin role: it will be able
         // to grant and revoke any roles
@@ -76,7 +92,7 @@ contract WQBridge is AccessControl {
         // Sets `ADMIN_ROLE` as `VALIDATOR_ROLE`'s admin role.
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
 
-        chainId = _chainId; // 1 - DEL, 2 - ETH, 3 - BSC
+        chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC
     }
 
     /**
@@ -95,10 +111,7 @@ contract WQBridge is AccessControl {
         string memory symbol
     ) external payable {
         require(chainTo != chainId, "WorkQuest Bridge: Invalid chainTo id");
-        require(
-            chains[chainTo],
-            "WorkQuest Bridge: ChainTo ID is not allowed"
-        );
+        require(chains[chainTo], "WorkQuest Bridge: ChainTo ID is not allowed");
         TokenSettings storage token = tokens[symbol];
         require(
             token.enabled,
@@ -134,13 +147,13 @@ contract WQBridge is AccessControl {
 
     /**
      * @dev Execute redeem. Emits a {SwapRedeemed} event
-     * @param nonce number of transaction
-     * @param chainFrom source chain id
-     * @param amount amount of tokens
-     * @param recipient recipient address in target network
-     * @param v v of signature
-     * @param r r of signature
-     * @param s s of signature
+     * @param nonce Number of transaction
+     * @param chainFrom Source chain id
+     * @param amount Amount of tokens
+     * @param recipient Recipient address in target network
+     * @param v V of signature
+     * @param r R of signature
+     * @param s S of signature
      * @param symbol Symbol of token
      */
     function redeem(
@@ -198,10 +211,7 @@ contract WQBridge is AccessControl {
 
     /**
      * @dev Returns swap state.
-     *
-     * Requirements
-     *
-     * - `_hashedSecret` hash of swap.
+     * @param message Hash of swap parameters
      */
     function getSwapState(bytes32 message) external view returns (State state) {
         return swaps[message].state;
@@ -209,8 +219,8 @@ contract WQBridge is AccessControl {
 
     /**
      * @notice Add enabled chain direction to bridge
-     * @param _chainId id of chain
-     * @param enabled true - enabled, false - disabled direction
+     * @param _chainId Id of chain
+     * @param enabled True - enabled, false - disabled direction
      */
     function updateChain(uint256 _chainId, bool enabled) external {
         require(
@@ -222,8 +232,10 @@ contract WQBridge is AccessControl {
 
     /**
      * @notice Update token settings
-     * @param token - address of token
+     * @param token Address of token. Ignored in swap and redeem when native is true.
+     * @param enabled True - enabled, false - disabled
      * @param native If money is native for this chain set true
+     * @param symbol Symbol of token
      */
     function updateToken(
         address token,
