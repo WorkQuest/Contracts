@@ -3,19 +3,23 @@ const { ethers, upgrades } = require("hardhat");
 const BigNumber = require('bignumber.js');
 BigNumber.config({ EXPONENTIAL_AT: 60 });
 const Web3 = require('web3');
+const { parseEther } = require("ethers/lib/utils");
 const web3 = new Web3(hre.network.provider);
 
 const nonce = 1;
 const chainWQ = 1;
 const chainETH = 2;
 const chainBSC = 3;
-const amount = "100000000000000000000";
+const amount = "500000000000000000";
 const newToken = "0x1234567890AbcdEF1234567890aBcdef12345678";
+const null_addr = "0x0000000000000000000000000000000000000000";
+const symbol = "WQT"
+const native_coin = "WUSD"
 const swapStatus = Object.freeze({
     Empty: 0,
     Initialized: 1,
     Redeemed: 2
-  });
+});
 
 let bridge_owner;
 let validator;
@@ -33,10 +37,11 @@ describe("Main bridge functions", () => {
         await token.transfer(sender.address, amount);
 
         const Bridge = await ethers.getContractFactory("WQBridge");
-        bridge = await Bridge.deploy(chainWQ, token.address);
+        bridge = await Bridge.deploy(chainWQ);
         await bridge.deployed();
         await bridge.grantRole(await bridge.VALIDATOR_ROLE(), validator.address);
         await bridge.updateChain(chainETH, true);
+        await bridge.updateToken(token.address, true, false, symbol);
 
         await token.setBridge(bridge.address);
     });
@@ -63,7 +68,7 @@ describe("Main bridge functions", () => {
 
         it('STEP 1: Swap with same chain id: fail', async () => {
             try {
-                await bridge.connect(sender).swap(nonce, chainWQ, amount, recipient.address);
+                await bridge.connect(sender).swap(nonce, chainWQ, amount, recipient.address, symbol, { value: 0 });
                 throw new Error("Not reverted");
             } catch (error) {
                 expect(error.message).to.include("WorkQuest Bridge: Invalid chainTo id");
@@ -72,7 +77,16 @@ describe("Main bridge functions", () => {
 
         it('STEP 2: Swap to disallowed chain: fail', async () => {
             try {
-                await bridge.connect(sender).swap(nonce, chainBSC, amount, recipient.address);
+                await bridge.connect(sender).swap(nonce, chainBSC, amount, recipient.address, symbol, { value: 0 });
+                throw new Error("Not reverted");
+            } catch (error) {
+                expect(error.message).to.include("WorkQuest Bridge: ChainTo ID is not allowed");
+            }
+        });
+
+        it('STEP 3: Swap disallowed token: fail', async () => {
+            try {
+                await bridge.connect(sender).swap(nonce, chainBSC, amount, recipient.address, native_coin, { value: 0 });
                 throw new Error("Not reverted");
             } catch (error) {
                 expect(error.message).to.include("WorkQuest Bridge: ChainTo ID is not allowed");
@@ -80,28 +94,29 @@ describe("Main bridge functions", () => {
         });
 
         it('STEP 4: Swap with not empty state: fail', async () => {
-            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address);
+            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, symbol, { value: 0 });
 
             try {
-                await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address);
+                await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, symbol, { value: 0 });
                 throw new Error("Not reverted");
             } catch (error) {
                 expect(error.message).to.include("WorkQuest Bridge: Swap is not empty state or duplicate transaction");
             }
         });
 
-        it('STEP 5: Success swap:', async () => {
+        it('STEP 5: Swap WQT token: success', async () => {
             expect(
                 await token.balanceOf(sender.address)
             ).to.be.equal(amount);
             let recipient_addr = recipient.address;
-            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address);
+            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, symbol, { value: 0 });
             message = await web3.utils.soliditySha3(
                 { t: 'uint', v: nonce },
                 { t: 'uint', v: amount },
                 { t: 'address', v: recipient_addr },
                 { t: 'uint256', v: chainWQ },
-                { t: 'uint256', v: chainETH }
+                { t: 'uint256', v: chainETH },
+                { t: 'string', v: symbol }
             );
             let data = await bridge.swaps(message);
             expect(data.nonce).to.equal(nonce);
@@ -109,6 +124,36 @@ describe("Main bridge functions", () => {
             expect(
                 await token.balanceOf(sender.address)
             ).to.be.equal(0);
+        });
+
+        it('STEP6: Swap native coin with wrong amount: fail', async () => {
+            await bridge.updateToken(null_addr, true, true, native_coin);
+            try {
+                await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, native_coin, { value: 1 });
+                throw new Error("Not reverted");
+            } catch (error) {
+                expect(error.message).to.include("WorkQuest Bridge: Amount value is not equal to transfered funds");
+            }
+        });
+
+        it('STEP7: Swap native coin: success', async () => {
+            await bridge.updateToken(null_addr, true, true, native_coin);
+            let recipient_addr = recipient.address;
+            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, native_coin, { value: amount });
+            message = await web3.utils.soliditySha3(
+                { t: 'uint', v: nonce },
+                { t: 'uint', v: amount },
+                { t: 'address', v: recipient_addr },
+                { t: 'uint256', v: chainWQ },
+                { t: 'uint256', v: chainETH },
+                { t: 'string', v: native_coin }
+            );
+            let data = await bridge.swaps(message);
+            expect(data.nonce).to.equal(nonce);
+            expect(data.state).to.equal(swapStatus.Initialized);
+            expect(
+                await web3.eth.getBalance(bridge.address)
+            ).to.be.equal(amount);
         });
     });
 
@@ -123,6 +168,7 @@ describe("Main bridge functions", () => {
                 { t: 'address', v: recipient_addr },
                 { t: 'uint256', v: chainETH },
                 { t: 'uint256', v: chainWQ },
+                { t: 'string', v: symbol }
             );
         });
 
@@ -137,7 +183,8 @@ describe("Main bridge functions", () => {
                     recipient_addr,
                     sig.v,
                     sig.r,
-                    sig.s
+                    sig.s,
+                    symbol
                 );
                 throw new Error("Not reverted");
             } catch (error) {
@@ -156,7 +203,8 @@ describe("Main bridge functions", () => {
                     recipient_addr,
                     sig.v,
                     sig.r,
-                    sig.s
+                    sig.s,
+                    symbol
                 );
                 throw new Error("Not reverted");
             } catch (error) {
@@ -174,7 +222,8 @@ describe("Main bridge functions", () => {
                 recipient_addr,
                 sig.v,
                 sig.r,
-                sig.s
+                sig.s,
+                symbol
             );
             try {
                 await bridge.connect(sender).redeem(
@@ -184,7 +233,8 @@ describe("Main bridge functions", () => {
                     recipient_addr,
                     sig.v,
                     sig.r,
-                    sig.s
+                    sig.s,
+                    symbol
                 );
                 throw new Error("Not reverted");
             } catch (error) {
@@ -203,7 +253,8 @@ describe("Main bridge functions", () => {
                     recipient_addr,
                     sig.v,
                     sig.r,
-                    sig.s
+                    sig.s,
+                    symbol
                 );
                 throw new Error("Not reverted");
             } catch (error) {
@@ -224,7 +275,8 @@ describe("Main bridge functions", () => {
                 recipient_addr,
                 sig.v,
                 sig.r,
-                sig.s
+                sig.s,
+                symbol
             );
             let data = await bridge.swaps(message);
             expect(data.nonce).to.equal(nonce);
@@ -233,34 +285,85 @@ describe("Main bridge functions", () => {
                 await token.balanceOf(recipient.address)
             ).to.be.equal(amount);
         });
+
+        it('STEP6: Redeem native coin: success', async () => {
+            await bridge.updateToken(null_addr, true, true, native_coin);
+            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, native_coin, { value: amount });
+            expect(
+                await web3.eth.getBalance(bridge.address)
+            ).to.be.equal(amount);
+
+            message = web3.utils.soliditySha3(
+                { t: 'uint256', v: nonce },
+                { t: 'uint256', v: amount },
+                { t: 'address', v: recipient_addr },
+                { t: 'uint256', v: chainETH },
+                { t: 'uint256', v: chainWQ },
+                { t: 'string', v: native_coin }
+            );
+            let signature = await web3.eth.sign(message, validator.address);
+            let sig = ethers.utils.splitSignature(signature)
+
+            await bridge.connect(sender).redeem(
+                nonce,
+                chainETH,
+                amount,
+                recipient_addr,
+                sig.v,
+                sig.r,
+                sig.s,
+                native_coin
+            );
+
+            let data = await bridge.swaps(message);
+            expect(data.nonce).to.equal(nonce);
+            expect(data.state).to.equal(swapStatus.Redeemed);
+            expect(
+                await web3.eth.getBalance(bridge.address)
+            ).to.be.equal('0');
+        });
     });
     describe('Bridge: admin functions', () => {
         it('STEP1: Add chain id', async () => {
             expect(
-                await bridge.chainList(chainBSC)
+                await bridge.chains(chainBSC)
             ).to.be.equal(false);
             await bridge.updateChain(chainBSC, true);
             expect(
-                await bridge.chainList(chainBSC)
+                await bridge.chains(chainBSC)
             ).to.be.equal(true);
         });
         it('STEP2: Remove chain id', async () => {
             expect(
-                await bridge.chainList(chainETH)
+                await bridge.chains(chainETH)
             ).to.be.equal(true);
             await bridge.updateChain(chainETH, false);
             expect(
-                await bridge.chainList(chainETH)
+                await bridge.chains(chainETH)
             ).to.be.equal(false);
         });
-        it('STEP3: Set token address', async () => {
+        it('STEP3: Update token settings', async () => {
+            let token_info = await bridge.tokens(symbol);
             expect(
-                await bridge.token()
+                token_info.token
             ).to.be.equal(token.address);
-            await bridge.setToken(newToken);
             expect(
-                await bridge.token()
+                token_info.enabled
+            ).to.be.equal(true);
+            expect(
+                token_info.native
+            ).to.be.equal(false);
+            await bridge.updateToken(newToken, false, true, symbol);
+            token_info = await bridge.tokens(symbol);
+            expect(
+                token_info.token
             ).to.be.equal(newToken);
+            expect(
+                token_info.enabled
+            ).to.be.equal(false);
+            expect(
+                token_info.native
+            ).to.be.equal(true);
         });
     });
 });

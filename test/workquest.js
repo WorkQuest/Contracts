@@ -599,15 +599,13 @@ describe("Work Quest contract", () => {
       }
       await work_quest.connect(employer).arbitration();
 
-      let employerBalance = await web3.eth.getBalance(employer.address);
-      let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address)
+      // let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address)
 
       await work_quest.connect(arbiter).arbitrationRejectWork();
 
-      // FIXME: different values for ever test
-      // expect(
-      //   (await web3.eth.getBalance(employer.address) - employerBalance).toString()
-      // ).to.be.equal('');
+      expect(
+        await web3.eth.getBalance(work_quest.address)
+      ).to.be.equal('0');
 
       // expect(
       //   await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance
