@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "./WQTokenInterface.sol";
+import "./TokenInterface.sol";
 
 contract WQBridge is AccessControl {
     /// @notice Statuses of a swap
@@ -19,11 +19,19 @@ contract WQBridge is AccessControl {
         State state;
     }
 
+    /**
+     * @notice settings of chain - wrapped token address and enable
+     */
+    struct TokenSettings {
+        address token;
+        bool enabled;
+        bool native;
+    }
+
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
 
-    /// @notice Address of proxy of WQToken
-    address public token;
+    address payable public vault;
 
     /// @notice 1 - WorkQuest, 2 - ETH, 3 - BSC
     uint256 public immutable chainId;
@@ -31,7 +39,10 @@ contract WQBridge is AccessControl {
     bool private _initialized;
 
     /// @notice List of enabled chain ID's
-    mapping(uint256 => bool) public chainList;
+    mapping(uint256 => bool) public chains;
+
+    /// @notice
+    mapping(string => TokenSettings) public tokens;
 
     // Map of message hash to swap state
     mapping(bytes32 => SwapData) public swaps;
@@ -57,7 +68,7 @@ contract WQBridge is AccessControl {
         address indexed initiator
     );
 
-    constructor(uint256 _chainId, address _token) {
+    constructor(uint256 _chainId) {
         // Grant the contract deployer the default admin role: it will be able
         // to grant and revoke any roles
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -66,30 +77,36 @@ contract WQBridge is AccessControl {
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
 
         chainId = _chainId; // 1 - DEL, 2 - ETH, 3 - BSC
-        token = _token;
     }
 
     /**
      * @dev Creates new swap. Emits a {SwapInitialized} event.
-     * @param nonce number of transaction
-     * @param chainTo destination chain id
-     * @param amount amount of tokens
-     * @param recipient recipient address in another network.
+     * @param nonce Number of transaction
+     * @param chainTo Destination chain id
+     * @param amount Amount of tokens
+     * @param recipient Recipient address in target network
+     * @param symbol Symbol of token
      */
     function swap(
         uint256 nonce,
         uint256 chainTo,
         uint256 amount,
-        address recipient
-    ) external {
+        address recipient,
+        string memory symbol
+    ) external payable {
         require(chainTo != chainId, "WorkQuest Bridge: Invalid chainTo id");
         require(
-            chainList[chainTo],
+            chains[chainTo],
             "WorkQuest Bridge: ChainTo ID is not allowed"
+        );
+        TokenSettings storage token = tokens[symbol];
+        require(
+            token.enabled,
+            "WorkQuest Bridge: This token not registered or disabled"
         );
 
         bytes32 message = keccak256(
-            abi.encodePacked(nonce, amount, recipient, chainId, chainTo)
+            abi.encodePacked(nonce, amount, recipient, chainId, chainTo, symbol)
         );
         require(
             swaps[message].state == State.Empty,
@@ -97,7 +114,14 @@ contract WQBridge is AccessControl {
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
-        WQTokenInterface(token).burn(msg.sender, amount);
+        if (token.native) {
+            require(
+                msg.value == amount,
+                "WorkQuest Bridge: Amount value is not equal to transfered funds"
+            );
+        } else {
+            TokenInterface(token.token).burn(msg.sender, amount);
+        }
         emit SwapInitialized(
             block.timestamp,
             nonce,
@@ -109,35 +133,46 @@ contract WQBridge is AccessControl {
     }
 
     /**
-     * @dev Execute redeem. Emits a {SwapRedeemed} event.
-     * @param nonce number of transaction.
+     * @dev Execute redeem. Emits a {SwapRedeemed} event
+     * @param nonce number of transaction
      * @param chainFrom source chain id
      * @param amount amount of tokens
-     * - `c` recipient address in this network.
-
-
-     * - `v` v of signature.
-     * - `r` r of signature.
-     * - `s` s of signature.
-     * - `tokenSymbol` symbol of token
+     * @param recipient recipient address in target network
+     * @param v v of signature
+     * @param r r of signature
+     * @param s s of signature
+     * @param symbol Symbol of token
      */
     function redeem(
         uint256 nonce,
         uint256 chainFrom,
         uint256 amount,
-        address recipient,
+        address payable recipient,
         uint8 v,
         bytes32 r,
-        bytes32 s
+        bytes32 s,
+        string memory symbol
     ) external {
         require(chainFrom != chainId, "WorkQuest Bridge: Invalid chainFrom ID");
         require(
-            chainList[chainFrom],
+            chains[chainFrom],
             "WorkQuest Bridge: ChainFrom ID is not allowed"
+        );
+        TokenSettings storage token = tokens[symbol];
+        require(
+            token.enabled,
+            "WorkQuest Bridge: This token not registered or disabled"
         );
 
         bytes32 message = keccak256(
-            abi.encodePacked(nonce, amount, recipient, chainFrom, chainId)
+            abi.encodePacked(
+                nonce,
+                amount,
+                recipient,
+                chainFrom,
+                chainId,
+                symbol
+            )
         );
         require(
             swaps[message].state == State.Empty,
@@ -152,7 +187,12 @@ contract WQBridge is AccessControl {
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
-        WQTokenInterface(token).mint(recipient, amount);
+        if (token.native) {
+            recipient.transfer(amount);
+        } else {
+            TokenInterface(token.token).mint(recipient, amount);
+        }
+
         emit SwapRedeemed(block.timestamp, nonce, msg.sender);
     }
 
@@ -169,26 +209,40 @@ contract WQBridge is AccessControl {
 
     /**
      * @notice Add enabled chain direction to bridge
-     * @param _chainId id of chain.
-     * @param enabled true - enabled, false - disabled direction.
+     * @param _chainId id of chain
+     * @param enabled true - enabled, false - disabled direction
      */
     function updateChain(uint256 _chainId, bool enabled) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
             "WorkQuest Bridge: Caller is not an admin"
         );
-        chainList[_chainId] = enabled;
+        chains[_chainId] = enabled;
     }
 
     /**
-     * @notice Set address of WQT token
-     * @param _token Address of token
+     * @notice Update token settings
+     * @param token - address of token
+     * @param native If money is native for this chain set true
      */
-    function setToken(address _token) external {
+    function updateToken(
+        address token,
+        bool enabled,
+        bool native,
+        string memory symbol
+    ) public {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
             "WorkQuest Bridge: Caller is not an admin"
         );
-        token = _token;
+        require(
+            bytes(symbol).length > 0,
+            "WorkQuest Bridge: Symbol length must be greater than 0"
+        );
+        tokens[symbol] = TokenSettings({
+            token: token,
+            enabled: enabled,
+            native: native
+        });
     }
 }

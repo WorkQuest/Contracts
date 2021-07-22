@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-interface WQTokenInterface {
+interface WQTInterface {
     function getPastVotes(address account, uint256 blockNumber)
         external
         view
@@ -23,8 +23,4 @@ interface WQTokenInterface {
         address recipient,
         uint256 amount
     ) external returns (bool);
-
-    function mint(address account, uint256 amount) external;
-
-    function burn(address account, uint256 amount) external;
 }
