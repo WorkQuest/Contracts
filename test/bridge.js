@@ -324,7 +324,15 @@ describe("Main bridge functions", () => {
         });
     });
     describe('Bridge: admin functions', () => {
-        it('STEP1: Add chain id', async () => {
+        it('STEP1: updateChain: Should revert if caller is no admin', async () => {
+            try {
+                await bridge.connect(sender).updateChain(chainBSC, true);
+                throw new Error("Not reverted");
+            } catch (error) {
+                expect(error.message).to.include("WorkQuest Bridge: Caller is not an admin");
+            }
+        });
+        it('STEP2: Add chain id', async () => {
             expect(
                 await bridge.chains(chainBSC)
             ).to.be.equal(false);
@@ -333,7 +341,7 @@ describe("Main bridge functions", () => {
                 await bridge.chains(chainBSC)
             ).to.be.equal(true);
         });
-        it('STEP2: Remove chain id', async () => {
+        it('STEP3: Remove chain id', async () => {
             expect(
                 await bridge.chains(chainETH)
             ).to.be.equal(true);
@@ -342,7 +350,15 @@ describe("Main bridge functions", () => {
                 await bridge.chains(chainETH)
             ).to.be.equal(false);
         });
-        it('STEP3: Update token settings', async () => {
+        it('STEP4: updateToken: Should revert if caller is no admin', async () => {
+            try {
+                await bridge.connect(sender).updateToken(newToken, false, true, symbol);
+                throw new Error("Not reverted");
+            } catch (error) {
+                expect(error.message).to.include("WorkQuest Bridge: Caller is not an admin");
+            }
+        });
+        it('STEP5: Update token settings', async () => {
             let token_info = await bridge.tokens(symbol);
             expect(
                 token_info.token
