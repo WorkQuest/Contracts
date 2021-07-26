@@ -29,13 +29,11 @@ contract WQToken {
     /// @notice Locking of transfer is impossible if _unlockFixed is true
     bool private _unlockFixed;
 
-    /// @notice
     address private _saleContract;
 
     /// @notice Address of an owner
     address public owner;
 
-    /// @notice
     bool private _initialized;
 
     /// @notice
@@ -267,7 +265,7 @@ contract WQToken {
 
     /**
      * @notice Set address of bridge for swap token
-     * @param _bridge Address of bridge  
+     * @param _bridge Address of bridge
      * Requirements: msg.sender should be an owner
      */
     function setBridge(address _bridge) external {

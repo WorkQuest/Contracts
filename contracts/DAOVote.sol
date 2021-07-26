@@ -8,12 +8,14 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract DAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
     /**
      * @notice Initializes the contract
+     * @param chairPerson Chairperson address
      * @param _voteToken The address of the DAO token
      */
     constructor(address chairPerson, address _voteToken) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(CHAIRPERSON_ROLE, chairPerson);
+        _setRoleAdmin(CHAIRPERSON_ROLE, ADMIN_ROLE);
         token = WQTInterface(_voteToken);
     }
 
