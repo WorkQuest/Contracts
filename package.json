@@ -11,10 +11,13 @@
     "upgrade WQT": "npx hardhat run scripts/upgrade_wqt.js --network wqdevnet",
     "deploy pension": "npx hardhat run scripts/deploy_pension.js --network wqdevnet",
     "deploy workquest": "npx hardhat run scripts/deploy_workquest.js --network wqdevnet",
+    "deploy dao": "npx hardhat run scripts/deploy_dao.js --network wqdevnet",
+    "deploy wrapped token": "npx hardhat run scripts/deploy_wrap_token.js --network wqdevnet",
     "deploy bridge wqdevnet": "npx hardhat run scripts/deploy_bridge.js --network wqdevnet",
     "deploy bridge rinkeby": "npx hardhat run scripts/deploy_bridge.js --network rinkeby",
     "deploy bridge ropsten": "npx hardhat run scripts/deploy_bridge.js --network ropsten",
-    "deploy bridge bsctestnet": "npx hardhat run scripts/deploy_bridge.js --network bsctestnet"
+    "deploy bridge bsctestnet": "npx hardhat run scripts/deploy_bridge.js --network bsctestnet",
+    "deploy proxy staking": "npx hardhat run scripts/deploy_proxy_staking.js --network wqdevnet"
   },
   "author": "",
   "license": "ISC",
