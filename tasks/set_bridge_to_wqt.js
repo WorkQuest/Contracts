@@ -1,4 +1,4 @@
-task("set_bridge", "Set bridge address to token")
+task("set_bridge_to_wqt", "Set bridge address to token")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
         const accounts = await ethers.getSigners();
