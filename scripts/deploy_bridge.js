@@ -15,9 +15,6 @@ async function main() {
     for (const k in envConfig) {
         process.env[k] = envConfig[k]
     }
-    if (!process.env.WORK_QUEST_TOKEN) {
-        throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
-    }
     if (!process.env.CHAIN_ID) {
         throw new Error(`Please set your CHAIN_ID in a .env-${network} file`);
     }
@@ -25,7 +22,7 @@ async function main() {
 
     console.log("Deploying...");
     const Bridge = await hre.ethers.getContractFactory("WQBridge");
-    const bridge = await Bridge.deploy(process.env.CHAIN_ID, process.env.WORK_QUEST_TOKEN);
+    const bridge = await Bridge.deploy(process.env.CHAIN_ID);
     await bridge.deployed();
     console.log("WorkQuest Bridge has been deployed to:", bridge.address);
 
