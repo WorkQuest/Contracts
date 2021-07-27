@@ -19,7 +19,7 @@ async function main() {
   }
 
   console.log("Deploying...");
-  const PensionFund = await hre.ethers.getContractFactory("PensionFund");
+  const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
   const pension_fund = await PensionFund.deploy(process.env.PENSION_LOCK_TIME);
   await pension_fund.deployed();
   console.log("PensionFund has been deployed to:", pension_fund.address);

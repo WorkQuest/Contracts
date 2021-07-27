@@ -22,7 +22,7 @@ async function main() {
   }
 
   console.log("Deploying...");
-  const DAOBallot = await hre.ethers.getContractFactory("DAOBallot");
+  const DAOBallot = await hre.ethers.getContractFactory("WQDAOBallot");
   const dao_ballot = await DAOBallot.deploy(process.env.DAO_CHAIR_PERSON, process.env.WORK_QUEST_TOKEN);
   await dao_ballot.deployed();
   console.log("DAO Ballot has been deployed to:", dao_ballot.address);

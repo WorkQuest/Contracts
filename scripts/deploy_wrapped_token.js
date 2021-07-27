@@ -25,7 +25,7 @@ async function main() {
     }
 
     console.log("Deploying...");
-    const BridgeToken = await hre.ethers.getContractFactory("BridgeToken");
+    const BridgeToken = await hre.ethers.getContractFactory("WQBridgeToken");
     const bridge_token = await BridgeToken.deploy(process.env.BRIDGE_TOKEN_NAME, process.env.BRIDGE_TOKEN_SYMBOL);
     await bridge_token.deployed();
     await bridge_token.grantRole(await bridge_token.BRIDGE_ROLE(), process.env.BRIDGE);

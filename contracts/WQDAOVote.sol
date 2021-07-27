@@ -5,7 +5,7 @@ import "./WQDAOVoteInterface.sol";
 import "./WQTInterface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract DAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
+contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
     /**
      * @notice Initializes the contract
      * @param chairPerson Chairperson address

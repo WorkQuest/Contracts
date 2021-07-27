@@ -1,6 +1,5 @@
 task("set_bridge_to_wrapped", "Set bridge address to token")
     .setAction(async function (args, hre, runSuper) {
-        require('dotenv').config();
         const accounts = await ethers.getSigners();
         const sender = accounts[0].address;
         console.log("Sender address: ", sender);
@@ -8,6 +7,7 @@ task("set_bridge_to_wrapped", "Set bridge address to token")
         const network = hre.network.name;
         const fs = require('fs');
         const dotenv = require('dotenv');
+        dotenv.config();
         const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
         for (const k in envConfig) {
             process.env[k] = envConfig[k]
