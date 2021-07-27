@@ -73,11 +73,6 @@ contract WQStaking is AccessControl {
             !_initialized,
             "WQStaking: Contract instance has already been initialized"
         );
-        require(
-            address(stakeToken) == address(0) &&
-                address(rewardToken) == address(0),
-            "WQStaking: contract already initialized"
-        );
 
         rewardTotal = _rewardTotal;
         startTime = _startTime;

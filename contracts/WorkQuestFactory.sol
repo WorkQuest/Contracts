@@ -7,9 +7,6 @@ import "./WorkQuest.sol";
 contract WorkQuestFactory is AccessControl {
     bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    /// @notice List of arbiters adresses
-    address payable[] public arbiterList;
-
     uint256 lastArbiter;
 
     /// @notice Fee amount
@@ -30,6 +27,9 @@ contract WorkQuestFactory is AccessControl {
     }
     /// @notice Mapping of arbiters adresses to boolean enabled
     mapping(address => ArbiterInfo) public arbiters;
+
+    /// @notice List of arbiters adresses
+    address payable[] public arbiterList;
 
     /**
      * @notice Event emited when new workquest contract created
@@ -130,6 +130,10 @@ contract WorkQuestFactory is AccessControl {
             delete arbiterList[arbiters[arbiter].index];
             delete arbiters[arbiter];
         }
+    }
+
+    function allArbiters() external view returns (address payable[] memory) {
+        return arbiterList;
     }
 
     /**

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "./DAOVoteInterface.sol";
+import "./WQDAOVoteInterface.sol";
 import "./WQTInterface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 

@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-contract PensionFund {
+contract WQPensionFund {
     uint256 constant DEFAULT_FEE = 1e16; // 1%
     uint256 public immutable lockTime;
 

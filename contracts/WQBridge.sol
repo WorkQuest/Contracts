@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "./BridgeTokenInterface.sol";
+import "./WQBridgeTokenInterface.sol";
 
 contract WQBridge is AccessControl {
     /// @notice Statuses of a swap
@@ -133,7 +133,7 @@ contract WQBridge is AccessControl {
                 "WorkQuest Bridge: Amount value is not equal to transfered funds"
             );
         } else {
-            BridgeTokenInterface(token.token).burn(msg.sender, amount);
+            WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
         emit SwapInitialized(
             block.timestamp,
@@ -203,7 +203,7 @@ contract WQBridge is AccessControl {
         if (token.native) {
             recipient.transfer(amount);
         } else {
-            BridgeTokenInterface(token.token).mint(recipient, amount);
+            WQBridgeTokenInterface(token.token).mint(recipient, amount);
         }
 
         emit SwapRedeemed(block.timestamp, nonce, msg.sender);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./PensionFund.sol";
+import "./WQPensionFund.sol";
 
 contract WorkQuest {
     string constant errMsg = "WorkQuest: Access denied or invalid status";
@@ -318,11 +318,11 @@ contract WorkQuest {
     function _transferFunds() internal {
         uint256 newCost = cost - forfeit;
         uint256 comission = (newCost * fee) / 1e18;
-        (, uint256 pensionFee, , ) = PensionFund(pensionFund).wallets(worker);
+        (, uint256 pensionFee, , ) = WQPensionFund(pensionFund).wallets(worker);
         uint256 pensionContribute = (newCost * pensionFee) / 1e18;
         worker.transfer(newCost - comission - pensionContribute);
         if (pensionFee > 0) {
-            PensionFund(pensionFund).contribute{value: pensionContribute}(
+            WQPensionFund(pensionFund).contribute{value: pensionContribute}(
                 worker
             );
         }
