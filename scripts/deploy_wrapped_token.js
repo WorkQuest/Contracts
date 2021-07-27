@@ -33,6 +33,8 @@ async function main() {
     console.log(`${process.env.BRIDGE_TOKEN_NAME} has been deployed to:`, bridge_token.address);
 
     envConfig[`STAKE_TOKEN`] = bridge_token.address;
+
+    envConfig[`${process.env.BRIDGE_TOKEN_SYMBOL}_TOKEN`] = bridge_token.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 

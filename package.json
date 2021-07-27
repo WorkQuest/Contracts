@@ -17,7 +17,8 @@
     "deploy bridge rinkeby": "npx hardhat run scripts/deploy_bridge.js --network rinkeby",
     "deploy bridge ropsten": "npx hardhat run scripts/deploy_bridge.js --network ropsten",
     "deploy bridge bsctestnet": "npx hardhat run scripts/deploy_bridge.js --network bsctestnet",
-    "deploy proxy staking": "npx hardhat run scripts/deploy_proxy_staking.js --network wqdevnet"
+    "deploy proxy staking": "npx hardhat run scripts/deploy_proxy_staking.js --network wqdevnet",
+    "upgrade staking": "npx hardhat run scripts/upgrade_staking.js --network wqdevnet"
   },
   "author": "",
   "license": "ISC",
