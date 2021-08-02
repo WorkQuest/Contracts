@@ -36,26 +36,21 @@ contract WQToken {
 
     bool private _initialized;
 
-    /// @notice
     mapping(address => address) private _delegates;
 
-    /// @notice
     mapping(address => Checkpoint[]) private _checkpoints;
 
-    /// @notice
     mapping(address => uint256) private _balances;
 
-    /// @notice maps user's address to voteToken balance
     mapping(address => uint256) private _voteLockedTokenBalance;
 
-    /// @notice
     mapping(address => mapping(address => uint256)) private _allowances;
 
     /// @notice Bridge address
     address public bridge;
 
     /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * @notice Emitted when `value` tokens are moved from one account (`from`) to
      * another (`to`).
      *
      * Note that `value` may be zero.
@@ -63,7 +58,7 @@ contract WQToken {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * @notice Emitted when the allowance of a `spender` for an `owner` is set by
      * a call to {approve}. `value` is the new allowance.
      */
     event Approval(
@@ -73,7 +68,7 @@ contract WQToken {
     );
 
     /**
-     * @dev Emitted when an account changes their delegate.
+     * @notice Emitted when an account changes their delegate.
      */
     event DelegateChanged(
         address indexed delegator,
@@ -82,7 +77,7 @@ contract WQToken {
     );
 
     /**
-     * @dev Emitted when a token transfer or delegate change results in changes to an account's voting power.
+     * @notice Emitted when a token transfer or delegate change results in changes to an account's voting power.
      */
     event DelegateVotesChanged(
         address indexed delegate,
@@ -101,22 +96,24 @@ contract WQToken {
     }
 
     /**
-     * @dev Returns the amount of tokens owned by `account`.
+     * @notice Returns the amount of tokens owned by `account`.
      */
     function balanceOf(address account) public view returns (uint256) {
         return _balances[account];
     }
 
+    /**
+     * @notice Returns the amount of locked tokens
+     */
     function votePowerOf(address account) public view returns (uint256) {
         return _voteLockedTokenBalance[account];
     }
 
     /**
-     * @dev Moves `amount` tokens from the caller's account to `recipient`.
-     *
+     * @notice Moves `amount` tokens from the caller's account to `recipient`. Emits a {Transfer} event.
+     * @param recipient Recipient address
+     * @param amount Amount value
      * @return A boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
      */
     function transfer(address recipient, uint256 amount) public returns (bool) {
         _transfer(msg.sender, recipient, amount);
@@ -124,11 +121,11 @@ contract WQToken {
     }
 
     /**
-     * @dev Returns the remaining number of tokens that `spender` will be
+     * @notice Returns the remaining number of tokens that `spender` will be
      * allowed to spend on behalf of `owner` through {transferFrom}. This is
-     * zero by default.
-     *
-     * This value changes when {approve} or {transferFrom} are called.
+     * zero by default. This value changes when {approve} or {transferFrom} are called.
+     * @param account Address of owner
+     * @param spender Address of spender
      */
     function allowance(address account, address spender)
         public
@@ -140,17 +137,10 @@ contract WQToken {
 
     /**
      * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * IMPORTANT: Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
      * Emits an {Approval} event.
+     * @param account Address of owner
+     * @param amount Amount value
+     * @return A boolean value indicating whether the operation succeeded.
      */
     function approve(address account, uint256 amount) public returns (bool) {
         _approve(msg.sender, account, amount);
@@ -160,11 +150,11 @@ contract WQToken {
     /**
      * @dev Moves `amount` tokens from `sender` to `recipient` using the
      * allowance mechanism. `amount` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
+     * allowance. Emits a {Transfer} event.
+     * @param sender Sender address
+     * @param recipient Recipient address
+     * @param amount Amount of coins
+     * @return A boolean value indicating whether the operation succeeded.
      */
     function transferFrom(
         address sender,
@@ -186,16 +176,9 @@ contract WQToken {
     }
 
     /**
-     * @dev Atomically increases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
-     * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
+     * @dev Atomically increases the allowance granted to spender by the caller. Emits an {Approval} event indicating the updated allowance.
+     * @param spender cannot be the zero address
+     * @param addedValue added value
      */
     function increaseAllowance(address spender, uint256 addedValue)
         public
@@ -211,17 +194,9 @@ contract WQToken {
 
     /**
      * @dev Atomically decreases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
      * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     * - `spender` must have allowance for the caller of at least
-     * `subtractedValue`.
+     * @param spender cannot be the zero address and must have allowance for the caller of at least subtractedValue.
+     * @param subtractedValue subtracted value
      */
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
@@ -252,11 +227,9 @@ contract WQToken {
     }
 
     /**
-     * @notice Burn token, when swap initialized in bridge
+     * @notice Burn token, when swap initialized in bridge. msg.sender should be a bridge address
      * @param account Address of an account
      * @param amount Amount of tokens
-     *
-     * Requirements: msg.sender should be a bridge address
      */
     function burn(address account, uint256 amount) external {
         require(msg.sender == bridge, "WQT: Sender should be a bridge");
@@ -264,9 +237,8 @@ contract WQToken {
     }
 
     /**
-     * @notice Set address of bridge for swap token
+     * @notice Set address of bridge for swap token. msg.sender should be an owner
      * @param _bridge Address of bridge
-     * Requirements: msg.sender should be an owner
      */
     function setBridge(address _bridge) external {
         require(msg.sender == owner, "WQT: Sender should be a owner");
@@ -274,7 +246,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Get the `pos`-th checkpoint for `account`.
+     * @notice Get the `pos`-th checkpoint for `account`.
      */
     function checkpoints(address account, uint32 pos)
         public
@@ -285,21 +257,21 @@ contract WQToken {
     }
 
     /**
-     * @dev Get number of checkpoints for `account`.
+     * @notice Get number of checkpoints for `account`.
      */
     function numCheckpoints(address account) public view returns (uint32) {
         return SafeCast.toUint32(_checkpoints[account].length);
     }
 
     /**
-     * @dev Get the address `account` is currently delegating to.
+     * @notice Get the address `account` is currently delegating to.
      */
     function delegates(address account) public view returns (address) {
         return _delegates[account];
     }
 
     /**
-     * @dev Gets the current votes balance for `account`
+     * @notice Gets the current votes balance for `account`
      */
     function getVotes(address account) public view returns (uint256) {
         uint256 pos = _checkpoints[account].length;
@@ -307,7 +279,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Retrieve the number of votes for `account` at the end of `blockNumber`.
+     * @notice Retrieve the number of votes for `account` at the end of `blockNumber`.
      * Requirements:
      * - `blockNumber` must have been already mined
      */
@@ -321,7 +293,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Delegate votes from the sender to `delegatee`.
+     * @notice Delegate votes from the sender to `delegatee`.
      */
     function delegate(address delegatee, uint256 amount) public {
         return _delegate(msg.sender, delegatee, amount);
@@ -343,7 +315,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Set the address of the sale contract.
+     * @notice Set the address of the sale contract.
      * `saleContract` can make token transfers
      * even when the token contract state is locked.
      * Transfer lock serves the purpose of preventing
@@ -361,7 +333,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Lock token transfers.
+     * @notice Lock token transfers.
      *
      * Added by WorkQuest Team.
      *
@@ -375,7 +347,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Unlock token transfers.
+     * @notice Unlock token transfers.
      *
      * Added by WorkQuest Team.
      *
@@ -389,7 +361,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Permanently unlock token transfers.
+     * @notice Permanently unlock token transfers.
      * After this, further locking is impossible.
      *
      * Added by WorkQuest Team.
@@ -565,7 +537,7 @@ contract WQToken {
         return type(uint224).max;
     }
 
-    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+    /** @notice Creates `amount` tokens and assigns them to `account`, increasing
      * the total supply.
      *
      * Emits a {Transfer} event with `from` set to the zero address.
@@ -589,7 +561,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Destroys `amount` tokens from `account`, reducing the
+     * @notice Destroys `amount` tokens from `account`, reducing the
      * total supply.
      *
      * Emits a {Transfer} event with `to` set to the zero address.
@@ -615,7 +587,7 @@ contract WQToken {
     }
 
     /**
-     * @dev Hook that is called before any transfer of tokens. This includes
+     * @notice Hook that is called before any transfer of tokens. This includes
      * minting and burning.
      *
      * Calling conditions:
