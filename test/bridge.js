@@ -27,7 +27,7 @@ let not_validator;
 let sender;
 let recipient;
 
-describe("Main bridge functions", () => {
+describe("Bridge test", () => {
     let bridge;
     let token;
     beforeEach(async () => {

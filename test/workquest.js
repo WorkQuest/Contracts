@@ -49,7 +49,7 @@ let feeReceiver;
 let work_quest_factory;
 let work_quest;
 
-describe("Work Quest contract", () => {
+describe("Work Quest test", () => {
   let call_flow;
 
   beforeEach(async () => {
