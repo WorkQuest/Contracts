@@ -45,4 +45,8 @@ contract WQInsuranceFactory {
             address(new WQInsurance(_contributionPeriod, _contributionAmount))
         );
     }
+
+    function getInsurances() external view returns (address[] memory){
+        return insurances;
+    }
 }

@@ -15,7 +15,11 @@ contract WQInsurance {
         bool executed;
     }
 
+    /// @dev Max number of members
     uint256 constant MAX_MEMBERS = 10;
+
+    /// @dev Seconds in year
+    uint256 constant YEAR = 31536000;
 
     uint256 public immutable contributionPeriod;
     uint256 public immutable contributionAmount;
@@ -52,14 +56,15 @@ contract WQInsurance {
     }
 
     /**
-     *
+     * @notice Get all addresses of members
      */
     function getMembers() external view returns (address[] memory) {
         return members;
     }
 
     /**
-     *
+     * @notice Add member to contract
+     * Emits a {MemberAdded} event
      */
     function addMember(address member) external {
         require(
@@ -77,57 +82,73 @@ contract WQInsurance {
     }
 
     /**
-     *
+     * @notice Remove member from contract
+     * Emits a {MemberRemoved} event
      */
-    function removeMember(address member) external {
+    function removeMember() external {
         require(
-            memberInfo[member].enabled,
+            memberInfo[msg.sender].enabled,
             "WQInsurance: Member already removed from contract"
         );
-        memberInfo[member].enabled = false;
+        memberInfo[msg.sender].enabled = false;
         memberCount--;
-        emit MemberRemoved(block.timestamp, member);
+        //remove all confirmations for this member
+        for (uint256 i = 0; i < members.length; i++) {
+            if (confirmations[members[i]][msg.sender] == true) {
+                confirmations[members[i]][msg.sender] = false;
+            }
+        }
+        emit MemberRemoved(block.timestamp, msg.sender);
     }
 
     /**
-     *
+     * @notice Contribute funds to contract
      */
     receive() external payable {
-        require(
-            memberInfo[msg.sender].enabled,
-            "WQInsurance: Member not found"
-        );
-        require(
-            msg.value == contributionAmount,
-            "WQInsurance: Invalid contribution amount"
-        );
-        memberInfo[msg.sender].contributed += msg.value;
-        memberInfo[msg.sender].lastContribution = block.timestamp;
+        MemberInfo storage member = memberInfo[msg.sender];
+        require(member.enabled, "WQInsurance: Member not found");
+        if (contributionPeriod == YEAR) {
+            require(
+                msg.value == contributionAmount,
+                "WQInsurance: Invalid contribution amount"
+            );
+        } else {
+            require(
+                msg.value == contributionAmount / 12,
+                "WQInsurance: Invalid contribution amount"
+            );
+        }
+        member.contributed += msg.value;
+        member.lastContribution = block.timestamp;
         emit Received(msg.value, block.timestamp, msg.sender);
     }
 
     /**
-     *
+     * Ask funds from contract
      */
-    function addAsk() external {
+    function askFunds() external {
         require(
             memberInfo[msg.sender].enabled,
             "WQInsurance: Member not found"
+        );
+        require(
+            memberCount > 1,
+            "WQInsurance: The contract must have more than one members"
         );
         require(
             memberInfo[msg.sender].lastContribution +
                 contributionPeriod +
                 7 days >
                 block.timestamp,
-            "WQInsurance: Your insurance is paused"
-        );
-        require(
-            !asks[msg.sender].active,
-            "WQInsurance: Payment is already asked"
+            "WQInsurance: You haven't contributed funds for a long time"
         );
         require(
             !asks[msg.sender].executed,
             "WQInsurance: Payment is already executed"
+        );
+        require(
+            !asks[msg.sender].active,
+            "WQInsurance: Payment is already asked"
         );
         asks[msg.sender].active = true;
         asks[msg.sender].asked = (memberInfo[msg.sender].contributed * 5) / 6;
@@ -137,24 +158,32 @@ contract WQInsurance {
     }
 
     /**
-     *
+     * Cancel ask funds
      */
     function removeAsk() external {
         require(
             memberInfo[msg.sender].enabled,
             "WQInsurance: Member not found"
         );
-        require(asks[msg.sender].active, "WQInsurance: Ask is already revoked");
         require(
             !asks[msg.sender].executed,
             "WQInsurance: Payment is already executed"
         );
+        require(asks[msg.sender].active, "WQInsurance: Ask is already revoked");
         asks[msg.sender].active = false;
+        asks[msg.sender].numConfirm = 0;
+
+        //Revoke all confirmations
+        for (uint256 i = 0; i < members.length; i++) {
+            if (confirmations[msg.sender][members[i]] == true) {
+                confirmations[msg.sender][members[i]] = false;
+            }
+        }
         emit AskRevoked(block.timestamp, msg.sender);
     }
 
     /**
-     *
+     * Confirm payment from other members
      */
     function confirmPayment(address member) external {
         require(memberInfo[member].enabled, "WQInsurance: Member not found");
@@ -172,7 +201,7 @@ contract WQInsurance {
     }
 
     /**
-     *
+     * Revoke confirmation payment
      */
     function revokeConfirmation(address member) external {
         require(memberInfo[member].enabled, "WQInsurance: Member not found");
@@ -190,7 +219,7 @@ contract WQInsurance {
     }
 
     /**
-     *
+     * Payment executed when all member confirmed it
      */
     function executePayment() external {
         require(
@@ -198,27 +227,26 @@ contract WQInsurance {
             "WQInsurance: You are not a member"
         );
         require(
+            memberCount > 1,
+            "WQInsurance: The contract must have more than one members"
+        );
+        require(
             memberInfo[msg.sender].lastContribution +
                 contributionPeriod +
                 7 days >
                 block.timestamp,
-            "WQInsurance: Your insurance is paused"
+            "WQInsurance: You haven't contributed funds for a long time"
         );
-        require(asks[msg.sender].active, "WQInsurance: Payment is not asked");
+        AskInfo storage ask = asks[msg.sender];
+        require(!ask.executed, "WQInsurance: Payment is already executed");
+        require(ask.active, "WQInsurance: Payment is not asked");
         require(
-            !asks[msg.sender].executed,
-            "WQInsurance: Payment is already executed"
-        );
-        require(
-            asks[msg.sender].numConfirm == MAX_MEMBERS,
+            ask.numConfirm == memberCount,
             "WQInsurance: Payment is not confirmed"
         );
-        asks[msg.sender].executed = true;
-        payable(msg.sender).transfer(asks[msg.sender].asked);
-        emit PaymentExecuted(
-            block.timestamp,
-            asks[msg.sender].asked,
-            msg.sender
-        );
+        ask.executed = true;
+        ask.active = false;
+        payable(msg.sender).transfer(ask.asked);
+        emit PaymentExecuted(block.timestamp, ask.asked, msg.sender);
     }
 }
