@@ -16,14 +16,20 @@ contract WQStaking is AccessControl {
         uint256 rewardAllowed; // amount of tokens
         uint256 rewardDebt; // value needed for correct calculation staker's share
         uint256 distributed; // amount of distributed earned tokens
+        uint256 stakedAt; // timestamp of last stake
+        uint256 claimedAt; // timestamp of last claim
+        uint256 unstakeTime; // timestamp of unstake
     }
 
     // StakeInfo contains info related to stake.
     struct StakeInfo {
-        uint256 startTime; //time of staking start
-        uint256 distributionTime;
-        uint256 unlockClaimTime;
         uint256 rewardTotal;
+        uint256 distributionTime;
+        uint256 duration;
+        uint256 stakePeriod;
+        uint256 claimPeriod;
+        uint256 minStake;
+        uint256 maxStake;
         uint256 totalStaked;
         uint256 totalDistributed;
         address stakeTokenAddress;
@@ -39,11 +45,21 @@ contract WQStaking is AccessControl {
     // ERC20 token earned by stakers as reward.
     IERC20 public rewardToken;
 
-    // Common contract configuration variables.
+    /// @notice Common contract configuration variables
+    /// @notice Total rewards per distribution time
     uint256 public rewardTotal;
-    uint256 public startTime;
-    uint256 public unlockClaimTime;
+    /// @notice Distribution time
     uint256 public distributionTime;
+    /// @notice Staking lock period of funds, 0 for flexible staking
+    uint256 public duration;
+    /// @notice Staking period
+    uint256 public stakePeriod;
+    /// @notice Claiming rewards period
+    uint256 public claimPeriod;
+    /// @notice minimal stake amount
+    uint256 public minStake;
+    /// @notice maximal stake amount
+    uint256 public maxStake;
 
     uint256 public tokensPerStake;
     uint256 public rewardProduced;
@@ -63,9 +79,12 @@ contract WQStaking is AccessControl {
 
     function initialize(
         uint256 _rewardTotal,
-        uint256 _startTime,
         uint256 _distributionTime,
-        uint256 _unlockClaimTime,
+        uint256 _duration,
+        uint256 _stakePeriod,
+        uint256 _claimPeriod,
+        uint256 _minStake,
+        uint256 _maxStake,
         address _rewardToken,
         address _stakeToken
     ) public {
@@ -75,13 +94,15 @@ contract WQStaking is AccessControl {
         );
 
         rewardTotal = _rewardTotal;
-        startTime = _startTime;
         distributionTime = _distributionTime;
-        unlockClaimTime = _unlockClaimTime;
-        producedTime = _startTime;
-
+        duration = _duration;
+        stakePeriod = _stakePeriod;
+        claimPeriod = _claimPeriod;
+        minStake = _minStake;
+        maxStake = _maxStake;
         rewardToken = IERC20(_rewardToken);
         stakeToken = IERC20(_stakeToken);
+        producedTime = block.timestamp;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -97,23 +118,28 @@ contract WQStaking is AccessControl {
      * - `_amount` - stake amount
      */
     function stake(uint256 _amount) public {
-        require(
-            block.timestamp > startTime,
-            "WQStaking: staking time has not come yet"
-        );
+        require(_amount >= minStake, "WQStaking: Amount should be greater than minimum stake");
+        require(_amount <= maxStake, "WQStaking: Amount should be less than maximum stake");
         Staker storage staker = stakes[msg.sender];
-
+        require(
+            block.timestamp - staker.stakedAt > stakePeriod,
+            "WQStaking: You cannot stake tokens yet"
+        );
         if (totalStaked > 0) {
             update();
         }
         staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
         totalStaked += _amount;
         staker.amount += _amount;
+        staker.stakedAt = block.timestamp;
+        if (staker.unstakeTime == 0) {
+            staker.unstakeTime = block.timestamp + duration;
+        }
 
         update();
 
         // Transfer specified amount of staking tokens to the contract
-        IERC20(stakeToken).safeTransferFrom(msg.sender, address(this), _amount);
+        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         emit tokensStaked(_amount, block.timestamp, msg.sender);
     }
@@ -130,7 +156,10 @@ contract WQStaking is AccessControl {
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
         Staker storage staker = stakes[msg.sender];
-
+        require(
+            staker.unstakeTime <= block.timestamp,
+            "WQStaking: You cannot unstake token yet"
+        );
         require(
             staker.amount >= _amount,
             "WQStaking: Not enough tokens to unstake"
@@ -142,7 +171,7 @@ contract WQStaking is AccessControl {
         staker.amount -= _amount;
         totalStaked -= _amount;
 
-        IERC20(stakeToken).safeTransfer(msg.sender, _amount);
+        stakeToken.safeTransfer(msg.sender, _amount);
 
         emit tokensUnstaked(_amount, block.timestamp, msg.sender);
         _entered = false;
@@ -154,20 +183,20 @@ contract WQStaking is AccessControl {
     function claim() public returns (bool) {
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
+        Staker storage staker = stakes[msg.sender];
         require(
-            block.timestamp > unlockClaimTime,
-            "WQStaking: Claiming is locked"
+            block.timestamp - staker.claimedAt > claimPeriod,
+            "WQStaking: You cannot stake tokens yet"
         );
+
         if (totalStaked > 0) {
             update();
         }
 
         uint256 reward = calcReward(msg.sender, tokensPerStake);
         require(reward > 0, "WQStaking: Nothing to claim");
-
-        Staker storage staker = stakes[msg.sender];
-
         staker.distributed += reward;
+        staker.claimedAt = block.timestamp;
         totalDistributed += reward;
 
         IERC20(rewardToken).safeTransfer(msg.sender, reward);
@@ -289,10 +318,8 @@ contract WQStaking is AccessControl {
     {
         Staker storage staker = stakes[user];
         staked_ = staker.amount;
-
         claim_ = getClaim(user);
-
-        return (staked_, claim_, IERC20(stakeToken).balanceOf(user));
+        return (staked_, claim_, stakeToken.balanceOf(user));
     }
 
     /**
@@ -300,16 +327,18 @@ contract WQStaking is AccessControl {
      */
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
-            startTime: startTime,
-            distributionTime: distributionTime,
-            unlockClaimTime: unlockClaimTime,
             rewardTotal: rewardTotal,
+            distributionTime: distributionTime,
+            duration: duration,
+            stakePeriod: stakePeriod,
+            claimPeriod: claimPeriod,
+            minStake: minStake,
+            maxStake: maxStake,
             totalStaked: totalStaked,
             totalDistributed: totalDistributed,
             stakeTokenAddress: address(stakeToken),
             rewardTokenAddress: address(rewardToken)
         });
-
         return info_;
     }
 }

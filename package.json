@@ -6,7 +6,7 @@
     "compile": "npx hardhat compile",
     "clean": "npx hardhat clean",
     "test": "npx hardhat test --network development",
-    "console": "npx hardhat console",
+    "console": "npx hardhat console --network development",
     "deploy proxy WQT": "npx hardhat run scripts/deploy_proxy_wqt.js --network wqdevnet",
     "upgrade WQT": "npx hardhat run scripts/upgrade_wqt.js --network wqdevnet",
     "deploy pension": "npx hardhat run scripts/deploy_pension.js --network wqdevnet",

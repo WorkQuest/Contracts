@@ -407,8 +407,8 @@ contract WQToken {
         require(account != address(0), "WQT: approve from the zero address");
         require(spender != address(0), "WQT: approve to the zero address");
 
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+        _allowances[account][spender] = amount;
+        emit Approval(account, spender, amount);
     }
 
     /**
