@@ -32,15 +32,11 @@ contract WQStaking is AccessControl {
         uint256 maxStake;
         uint256 totalStaked;
         uint256 totalDistributed;
-        address stakeTokenAddress;
         address rewardTokenAddress;
     }
 
     // Stakers info by token holders.
     mapping(address => Staker) public stakes;
-
-    // ERC20 token staked to the contract.
-    IERC20 public stakeToken;
 
     // ERC20 token earned by stakers as reward.
     IERC20 public rewardToken;
@@ -85,8 +81,7 @@ contract WQStaking is AccessControl {
         uint256 _claimPeriod,
         uint256 _minStake,
         uint256 _maxStake,
-        address _rewardToken,
-        address _stakeToken
+        address _rewardToken
     ) external {
         require(
             !_initialized,
@@ -101,7 +96,6 @@ contract WQStaking is AccessControl {
         minStake = _minStake;
         maxStake = _maxStake;
         rewardToken = IERC20(_rewardToken);
-        stakeToken = IERC20(_stakeToken);
         producedTime = block.timestamp;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -117,9 +111,9 @@ contract WQStaking is AccessControl {
      *
      * - `_amount` - stake amount
      */
-    function stake(uint256 _amount) external {
-        require(_amount >= minStake, "WQStaking: Amount should be greater than minimum stake");
-        require(_amount <= maxStake, "WQStaking: Amount should be less than maximum stake");
+    function stake() external payable {
+        require(msg.value >= minStake, "WQStaking: Amount should be greater than minimum stake");
+        require(msg.value <= maxStake, "WQStaking: Amount should be less than maximum stake");
         Staker storage staker = stakes[msg.sender];
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
@@ -128,20 +122,15 @@ contract WQStaking is AccessControl {
         if (totalStaked > 0) {
             update();
         }
-        staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
-        totalStaked += _amount;
-        staker.amount += _amount;
+        staker.rewardDebt += (msg.value * tokensPerStake) / 1e20;
+        totalStaked += msg.value;
+        staker.amount += msg.value;
         staker.stakedAt = block.timestamp;
         if (staker.unstakeTime == 0) {
             staker.unstakeTime = block.timestamp + duration;
         }
-
         update();
-
-        // Transfer specified amount of staking tokens to the contract
-        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
-
-        emit tokensStaked(_amount, block.timestamp, msg.sender);
+        emit tokensStaked(msg.value, block.timestamp, msg.sender);
     }
 
     /**
@@ -171,7 +160,7 @@ contract WQStaking is AccessControl {
         staker.amount -= _amount;
         totalStaked -= _amount;
 
-        stakeToken.safeTransfer(msg.sender, _amount);
+        payable(msg.sender).transfer(_amount);
 
         emit tokensUnstaked(_amount, block.timestamp, msg.sender);
         _entered = false;
@@ -307,7 +296,7 @@ contract WQStaking is AccessControl {
     /**
      * @dev getInfoByAddress - return information about the staker
      */
-    function getInfoByAddress(address user)
+    function getInfoByAddress(address payable user)
         external
         view
         returns (
@@ -319,7 +308,7 @@ contract WQStaking is AccessControl {
         Staker storage staker = stakes[user];
         staked_ = staker.amount;
         claim_ = getClaim(user);
-        return (staked_, claim_, stakeToken.balanceOf(user));
+        return (staked_, claim_, user.balance);
     }
 
     /**
@@ -336,7 +325,6 @@ contract WQStaking is AccessControl {
             maxStake: maxStake,
             totalStaked: totalStaked,
             totalDistributed: totalDistributed,
-            stakeTokenAddress: address(stakeToken),
             rewardTokenAddress: address(rewardToken)
         });
         return info_;
