@@ -150,7 +150,7 @@ contract WorkQuest {
         );
     }
 
-    function cancelJob() public {
+    function cancelJob() external {
         require(status == JobStatus.New && msg.sender == employer, errMsg);
         status = JobStatus.Finished;
         emit JobCancelled();
@@ -175,7 +175,7 @@ contract WorkQuest {
      * @notice Employer assigned worker to job
      * @param _worker Address of worker
      */
-    function assignJob(address payable _worker) public {
+    function assignJob(address payable _worker) external {
         require(
             msg.sender == employer && status == JobStatus.Published,
             errMsg
@@ -189,7 +189,7 @@ contract WorkQuest {
     /**
      * @notice Worker accepted job to work
      */
-    function acceptJob() public {
+    function acceptJob() external {
         require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
         status = JobStatus.WaitJobStart;
         emit JobAccepted();
@@ -198,7 +198,7 @@ contract WorkQuest {
     /**
      * @notice Worker decline job
      */
-    function declineJob() public {
+    function declineJob() external {
         require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
         status = JobStatus.Published;
         emit JobDeclined();
@@ -207,7 +207,7 @@ contract WorkQuest {
     /**
      * @notice Worker process job
      */
-    function processJob() public {
+    function processJob() external {
         require(
             msg.sender == worker && status == JobStatus.WaitJobStart,
             errMsg
@@ -219,7 +219,7 @@ contract WorkQuest {
     /**
      * @notice Worker send job to verification
      */
-    function verificationJob() public {
+    function verificationJob() external {
         require(msg.sender == worker && status == JobStatus.InProgress, errMsg);
         status = JobStatus.WaitJobVerify;
         timeDone = block.timestamp;
@@ -229,7 +229,7 @@ contract WorkQuest {
     /**
      * @notice Employer accepted job
      */
-    function acceptJobResult() public {
+    function acceptJobResult() external {
         require(
             msg.sender == employer && status == JobStatus.WaitJobVerify,
             errMsg
@@ -242,7 +242,7 @@ contract WorkQuest {
     /**
      * @notice Employer or worker send job to arbitration
      */
-    function arbitration() public {
+    function arbitration() external {
         require(
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
                 (msg.sender == worker &&
@@ -257,7 +257,7 @@ contract WorkQuest {
     /**
      * @notice Arbiter send job to rework
      */
-    function arbitrationRework() public {
+    function arbitrationRework() external {
         require(
             msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
@@ -272,7 +272,7 @@ contract WorkQuest {
      * @param _forfeit Forfeit amount
      */
 
-    function arbitrationDecreaseCost(uint256 _forfeit) public {
+    function arbitrationDecreaseCost(uint256 _forfeit) external {
         require(
             msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
@@ -290,7 +290,7 @@ contract WorkQuest {
     /**
      * @notice Arbiter accepted job result
      */
-    function arbitrationAcceptWork() public {
+    function arbitrationAcceptWork() external {
         require(
             msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
@@ -303,7 +303,7 @@ contract WorkQuest {
     /**
      * @notice Arbiter declined job
      */
-    function arbitrationRejectWork() public {
+    function arbitrationRejectWork() external {
         require(
             msg.sender == arbiter && status == JobStatus.Arbitration,
             errMsg
@@ -313,6 +313,10 @@ contract WorkQuest {
         employer.transfer(cost - comission);
         feeReceiver.transfer(comission);
         emit ArbitrationRejectWork();
+    }
+
+    function setFeeReceiver(address _feeReceiver) external {
+
     }
 
     function _transferFunds() internal {
