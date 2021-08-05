@@ -17,7 +17,7 @@ const PolicyType = Object.freeze({
     Medium: 1,
     Maximal: 2
 });
-
+/*
 describe("Insurance tests", () => {
     let insurance_factory;
     let insurance;
@@ -522,4 +522,4 @@ describe("Insurance tests", () => {
             }
         });
     });
-});
+});*/

@@ -3,6 +3,7 @@ pragma solidity =0.8.4;
 
 contract WQInsurance {
     struct MemberInfo {
+        uint256 firstContribution;
         uint256 lastContribution;
         uint256 contributed;
         bool enabled;
@@ -120,11 +121,14 @@ contract WQInsurance {
         }
         member.contributed += msg.value;
         member.lastContribution = block.timestamp;
+        if (member.firstContribution == 0) {
+            member.firstContribution = block.timestamp;
+        }
         emit Received(msg.value, block.timestamp, msg.sender);
     }
 
     /**
-     * Ask funds from contract
+     * @notice Ask funds from contract
      */
     function askFunds() external {
         require(
@@ -158,7 +162,7 @@ contract WQInsurance {
     }
 
     /**
-     * Cancel ask funds
+     * @notice Cancel ask funds
      */
     function removeAsk() external {
         require(
@@ -183,7 +187,7 @@ contract WQInsurance {
     }
 
     /**
-     * Confirm payment from other members
+     * @notice Confirm payment from other members
      */
     function confirmPayment(address member) external {
         require(memberInfo[member].enabled, "WQInsurance: Member not found");
@@ -201,7 +205,7 @@ contract WQInsurance {
     }
 
     /**
-     * Revoke confirmation payment
+     * @notice Revoke confirmation payment
      */
     function revokeConfirmation(address member) external {
         require(memberInfo[member].enabled, "WQInsurance: Member not found");
@@ -219,7 +223,7 @@ contract WQInsurance {
     }
 
     /**
-     * Payment executed when all member confirmed it
+     * @notice Payment executed when all member confirmed it
      */
     function executePayment() external {
         require(
@@ -248,5 +252,22 @@ contract WQInsurance {
         ask.active = false;
         payable(msg.sender).transfer(ask.asked);
         emit PaymentExecuted(block.timestamp, ask.asked, msg.sender);
+    }
+
+    /**
+     * @notice withdraw after year
+     */
+    function withdraw() external {
+        require(
+            memberInfo[msg.sender].enabled,
+            "WQInsurance: You are not a member"
+        );
+        require(
+            memberInfo[msg.sender].firstContribution + YEAR <= block.timestamp,
+            "WQInsurance: Your funds are still frozen "
+        );
+        payable(msg.sender).transfer(
+            memberInfo[msg.sender].contributed - asks[msg.sender].asked
+        );
     }
 }
