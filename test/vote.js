@@ -9,7 +9,7 @@ const envConfig = dotenv.parse(fs.readFileSync(".env"));
 for (const k in envConfig) {
     process.env[k] = envConfig[k]
 }
-
+/*
 describe('Governance token test', () => {
     let token;
     let owner;
@@ -23,7 +23,7 @@ describe('Governance token test', () => {
         const WQToken = await ethers.getContractFactory('WQToken');
         token = await upgrades.deployProxy(WQToken, [ethers.utils.parseEther("100000000")], {initializer: 'initialize'});
 
-        const DAOBallot = await ethers.getContractFactory("DAOBallot");
+        const DAOBallot = await ethers.getContractFactory("WQDAOBallot");
         vote = await DAOBallot.deploy(owner.address, token.address);
         await vote.addProposal("", 6000, 2);
     });
@@ -182,4 +182,4 @@ describe('Governance token test', () => {
             })
         })
     })
-})
+})*/

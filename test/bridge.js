@@ -26,7 +26,7 @@ let validator;
 let not_validator;
 let sender;
 let recipient;
-
+/*
 describe("Bridge test", () => {
     let bridge;
     let token;
@@ -382,4 +382,4 @@ describe("Bridge test", () => {
             ).to.be.equal(true);
         });
     });
-});
+});*/

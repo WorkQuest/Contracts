@@ -48,7 +48,7 @@ let arbiter;
 let feeReceiver;
 let work_quest_factory;
 let work_quest;
-
+/*
 describe("Work Quest test", () => {
   let call_flow;
 
@@ -56,7 +56,7 @@ describe("Work Quest test", () => {
     require('dotenv').config();
     [work_quest_owner, employer, worker, arbiter, feeReceiver] = await ethers.getSigners();
 
-    const PensionFund = await hre.ethers.getContractFactory("PensionFund");
+    const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
     const pension_fund = await PensionFund.deploy(60);
     await pension_fund.deployed();
 
@@ -644,4 +644,4 @@ describe("Work Quest test", () => {
       }
     });
   });
-});
+});*/
