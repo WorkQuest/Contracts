@@ -107,7 +107,7 @@ contract WQPensionFund is WQFundInterface, AccessControl {
         _entered = true;
         require(
             hasRole(BORROWER_ROLE, msg.sender),
-            "WQPension: You are not have a borrower role"
+            "WQPension: You don't have a borrower role"
         );
         require(
             amount <= contributed - borrowed,

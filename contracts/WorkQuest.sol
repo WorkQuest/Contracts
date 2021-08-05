@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WQPensionFund.sol";
 
-contract WorkQuest {
+contract WorkQuest is AccessControl{
+
     string constant errMsg = "WorkQuest: Access denied or invalid status";
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     /**
      * @notice Job offer statuses
@@ -23,7 +26,7 @@ contract WorkQuest {
     /// @notice Fee coefficient of workquest
     uint256 public immutable fee;
     /// @notice Fee receiver address
-    address payable public immutable feeReceiver;
+    address payable public feeReceiver;
     /// @notice Pension wallet factory contract address
     address payable public immutable pensionFund;
     /// @notice Address of employer
@@ -117,6 +120,7 @@ contract WorkQuest {
         pensionFund = _pensionFund;
         employer = _employer;
         arbiter = _arbiter;
+        // TODO: grant admin role to admin
         emit WorkQuestCreated(jobHash);
     }
 
@@ -315,8 +319,9 @@ contract WorkQuest {
         emit ArbitrationRejectWork();
     }
 
-    function setFeeReceiver(address _feeReceiver) external {
-
+    function setFeeReceiver(address payable _feeReceiver) external {
+        require(hasRole(ADMIN_ROLE, msg.sender), "WorkQuest: You don't have an admin role");
+        feeReceiver = _feeReceiver;
     }
 
     function _transferFunds() internal {
