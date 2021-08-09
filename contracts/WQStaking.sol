@@ -23,6 +23,7 @@ contract WQStaking is AccessControl {
 
     // StakeInfo contains info related to stake.
     struct StakeInfo {
+        uint256 startTime;
         uint256 rewardTotal;
         uint256 distributionTime;
         uint256 duration;
@@ -46,6 +47,8 @@ contract WQStaking is AccessControl {
     IERC20 public rewardToken;
 
     /// @notice Common contract configuration variables
+    /// @notice Time of start staking
+    uint256 startTime;
     /// @notice Total rewards per distribution time
     uint256 public rewardTotal;
     /// @notice Distribution time
@@ -78,6 +81,7 @@ contract WQStaking is AccessControl {
     event tokensUnstaked(uint256 amount, uint256 time, address indexed sender);
 
     function initialize(
+        uint256 _startTime,
         uint256 _rewardTotal,
         uint256 _distributionTime,
         uint256 _duration,
@@ -92,7 +96,7 @@ contract WQStaking is AccessControl {
             !_initialized,
             "WQStaking: Contract instance has already been initialized"
         );
-
+        startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
         duration = _duration;
@@ -102,7 +106,7 @@ contract WQStaking is AccessControl {
         maxStake = _maxStake;
         rewardToken = IERC20(_rewardToken);
         stakeToken = IERC20(_stakeToken);
-        producedTime = block.timestamp;
+        producedTime = _startTime;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -118,9 +122,23 @@ contract WQStaking is AccessControl {
      * - `_amount` - stake amount
      */
     function stake(uint256 _amount) external {
-        require(_amount >= minStake, "WQStaking: Amount should be greater than minimum stake");
-        require(_amount <= maxStake, "WQStaking: Amount should be less than maximum stake");
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            "WQStaking: Daily lock"
+        );
+        require(
+            block.timestamp > startTime,
+            "WQStaking: Staking time has not come yet"
+        );
+        require(
+            _amount >= minStake,
+            "WQStaking: Amount should be greater than minimum stake"
+        );
         Staker storage staker = stakes[msg.sender];
+        require(
+            _amount + staker.amount <= maxStake,
+            "WQStaking: Amount should be less than maximum stake"
+        );
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
             "WQStaking: You cannot stake tokens yet"
@@ -128,6 +146,8 @@ contract WQStaking is AccessControl {
         if (totalStaked > 0) {
             update();
         }
+        // Transfer specified amount of staking tokens to the contract
+        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
         staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
         totalStaked += _amount;
         staker.amount += _amount;
@@ -135,12 +155,6 @@ contract WQStaking is AccessControl {
         if (staker.unstakeTime == 0) {
             staker.unstakeTime = block.timestamp + duration;
         }
-
-        update();
-
-        // Transfer specified amount of staking tokens to the contract
-        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
-
         emit tokensStaked(_amount, block.timestamp, msg.sender);
     }
 
@@ -153,6 +167,10 @@ contract WQStaking is AccessControl {
      */
 
     function unstake(uint256 _amount) external {
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            "WQStaking: Daily lock"
+        );
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
         Staker storage staker = stakes[msg.sender];
@@ -181,6 +199,10 @@ contract WQStaking is AccessControl {
      * @dev claim available rewards
      */
     function claim() external returns (bool) {
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            "WQStaking: Daily lock"
+        );
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
         Staker storage staker = stakes[msg.sender];
@@ -327,6 +349,7 @@ contract WQStaking is AccessControl {
      */
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
+            startTime: startTime,
             rewardTotal: rewardTotal,
             distributionTime: distributionTime,
             duration: duration,

@@ -49,6 +49,11 @@ contract WQBorrowing is AccessControl {
         _initialized = true;
     }
 
+    /**
+     * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
+     * @param collateral Amount of collateral token
+     * @param token Collateral token address
+     */
     function borrow(uint256 collateral, IERC20 token) external {
         require(
             collateralTokens[token].enabled,
@@ -59,8 +64,9 @@ contract WQBorrowing is AccessControl {
         loan.borrowed = true;
         loan.collateral = collateral;
         loan.token = token;
-        uint256 price = 0; // TODO: get price from oracle
-        loan.amount = (collateral * price) / 1e18;
+        // TODO: get price from oracle
+        uint256 price = 0; // oracle.getPrice(token.symbol());
+        loan.amount = ((collateral * price) * 1000) / 1500e18;
 
         //TODO: check funds on contracts and request it
         bool success = false;
@@ -81,6 +87,9 @@ contract WQBorrowing is AccessControl {
         emit Borrowed(collateral, token, loan.amount, msg.sender);
     }
 
+    /**
+     * @notice Refund loan
+     */
     function refund() external payable {
         BorrowInfo storage loan = borrowers[msg.sender];
         require(
@@ -96,6 +105,10 @@ contract WQBorrowing is AccessControl {
         emit Refunded(msg.sender, msg.value);
     }
 
+    /**
+     * @notice Add address of fund
+     * @param fund Address of fund
+     */
     function addFund(address fund) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
@@ -104,6 +117,10 @@ contract WQBorrowing is AccessControl {
         funds.push(WQFundInterface(fund));
     }
 
+    /**
+     * @notice Set fee for loan using
+     * @param _fee Fee amount
+     */
     function setFee(uint256 _fee) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),

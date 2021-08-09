@@ -23,8 +23,12 @@ task("set_bridge_to_wrapped", "Set bridge address to token")
         console.log("Bridge:", process.env.BRIDGE);
         console.log("Token:", process.env.STAKE_TOKEN);
 
+        let minter_role = await token.MINTER_ROLE();
+        let burner_role = await token.BURNER_ROLE();
+
         const token = await hre.ethers.getContractAt("BridgeToken", process.env.STAKE_TOKEN);
-        await token.grantRole(await token.BRIDGE_ROLE(), process.env.BRIDGE);
+        await token.grantRole(minter_role, process.env.BRIDGE);
+        await token.grantRole(burner_role, process.env.BRIDGE);
 
         console.log("Done");
     });

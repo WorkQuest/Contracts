@@ -112,9 +112,19 @@ contract WQStaking is AccessControl {
      * - `_amount` - stake amount
      */
     function stake() external payable {
-        require(msg.value >= minStake, "WQStaking: Amount should be greater than minimum stake");
-        require(msg.value <= maxStake, "WQStaking: Amount should be less than maximum stake");
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            "WQStaking: Daily lock"
+        );
+        require(
+            msg.value >= minStake,
+            "WQStaking: Amount should be greater than minimum stake"
+        );
         Staker storage staker = stakes[msg.sender];
+        require(
+            msg.value + staker.amount <= maxStake,
+            "WQStaking: Amount should be less than maximum stake"
+        );
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
             "WQStaking: You cannot stake tokens yet"
@@ -129,7 +139,6 @@ contract WQStaking is AccessControl {
         if (staker.unstakeTime == 0) {
             staker.unstakeTime = block.timestamp + duration;
         }
-        update();
         emit tokensStaked(msg.value, block.timestamp, msg.sender);
     }
 
@@ -142,6 +151,10 @@ contract WQStaking is AccessControl {
      */
 
     function unstake(uint256 _amount) external {
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            "WQStaking: Daily lock"
+        );
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
         Staker storage staker = stakes[msg.sender];
@@ -170,6 +183,10 @@ contract WQStaking is AccessControl {
      * @dev claim available rewards
      */
     function claim() external returns (bool) {
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            "WQStaking: Daily lock"
+        );
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
         Staker storage staker = stakes[msg.sender];

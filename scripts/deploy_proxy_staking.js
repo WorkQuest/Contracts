@@ -14,8 +14,8 @@ async function main() {
     for (const k in envConfig) {
         process.env[k] = envConfig[k]
     }
-    if (!process.env.REWARD_TOTAL) {
-        throw new Error(`Please set your REWARD_TOTAL in a .env-${network} file`);
+    if (!process.env.REWARD_DELTA) {
+        throw new Error(`Please set your REWARD_DELTA in a .env-${network} file`);
     }
     if (!process.env.START_TIME) {
         throw new Error(`Please set your START_TIME in a .env-${network} file`);
@@ -23,8 +23,20 @@ async function main() {
     if (!process.env.DISTRIBUTION_TIME) {
         throw new Error(`Please set your DISTRIBUTION_TIME in a .env-${network} file`);
     }
-    if (!process.env.UNLOCK_CLAIM_TIME) {
-        throw new Error(`Please set your UNLOCK_CLAIM_TIME in a .env-${network} file`);
+    if (!process.env.DURATION) {
+        throw new Error(`Please set your DURATION in a .env-${network} file`);
+    }
+    if (!process.env.STAKE_PERIOD) {
+        throw new Error(`Please set your STAKE_PERIOD in a .env-${network} file`);
+    }
+    if (!process.env.CLAIM_PERIOD) {
+        throw new Error(`Please set your CLAIM_PERIOD in a .env-${network} file`);
+    }
+    if (!process.env.MIN_STAKE) {
+        throw new Error(`Please set your MIN_STAKE in a .env-${network} file`);
+    }
+    if (!process.env.MAX_STAKE) {
+        throw new Error(`Please set your MAX_STAKE in a .env-${network} file`);
     }
     if (!process.env.WORK_QUEST_TOKEN) {
         throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
@@ -38,10 +50,14 @@ async function main() {
     const staking = await upgrades.deployProxy(
         WQStaking,
         [
-            process.env.REWARD_TOTAL,
             process.env.START_TIME,
+            process.env.REWARD_DELTA,
             process.env.DISTRIBUTION_TIME,
-            process.env.UNLOCK_CLAIM_TIME,
+            process.env.DURATION,
+            process.env.STAKE_PERIOD,
+            process.env.CLAIM_PERIOD,
+            process.env.MIN_STAKE,
+            process.env.MAX_STAKE,
             process.env.WORK_QUEST_TOKEN,
             process.env.STAKE_TOKEN
         ],

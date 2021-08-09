@@ -6,7 +6,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract WQBridgeToken is ERC20Pausable, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
+    bytes32 public constant BRIDGE_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BRIDGE_ROLE = keccak256("BURNER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     address private owner;
@@ -42,7 +43,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
      */
     function mint(address to, uint256 amount) external {
         require(
-            hasRole(BRIDGE_ROLE, msg.sender),
+            hasRole(MINTER_ROLE, msg.sender),
             "You should have a bridge role"
         );
         _mint(to, amount);
@@ -58,7 +59,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
      */
     function burn(address from, uint256 amount) external {
         require(
-            hasRole(BRIDGE_ROLE, msg.sender),
+            hasRole(BURNER_ROLE, msg.sender),
             "You should have a bridge role"
         );
         _burn(from, amount);

@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract WQToken {
+contract WQToken is AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+
     /// @notice Checkpoint structure
     struct Checkpoint {
         uint32 fromBlock;
@@ -45,9 +50,6 @@ contract WQToken {
     mapping(address => uint256) private _voteLockedTokenBalance;
 
     mapping(address => mapping(address => uint256)) private _allowances;
-
-    /// @notice Bridge address
-    address public bridge;
 
     /**
      * @notice Emitted when `value` tokens are moved from one account (`from`) to
@@ -222,27 +224,18 @@ contract WQToken {
      * Requirements: msg.sender should be a bridge address
      */
     function mint(address account, uint256 amount) external {
-        require(msg.sender == bridge, "WQT: Sender should be a bridge");
+        require(hasRole(MINTER_ROLE, msg.sender), "WQT: Sender should be a bridge");
         _mint(account, amount);
     }
 
     /**
-     * @notice Burn token, when swap initialized in bridge. msg.sender should be a bridge address
+     * @notice Burn token, when swap initialized in bridge. msg.sender should be a burner role
      * @param account Address of an account
      * @param amount Amount of tokens
      */
     function burn(address account, uint256 amount) external {
-        require(msg.sender == bridge, "WQT: Sender should be a bridge");
+        require(hasRole(BURNER_ROLE, msg.sender), "WQT: Sender should be a bridge");
         _burn(account, amount);
-    }
-
-    /**
-     * @notice Set address of bridge for swap token. msg.sender should be an owner
-     * @param _bridge Address of bridge
-     */
-    function setBridge(address _bridge) external {
-        require(msg.sender == owner, "WQT: Sender should be a owner");
-        bridge = _bridge;
     }
 
     /**
@@ -326,7 +319,7 @@ contract WQToken {
      */
     function setSaleContract(address saleContract) public {
         require(
-            msg.sender == owner && _saleContract == address(0),
+            hasRole(ADMIN_ROLE, msg.sender) && _saleContract == address(0),
             "WQT: Caller must be owner and _saleContract yet unset"
         );
         _saleContract = saleContract;
@@ -340,7 +333,7 @@ contract WQToken {
      */
     function lockTransfers() public {
         require(
-            msg.sender == owner && !_unlockFixed,
+            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
             "WQT: Caller must be owner and _unlockFixed false"
         );
         _locked = true;
@@ -354,7 +347,7 @@ contract WQToken {
      */
     function unlockTransfers() public {
         require(
-            msg.sender == owner && !_unlockFixed,
+            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
             "WQT: Caller must be owner and _unlockFixed false"
         );
         _locked = false;
@@ -369,11 +362,11 @@ contract WQToken {
      */
     function unlockTransfersPermanent() public {
         require(
-            msg.sender == owner && !_unlockFixed,
+            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
             "WQT: Caller must be owner and _unlockFixed false"
         );
         _locked = false;
-        _unlockFixed = true;
+        _unlockFixed = true;bridge address
     }
 
     function _transfer(

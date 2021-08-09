@@ -24,7 +24,10 @@ task("set_bridge_to_wqt", "Set bridge address to token")
         console.log("Token:", process.env.WORK_QUEST_TOKEN);
 
         const token = await hre.ethers.getContractAt("WQToken", process.env.WORK_QUEST_TOKEN);
-        await token.setBridge(process.env.BRIDGE);
+        let minter_role = await token.MINTER_ROLE();
+        let burner_role = await token.BURNER_ROLE();
+        await token.grantRole(minter_role, process.env.BRIDGE);
+        await token.grantRole(burner_role, process.env.BRIDGE);
 
         console.log("Done");
     });
