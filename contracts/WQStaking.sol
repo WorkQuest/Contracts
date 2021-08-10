@@ -26,7 +26,6 @@ contract WQStaking is AccessControl {
         uint256 startTime;
         uint256 rewardTotal;
         uint256 distributionTime;
-        uint256 duration;
         uint256 stakePeriod;
         uint256 claimPeriod;
         uint256 minStake;
@@ -53,8 +52,6 @@ contract WQStaking is AccessControl {
     uint256 public rewardTotal;
     /// @notice Distribution time
     uint256 public distributionTime;
-    /// @notice Staking lock period of funds, 0 for flexible staking
-    uint256 public duration;
     /// @notice Staking period
     uint256 public stakePeriod;
     /// @notice Claiming rewards period
@@ -84,7 +81,6 @@ contract WQStaking is AccessControl {
         uint256 _startTime,
         uint256 _rewardTotal,
         uint256 _distributionTime,
-        uint256 _duration,
         uint256 _stakePeriod,
         uint256 _claimPeriod,
         uint256 _minStake,
@@ -99,7 +95,6 @@ contract WQStaking is AccessControl {
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
-        duration = _duration;
         stakePeriod = _stakePeriod;
         claimPeriod = _claimPeriod;
         minStake = _minStake;
@@ -121,10 +116,10 @@ contract WQStaking is AccessControl {
      *
      * - `_amount` - stake amount
      */
-    function stake(uint256 _amount) external {
+    function stake(uint256 _amount, uint256 duration) external {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
-            "WQStaking: Daily lock"
+            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
         );
         require(
             block.timestamp > startTime,
@@ -139,6 +134,13 @@ contract WQStaking is AccessControl {
             _amount + staker.amount <= maxStake,
             "WQStaking: Amount should be less than maximum stake"
         );
+        if (block.timestamp >= staker.unstakeTime) {
+            require(
+                duration == 30 || duration == 60 || duration == 90,
+                "WQStaking: duration must be 30, 60 or 90 days"
+            );
+            staker.unstakeTime = block.timestamp + duration * 86400;
+        }
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
             "WQStaking: You cannot stake tokens yet"
@@ -148,13 +150,10 @@ contract WQStaking is AccessControl {
         }
         // Transfer specified amount of staking tokens to the contract
         stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
-        staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
+        staker.rewardDebt += (_amount * tokensPerStake) / 1e18;
         totalStaked += _amount;
         staker.amount += _amount;
         staker.stakedAt = block.timestamp;
-        if (staker.unstakeTime == 0) {
-            staker.unstakeTime = block.timestamp + duration;
-        }
         emit tokensStaked(_amount, block.timestamp, msg.sender);
     }
 
@@ -169,7 +168,7 @@ contract WQStaking is AccessControl {
     function unstake(uint256 _amount) external {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
-            "WQStaking: Daily lock"
+            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
         );
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
@@ -185,7 +184,7 @@ contract WQStaking is AccessControl {
 
         update();
 
-        staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
+        staker.rewardAllowed += (_amount * tokensPerStake) / 1e18;
         staker.amount -= _amount;
         totalStaked -= _amount;
 
@@ -201,7 +200,7 @@ contract WQStaking is AccessControl {
     function claim() external returns (bool) {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
-            "WQStaking: Daily lock"
+            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
         );
         require(!_entered, "WQStaking: Reentrancy guard");
         _entered = true;
@@ -239,7 +238,7 @@ contract WQStaking is AccessControl {
 
         reward =
             (staker.amount * _tps) /
-            1e20 +
+            1e18 +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -256,7 +255,7 @@ contract WQStaking is AccessControl {
             uint256 rewardProducedAtNow = produced();
             if (rewardProducedAtNow > rewardProduced) {
                 uint256 producedNew = rewardProducedAtNow - rewardProduced;
-                _tps += (producedNew * 1e20) / totalStaked;
+                _tps += (producedNew * 1e18) / totalStaked;
             }
         }
         reward = calcReward(_staker, _tps);
@@ -280,9 +279,9 @@ contract WQStaking is AccessControl {
         if (rewardProducedAtNow > rewardProduced) {
             uint256 producedNew = rewardProducedAtNow - rewardProduced;
             if (totalStaked > 0) {
-                tokensPerStake += (producedNew * 1e20) / totalStaked;
+                tokensPerStake += (producedNew * 1e18) / totalStaked;
             }
-            rewardProduced += producedNew;
+            rewardProduced = rewardProducedAtNow;
         }
     }
 
@@ -352,7 +351,6 @@ contract WQStaking is AccessControl {
             startTime: startTime,
             rewardTotal: rewardTotal,
             distributionTime: distributionTime,
-            duration: duration,
             stakePeriod: stakePeriod,
             claimPeriod: claimPeriod,
             minStake: minStake,

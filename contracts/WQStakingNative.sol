@@ -18,14 +18,13 @@ contract WQStaking is AccessControl {
         uint256 distributed; // amount of distributed earned tokens
         uint256 stakedAt; // timestamp of last stake
         uint256 claimedAt; // timestamp of last claim
-        uint256 unstakeTime; // timestamp of unstake
     }
 
     // StakeInfo contains info related to stake.
     struct StakeInfo {
-        uint256 rewardTotal;
+        uint256 rewardDelta1;
+        uint256 rewardDelta2;
         uint256 distributionTime;
-        uint256 duration;
         uint256 stakePeriod;
         uint256 claimPeriod;
         uint256 minStake;
@@ -42,12 +41,11 @@ contract WQStaking is AccessControl {
     IERC20 public rewardToken;
 
     /// @notice Common contract configuration variables
-    /// @notice Total rewards per distribution time
-    uint256 public rewardTotal;
+    /// @notice Increase of rewards per distribution time
+    uint256 public rewardDelta1;
+    uint256 public rewardDelta2;
     /// @notice Distribution time
     uint256 public distributionTime;
-    /// @notice Staking lock period of funds, 0 for flexible staking
-    uint256 public duration;
     /// @notice Staking period
     uint256 public stakePeriod;
     /// @notice Claiming rewards period
@@ -74,9 +72,10 @@ contract WQStaking is AccessControl {
     event tokensUnstaked(uint256 amount, uint256 time, address indexed sender);
 
     function initialize(
-        uint256 _rewardTotal,
+        uint256 _startTime,
+        uint256 _rewardDelta1,
+        uint256 _rewardDelta2,
         uint256 _distributionTime,
-        uint256 _duration,
         uint256 _stakePeriod,
         uint256 _claimPeriod,
         uint256 _minStake,
@@ -87,16 +86,16 @@ contract WQStaking is AccessControl {
             !_initialized,
             "WQStaking: Contract instance has already been initialized"
         );
-
-        rewardTotal = _rewardTotal;
+        startTime = _startTime;
+        rewardDelta1 = _rewardDelta1;
+        rewardDelta2 = _rewardDelta2;
         distributionTime = _distributionTime;
-        duration = _duration;
         stakePeriod = _stakePeriod;
         claimPeriod = _claimPeriod;
         minStake = _minStake;
         maxStake = _maxStake;
         rewardToken = IERC20(_rewardToken);
-        producedTime = block.timestamp;
+        producedTime = _startTime;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -132,13 +131,10 @@ contract WQStaking is AccessControl {
         if (totalStaked > 0) {
             update();
         }
-        staker.rewardDebt += (msg.value * tokensPerStake) / 1e20;
+        staker.rewardDebt += (msg.value * tokensPerStake) / 1e18;
         totalStaked += msg.value;
         staker.amount += msg.value;
         staker.stakedAt = block.timestamp;
-        if (staker.unstakeTime == 0) {
-            staker.unstakeTime = block.timestamp + duration;
-        }
         emit tokensStaked(msg.value, block.timestamp, msg.sender);
     }
 
@@ -159,17 +155,13 @@ contract WQStaking is AccessControl {
         _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
-            staker.unstakeTime <= block.timestamp,
-            "WQStaking: You cannot unstake token yet"
-        );
-        require(
             staker.amount >= _amount,
             "WQStaking: Not enough tokens to unstake"
         );
 
         update();
 
-        staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
+        staker.rewardAllowed += (_amount * tokensPerStake) / 1e18;
         staker.amount -= _amount;
         totalStaked -= _amount;
 
@@ -223,7 +215,7 @@ contract WQStaking is AccessControl {
 
         reward =
             (staker.amount * _tps) /
-            1e20 +
+            1e18 +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -240,7 +232,7 @@ contract WQStaking is AccessControl {
             uint256 rewardProducedAtNow = produced();
             if (rewardProducedAtNow > rewardProduced) {
                 uint256 producedNew = rewardProducedAtNow - rewardProduced;
-                _tps += (producedNew * 1e20) / totalStaked;
+                _tps += (producedNew * 1e18) / totalStaked;
             }
         }
         reward = calcReward(_staker, _tps);
@@ -253,10 +245,21 @@ contract WQStaking is AccessControl {
      *
      */
     function produced() private view returns (uint256) {
-        return
-            allProduced +
-            (rewardTotal * (block.timestamp - producedTime)) /
-            distributionTime;
+        uint256 n = (block.timestamp - startTime) / distributionTime;
+        if (n <= 27) {
+            uint256 producedEarlier = (rewardDelta1 * n * (n + 1)) / 2;
+            return
+                producedEarlier +
+                rewardDelta1 *
+                (block.timestamp - (startTime + n * distributionTime));
+        } else {
+            uint256 producedEarlier = (rewardDelta1 * 378) +
+                ((rewardDelta2 * (n - 27) * (n - 26)) / 2);
+            return
+                producedEarlier +
+                rewardDelta2 *
+                (block.timestamp - (startTime + n * distributionTime));
+        }
     }
 
     function update() public {
@@ -264,9 +267,9 @@ contract WQStaking is AccessControl {
         if (rewardProducedAtNow > rewardProduced) {
             uint256 producedNew = rewardProducedAtNow - rewardProduced;
             if (totalStaked > 0) {
-                tokensPerStake += (producedNew * 1e20) / totalStaked;
+                tokensPerStake += (producedNew * 1e18) / totalStaked;
             }
-            rewardProduced += producedNew;
+            rewardProduced = rewardProducedAtNow;
         }
     }
 
@@ -276,7 +279,7 @@ contract WQStaking is AccessControl {
     function setReward(uint256 _amount) external onlyRole(ADMIN_ROLE) {
         allProduced = produced();
         producedTime = block.timestamp;
-        rewardTotal = _amount;
+        rewardDelta1 = _amount;
     }
 
     /**
@@ -333,9 +336,8 @@ contract WQStaking is AccessControl {
      */
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
-            rewardTotal: rewardTotal,
+            rewardDelta1: rewardDelta1,
             distributionTime: distributionTime,
-            duration: duration,
             stakePeriod: stakePeriod,
             claimPeriod: claimPeriod,
             minStake: minStake,
