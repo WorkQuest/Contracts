@@ -9,7 +9,7 @@ contract WQInsurance {
         bool enabled;
     }
 
-    struct AskInfo {
+    struct ClaimInfo {
         uint256 asked;
         uint256 numConfirm;
         bool active;
@@ -29,7 +29,7 @@ contract WQInsurance {
     mapping(address => MemberInfo) public memberInfo;
     uint256 public memberCount;
 
-    mapping(address => AskInfo) public asks;
+    mapping(address => ClaimInfo) public claims;
     mapping(address => mapping(address => bool)) public confirmations;
 
     event Received(uint256 timestamp, uint256 amount, address user);
@@ -38,9 +38,9 @@ contract WQInsurance {
 
     event MemberRemoved(uint256 timestamp, address user);
 
-    event PaymentAsked(uint256 timestamp, address user, uint256 amount);
+    event PaymentClaimed(uint256 timestamp, address user, uint256 amount);
 
-    event AskRevoked(uint256 timestamp, address user);
+    event ClaimRemoved(uint256 timestamp, address user);
 
     event PaymentConfirmed(uint256 timestamp, address member, address user);
 
@@ -130,7 +130,7 @@ contract WQInsurance {
     /**
      * @notice Ask funds from contract
      */
-    function askFunds() external {
+    function claim() external {
         require(
             memberInfo[msg.sender].enabled,
             "WQInsurance: Member not found"
@@ -147,18 +147,18 @@ contract WQInsurance {
             "WQInsurance: You haven't contributed funds for a long time"
         );
         require(
-            !asks[msg.sender].executed,
+            !claims[msg.sender].executed,
             "WQInsurance: Payment is already executed"
         );
         require(
-            !asks[msg.sender].active,
+            !claims[msg.sender].active,
             "WQInsurance: Payment is already asked"
         );
-        asks[msg.sender].active = true;
-        asks[msg.sender].asked = (memberInfo[msg.sender].contributed * 5) / 6;
+        claims[msg.sender].active = true;
+        claims[msg.sender].asked = (memberInfo[msg.sender].contributed * 5) / 6;
         confirmations[msg.sender][msg.sender] = true;
-        asks[msg.sender].numConfirm = 1;
-        emit PaymentAsked(block.timestamp, msg.sender, asks[msg.sender].asked);
+        claims[msg.sender].numConfirm = 1;
+        emit PaymentClaimed(block.timestamp, msg.sender, claims[msg.sender].asked);
     }
 
     /**
@@ -170,12 +170,12 @@ contract WQInsurance {
             "WQInsurance: Member not found"
         );
         require(
-            !asks[msg.sender].executed,
+            !claims[msg.sender].executed,
             "WQInsurance: Payment is already executed"
         );
-        require(asks[msg.sender].active, "WQInsurance: Ask is already revoked");
-        asks[msg.sender].active = false;
-        asks[msg.sender].numConfirm = 0;
+        require(claims[msg.sender].active, "WQInsurance: Ask is already revoked");
+        claims[msg.sender].active = false;
+        claims[msg.sender].numConfirm = 0;
 
         //Revoke all confirmations
         for (uint256 i = 0; i < members.length; i++) {
@@ -183,7 +183,7 @@ contract WQInsurance {
                 confirmations[msg.sender][members[i]] = false;
             }
         }
-        emit AskRevoked(block.timestamp, msg.sender);
+        emit ClaimRemoved(block.timestamp, msg.sender);
     }
 
     /**
@@ -199,7 +199,7 @@ contract WQInsurance {
             !confirmations[member][msg.sender],
             "WQInsurance: Payment is already confirmed"
         );
-        asks[member].numConfirm++;
+        claims[member].numConfirm++;
         confirmations[member][msg.sender] = true;
         emit PaymentConfirmed(block.timestamp, member, msg.sender);
     }
@@ -217,7 +217,7 @@ contract WQInsurance {
             confirmations[member][msg.sender],
             "WQInsurance: Payment is already revoked confirmation"
         );
-        asks[member].numConfirm--;
+        claims[member].numConfirm--;
         confirmations[member][msg.sender] = false;
         emit ConfirmationRevoked(block.timestamp, member, msg.sender);
     }
@@ -241,7 +241,7 @@ contract WQInsurance {
                 block.timestamp,
             "WQInsurance: You haven't contributed funds for a long time"
         );
-        AskInfo storage ask = asks[msg.sender];
+        ClaimInfo storage ask = claims[msg.sender];
         require(!ask.executed, "WQInsurance: Payment is already executed");
         require(ask.active, "WQInsurance: Payment is not asked");
         require(
@@ -267,7 +267,7 @@ contract WQInsurance {
             "WQInsurance: Your funds are still frozen "
         );
         payable(msg.sender).transfer(
-            memberInfo[msg.sender].contributed - asks[msg.sender].asked
+            memberInfo[msg.sender].contributed - claims[msg.sender].asked
         );
     }
 }
