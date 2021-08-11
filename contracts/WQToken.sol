@@ -366,7 +366,7 @@ contract WQToken is AccessControl {
             "WQT: Caller must be owner and _unlockFixed false"
         );
         _locked = false;
-        _unlockFixed = true;bridge address
+        _unlockFixed = true;
     }
 
     function _transfer(

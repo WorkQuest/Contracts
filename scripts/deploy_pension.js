@@ -18,9 +18,13 @@ async function main() {
     throw new Error(`Please set your PENSION_LOCK_TIME in a .env-${network} file`);
   }
 
+  if (!process.env.PENSION_DEFAULT_FEE) {
+    throw new Error(`Please set your PENSION_DEFAULT_FEE in a .env-${network} file`);
+  }
+
   console.log("Deploying...");
   const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
-  const pension_fund = await PensionFund.deploy(process.env.PENSION_LOCK_TIME);
+  const pension_fund = await PensionFund.deploy(process.env.PENSION_LOCK_TIME, process.env.PENSION_DEFAULT_FEE);
   await pension_fund.deployed();
   console.log("PensionFund has been deployed to:", pension_fund.address);
 

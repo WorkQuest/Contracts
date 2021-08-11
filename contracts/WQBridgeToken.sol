@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract WQBridgeToken is ERC20Pausable, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant BRIDGE_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant BRIDGE_ROLE = keccak256("BURNER_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     address private owner;
@@ -21,7 +21,8 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
         owner = msg.sender;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(BRIDGE_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(PAUSER_ROLE, ADMIN_ROLE);
     }
 

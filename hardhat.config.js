@@ -48,7 +48,8 @@ module.exports = {
     wqdevnet: {
       url: "https://dev-node-ams3.workquest.co/",
       accounts: { mnemonic: mnemonic },
-      gasPrice: 10000000000
+      gasPrice: 10000000000,
+      chainId: 20210811
     },
     bsctestnet: {
       url: "https://data-seed-prebsc-2-s1.binance.org:8545",

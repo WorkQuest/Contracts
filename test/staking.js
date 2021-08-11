@@ -5,11 +5,11 @@ BigNumber.config({ EXPONENTIAL_AT: 60 });
 const Web3 = require('web3');
 const { parseEther } = require("ethers/lib/utils");
 const web3 = new Web3(hre.network.provider);
-const rewardTotal = parseEther("100");
-const distributionTime = 86400;
+const rewardDelta1 = parseEther("76000");
+const rewardDelta2 = parseEther("1056800");
+const distributionTime = 2678400; //31 day
 const stakePeriod = 86400;
 const claimPeriod = 86400;
-const duration = 2592000;
 const minStake = parseEther("100");
 const maxStake = parseEther("100000");
 
@@ -28,15 +28,21 @@ describe("Staking tests", () => {
         await token.transfer(accounts[2].address, parseEther("500000"));
         await token.transfer(accounts[3].address, parseEther("500000"));
         const Staking = await ethers.getContractFactory("WQStaking");
-        staking = await upgrades.deployProxy(Staking, [rewardTotal, distributionTime, duration, stakePeriod, claimPeriod, minStake, maxStake, token.address, token.address], { initializer: 'initialize' });
+        staking = await upgrades.deployProxy(Staking, [parseInt(staking_deploy_block.timestamp), rewardDelta1, rewardDelta2, distributionTime, stakePeriod, claimPeriod, minStake, maxStake, token.address, token.address], { initializer: 'initialize' });
     });
 
     describe("Staking deploy", () => {
         it("STEP1: should be set all variables", async () => {
             let staking_info = await staking.getStakingInfo();
             expect(
-                staking_info.rewardTotal
-            ).to.to.equal(rewardTotal);
+                staking_info.startTime
+            ).to.to.equal(parseInt(staking_deploy_block.timestamp));
+            expect(
+                staking_info.rewardDelta1
+            ).to.to.equal(rewardDelta1);
+            expect(
+                staking_info.rewardDelta2
+            ).to.to.equal(rewardDelta2);
             expect(
                 staking_info.distributionTime
             ).to.to.equal(distributionTime);
@@ -47,8 +53,11 @@ describe("Staking tests", () => {
                 staking_info.claimPeriod
             ).to.to.equal(claimPeriod);
             expect(
-                staking_info.duration
-            ).to.to.equal(duration);
+                staking_info.minStake
+            ).to.to.equal(minStake);
+            expect(
+                staking_info.maxStake
+            ).to.to.equal(maxStake);
             expect(
                 staking_info.totalStaked
             ).to.to.equal(0);
@@ -144,6 +153,7 @@ describe("Staking tests", () => {
 
     describe("Claim", () => {
         it("STEP1: stake: success", async () => {
+            //await hre.ethers.provider.send("evm_setNextBlockTimestamp", []);
         });
         it("STEP2:", async () => {
         });

@@ -34,6 +34,8 @@ contract DAODelegateStorage {
     // The maximum setable proposal threshold
     uint256 public constant proposalThreshold = 10000e18; //10,000
 
+    uint256 public constant voteThreshold = 100e18; //100
+
     string public constant name = "DAO Ballot";
 
     /// @notice The EIP-712 typehash for the contract's domain

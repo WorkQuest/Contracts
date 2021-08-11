@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract WQStaking is AccessControl {
+contract WQStakingNative is AccessControl {
     using SafeERC20 for IERC20;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -22,6 +22,7 @@ contract WQStaking is AccessControl {
 
     // StakeInfo contains info related to stake.
     struct StakeInfo {
+        uint256 startTime;
         uint256 rewardDelta1;
         uint256 rewardDelta2;
         uint256 distributionTime;
@@ -41,6 +42,8 @@ contract WQStaking is AccessControl {
     IERC20 public rewardToken;
 
     /// @notice Common contract configuration variables
+    /// @notice Time of start staking
+    uint256 startTime;
     /// @notice Increase of rewards per distribution time
     uint256 public rewardDelta1;
     uint256 public rewardDelta2;
@@ -111,6 +114,10 @@ contract WQStaking is AccessControl {
      * - `_amount` - stake amount
      */
     function stake() external payable {
+        require(
+            block.timestamp > startTime,
+            "WQStaking: Staking time has not come yet"
+        );
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
             "WQStaking: Daily lock"
@@ -336,7 +343,9 @@ contract WQStaking is AccessControl {
      */
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
+            startTime: startTime,
             rewardDelta1: rewardDelta1,
+            rewardDelta2: rewardDelta2,
             distributionTime: distributionTime,
             stakePeriod: stakePeriod,
             claimPeriod: claimPeriod,

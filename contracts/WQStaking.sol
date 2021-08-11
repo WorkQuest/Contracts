@@ -24,7 +24,8 @@ contract WQStaking is AccessControl {
     // StakeInfo contains info related to stake.
     struct StakeInfo {
         uint256 startTime;
-        uint256 rewardTotal;
+        uint256 rewardDelta1;
+        uint256 rewardDelta2;
         uint256 distributionTime;
         uint256 stakePeriod;
         uint256 claimPeriod;
@@ -48,8 +49,9 @@ contract WQStaking is AccessControl {
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
     uint256 startTime;
-    /// @notice Total rewards per distribution time
-    uint256 public rewardTotal;
+    /// @notice Increase of rewards per distribution time
+    uint256 public rewardDelta1;
+    uint256 public rewardDelta2;
     /// @notice Distribution time
     uint256 public distributionTime;
     /// @notice Staking period
@@ -79,7 +81,8 @@ contract WQStaking is AccessControl {
 
     function initialize(
         uint256 _startTime,
-        uint256 _rewardTotal,
+        uint256 _rewardDelta1,
+        uint256 _rewardDelta2,
         uint256 _distributionTime,
         uint256 _stakePeriod,
         uint256 _claimPeriod,
@@ -93,7 +96,8 @@ contract WQStaking is AccessControl {
             "WQStaking: Contract instance has already been initialized"
         );
         startTime = _startTime;
-        rewardTotal = _rewardTotal;
+        rewardDelta1 = _rewardDelta1;
+        rewardDelta2 = _rewardDelta2;
         distributionTime = _distributionTime;
         stakePeriod = _stakePeriod;
         claimPeriod = _claimPeriod;
@@ -118,12 +122,12 @@ contract WQStaking is AccessControl {
      */
     function stake(uint256 _amount, uint256 duration) external {
         require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
-            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
-        );
-        require(
             block.timestamp > startTime,
             "WQStaking: Staking time has not come yet"
+        );
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
         );
         require(
             _amount >= minStake,
@@ -268,10 +272,21 @@ contract WQStaking is AccessControl {
      *
      */
     function produced() private view returns (uint256) {
-        return
-            allProduced +
-            (rewardTotal * (block.timestamp - producedTime)) /
-            distributionTime;
+        uint256 n = (block.timestamp - startTime) / distributionTime;
+        if (n <= 27) {
+            uint256 producedEarlier = (rewardDelta1 * n * (n + 1)) / 2;
+            return
+                producedEarlier +
+                rewardDelta1 *
+                (block.timestamp - (startTime + n * distributionTime));
+        } else {
+            uint256 producedEarlier = (rewardDelta1 * 378) +
+                ((rewardDelta2 * (n - 27) * (n - 26)) / 2);
+            return
+                producedEarlier +
+                rewardDelta2 *
+                (block.timestamp - (startTime + n * distributionTime));
+        }
     }
 
     function update() public {
@@ -288,10 +303,11 @@ contract WQStaking is AccessControl {
     /**
      * @dev setReward - sets amount of reward during `distributionTime`
      */
-    function setReward(uint256 _amount) external onlyRole(ADMIN_ROLE) {
+    function setReward(uint256 _rewardDelta1, uint256 _rewardDelta2) external onlyRole(ADMIN_ROLE) {
         allProduced = produced();
         producedTime = block.timestamp;
-        rewardTotal = _amount;
+        rewardDelta1 = _rewardDelta1;
+        rewardDelta2 = _rewardDelta2;
     }
 
     /**
@@ -349,7 +365,8 @@ contract WQStaking is AccessControl {
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
             startTime: startTime,
-            rewardTotal: rewardTotal,
+            rewardDelta1: rewardDelta1,
+            rewardDelta2: rewardDelta2,
             distributionTime: distributionTime,
             stakePeriod: stakePeriod,
             claimPeriod: claimPeriod,
