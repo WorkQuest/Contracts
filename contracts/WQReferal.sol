@@ -4,6 +4,7 @@ pragma solidity =0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./WQTInterface.sol";
 
 contract WQReferal is AccessControl {
     using SafeERC20 for IERC20;
@@ -16,28 +17,33 @@ contract WQReferal is AccessControl {
      * @param lastActiveTimestamp The last active timestamp of an address
      */
     struct Account {
-        address payable referrer;
+        address referrer;
         uint256 reward;
         uint256 referredCount;
-        uint256 lastActiveTimestamp;
+        bool paid;
     }
 
     bool private _initialized;
 
+    WQTInterface token;
+    uint256 referralBonus;
+
     mapping(address => Account) public accounts;
 
     event RegisteredReferer(address referee, address referrer);
+    event PaidReferral(address from, address to, uint256 amount);
 
-    function initialize() external {
+    function initialize(address _token, uint256 _referralBonus) external {
         require(
             !_initialized,
             "WQReferal: Contract instance has already been initialized"
         );
-
+        token = WQTInterface(_token);
+        referralBonus = _referralBonus;
         _initialized = true;
     }
 
-    function addReferrer(address payable referrer) internal returns (bool) {
+    function addReferrer(address referrer) internal returns (bool) {
         require(
             referrer != address(0),
             "WQReferal: Referrer cannot be zero address"
@@ -46,17 +52,14 @@ contract WQReferal is AccessControl {
             referrer != msg.sender,
             "WQReferal: Referrer cannot be sender address"
         );
-        require(
-            accounts[msg.sender].referrer == address(0),
-            "WQReferal: Address have been registered upline"
-        );
-
         Account storage userAccount = accounts[msg.sender];
+        require(
+            userAccount.referrer == address(0),
+            "WQReferal: Address is already registered"
+        );
         Account storage parentAccount = accounts[referrer];
-
         userAccount.referrer = referrer;
-        userAccount.lastActiveTimestamp = block.timestamp;
-        parentAccount.referredCount += 1;
+        parentAccount.referredCount++;
 
         emit RegisteredReferer(msg.sender, referrer);
         return true;
@@ -70,9 +73,22 @@ contract WQReferal is AccessControl {
     }
 
     /**
-     * @dev
+     * @dev Pay referal to registered referrer
      */
 
-    function payReferral() external returns (uint256) {
+    function payReferral() external {
+        require(
+            token.balanceOf(address(this)) > referralBonus,
+            "WQReferal: Balance on contract too low"
+        );
+        Account storage userAccount = accounts[msg.sender];
+        require(!userAccount.paid, "WQReferal: Bonus already paid");
+        require(
+            userAccount.referrer != address(0),
+            "WQReferal: Address is not registered"
+        );
+        accounts[userAccount.referrer].reward += referralBonus;
+        token.transfer(userAccount.referrer, referralBonus);
+        emit PaidReferral(msg.sender, userAccount.referrer, referralBonus);
     }
 }
