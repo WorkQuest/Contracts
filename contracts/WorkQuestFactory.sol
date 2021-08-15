@@ -7,6 +7,11 @@ import "./WorkQuest.sol";
 contract WorkQuestFactory is AccessControl {
     bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
+    struct ArbiterInfo {
+        uint256 idx;
+        bool status;
+    }
+
     uint256 lastArbiter;
 
     /// @notice Fee amount
@@ -21,10 +26,6 @@ contract WorkQuestFactory is AccessControl {
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
 
-    struct ArbiterInfo {
-        uint256 index;
-        bool enabled;
-    }
     /// @notice Mapping of arbiters adresses to boolean enabled
     mapping(address => ArbiterInfo) public arbiters;
 
@@ -62,7 +63,7 @@ contract WorkQuestFactory is AccessControl {
     /**
      * @notice Check msg.sender is admin role
      */
-    modifier onlyAdmin {
+    modifier onlyAdmin() {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
             "WorkQuestFactory: You should have an admin role"
@@ -112,24 +113,19 @@ contract WorkQuestFactory is AccessControl {
 
     /**
      * @notice Enable or disable address of arbiter
-     * @param arbiter Address of arbiter
-     * @param enabled true - enable arbiter address, false - disable
+     * @param _arbiter Address of arbiter
+     * @param _enabled true - enable arbiter address, false - disable
      */
-    function updateArbiter(address payable arbiter, bool enabled)
+    function updateArbiter(address payable _arbiter, bool _enabled)
         external
         onlyAdmin
     {
-        if (enabled && !arbiters[arbiter].enabled) {
-            arbiters[arbiter] = ArbiterInfo({
-                index: arbiterList.length,
-                enabled: enabled
-            });
-            arbiterList.push(arbiter);
+        ArbiterInfo storage a = arbiters[_arbiter];
+        if (arbiterList.length == 0 || arbiterList[a.idx] != _arbiter) {
+            a.idx = arbiterList.length;
+            arbiterList.push(_arbiter);
         }
-        if (!enabled && arbiters[arbiter].enabled) {
-            delete arbiterList[arbiters[arbiter].index];
-            delete arbiters[arbiter];
-        }
+        a.status = _enabled;
     }
 
     function allArbiters() external view returns (address payable[] memory) {
@@ -159,7 +155,7 @@ contract WorkQuestFactory is AccessControl {
         for (uint256 i = 0; i < arbiterList.length; i++) {
             lastArbiter++;
             if (lastArbiter >= arbiterList.length) lastArbiter = 0;
-            if (arbiters[arbiterList[lastArbiter]].enabled) break;
+            if (arbiters[arbiterList[lastArbiter]].status) break;
         }
         return arbiterList[lastArbiter];
     }

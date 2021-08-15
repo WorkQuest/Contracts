@@ -1,6 +1,6 @@
 task("update_arbiter", "Update arbiter in workquest factory")
     .addParam("arbiter", "The arbiter address")
-    .addParam("enabled", "Enable - true, disable -false")
+    .addParam("status", "Enable - true, disable -false")
     .setAction(async function (args, hre, runSuper) {
         const accounts = await ethers.getSigners();
         const sender = accounts[0].address;
@@ -21,7 +21,12 @@ task("update_arbiter", "Update arbiter in workquest factory")
         console.log("WorkQuestFactory address:", process.env.WORK_QUEST_FACTORY);
         console.log("Try to update arbiter...");
         const work_quest_factory = await hre.ethers.getContractAt("WorkQuestFactory", process.env.WORK_QUEST_FACTORY);
-        await work_quest_factory.updateArbiter(args.arbiter, args.enabled);
-        console.log("Done");
-        console.log("Arbiters:", await work_quest_factory.allArbiters());
+        await work_quest_factory.updateArbiter(args.arbiter, JSON.parse(args.status));
+        console.log("Done", args.status);
+        let arbiterList = await work_quest_factory.allArbiters()
+        console.log(arbiterList);
+        for (i = 0; i < arbiterList.length; i++) {
+            let arbiter = await work_quest_factory.arbiters(arbiterList[i]);
+            console.log("address:", arbiterList[i], "index:", arbiter.idx.toString(), "status:", arbiter.status);
+        }
     });
