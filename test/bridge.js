@@ -26,7 +26,7 @@ let validator;
 let not_validator;
 let sender;
 let recipient;
-/*
+
 describe("Bridge test", () => {
     let bridge;
     let token;
@@ -43,7 +43,11 @@ describe("Bridge test", () => {
         await bridge.updateChain(chainETH, true);
         await bridge.updateToken(token.address, true, false, symbol);
 
-        await token.setBridge(bridge.address);
+        let minter_role = await token.MINTER_ROLE();
+        let burner_role = await token.BURNER_ROLE();
+        await token.grantRole(minter_role, bridge.address);
+        await token.grantRole(burner_role, bridge.address);
+        
     });
 
     describe('Bridge: deploy', () => {
@@ -382,4 +386,4 @@ describe("Bridge test", () => {
             ).to.be.equal(true);
         });
     });
-});*/
+});

@@ -17,7 +17,7 @@ const PolicyType = Object.freeze({
     Medium: 1,
     Maximal: 2
 });
-/*
+
 describe("Insurance tests", () => {
     let insurance_factory;
     let insurance;
@@ -166,15 +166,15 @@ describe("Insurance tests", () => {
         });
     });
 
-    describe("Ask funds", () => {
-        it("STEP1: Ask funds from contract: success", async () => {
+    describe("Claim funds", () => {
+        it("STEP1: Claim funds from contract: success", async () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             for (i = 0; i < 12; i++) {
                 await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
             }
-            await insurance.connect(user1).askFunds();
-            let ask = await insurance.asks(user1.address);
+            await insurance.connect(user1).claim();
+            let ask = await insurance.claims(user1.address);
             expect(ask.active).to.equal(true);
             expect(ask.executed).to.equal(false);
             expect(ask.numConfirm).to.equal(1);
@@ -184,64 +184,64 @@ describe("Insurance tests", () => {
             ).to.equal(true);
         });
 
-        it("STEP2: Ask from disabled account: fail", async () => {
+        it("STEP2: Claim from disabled account: fail", async () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await insurance.addMember(user3.address);
             await insurance.connect(user1).removeMember();
             try {
-                await insurance.connect(user1).askFunds();
+                await insurance.connect(user1).claim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: Member not found");
             }
         });
 
-        it("STEP3: Ask funds with alone member: fail", async () => {
+        it("STEP3: Claim funds with alone member: fail", async () => {
             await insurance.addMember(user1.address);
             try {
-                await insurance.connect(user1).askFunds();
+                await insurance.connect(user1).claim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: The contract must have more than one members");
             }
         });
 
-        it("STEP3: Ask funds when member not contributed funds for a long time: fail", async () => {
+        it("STEP3: Claim funds when member not contributed funds for a long time: fail", async () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
             await hre.ethers.provider.send("evm_increaseTime", [38 * 86400]);
             try {
-                await insurance.connect(user1).askFunds();
+                await insurance.connect(user1).claim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: You haven't contributed funds for a long time");
             }
         });
 
-        it("STEP4: Ask again: fail", async () => {
+        it("STEP4: Claim again: fail", async () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             try {
-                await insurance.connect(user1).askFunds();
+                await insurance.connect(user1).claim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: Payment is already asked");
             }
         });
 
-        it("STEP5: Ask funds after execute payment: fail", async () => {
+        it("STEP5: Claim funds after execute payment: fail", async () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user1).executePayment();
             try {
-                await insurance.connect(user1).askFunds();
+                await insurance.connect(user1).claim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: Payment is already executed");
@@ -249,42 +249,42 @@ describe("Insurance tests", () => {
         });
     });
 
-    describe("Remove ask", () => {
-        it("STEP1: Remove ask: success", async () => {
+    describe("Unclaim", () => {
+        it("STEP1: Unclaim: success", async () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
 
-            await insurance.connect(user1).askFunds();
-            let ask_info = await insurance.asks(user1.address);
+            await insurance.connect(user1).claim();
+            let ask_info = await insurance.claims(user1.address);
             expect(ask_info.active).to.equal(true);
             expect(ask_info.executed).to.equal(false);
             expect(ask_info.numConfirm).to.equal(1);
             expect(await insurance.confirmations(user1.address, user1.address)).to.equal(true);
 
-            await insurance.connect(user1).removeAsk();
-            ask_info = await insurance.asks(user1.address);
+            await insurance.connect(user1).unclaim();
+            ask_info = await insurance.claims(user1.address);
             expect(ask_info.active).to.equal(false);
             expect(ask_info.executed).to.equal(false);
             expect(ask_info.numConfirm).to.equal(0);
             expect(await insurance.confirmations(user1.address, user1.address)).to.equal(false);
         });
-        it("STEP2: Remove ask from disabled member: fail", async () => {
+        it("STEP2: Unclaim from disabled member: fail", async () => {
             try {
-                await insurance.connect(user1).removeAsk();
+                await insurance.connect(user1).unclaim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: Member not found");
             }
         });
-        it("STEP3: Remove ask again: fail", async () => {
+        it("STEP3: Unclaim again: fail", async () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
-            await insurance.connect(user1).removeAsk();
+            await insurance.connect(user1).claim();
+            await insurance.connect(user1).unclaim();
             try {
-                await insurance.connect(user1).removeAsk();
+                await insurance.connect(user1).unclaim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: Ask is already revoked");
@@ -295,11 +295,11 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user1).executePayment();
             try {
-                await insurance.connect(user1).removeAsk();
+                await insurance.connect(user1).unclaim();
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQInsurance: Payment is already executed");
@@ -312,12 +312,12 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             expect(
                 await insurance.confirmations(user1.address, user2.address)
             ).to.equal(true);
-            let ask = await insurance.asks(user1.address);
+            let ask = await insurance.claims(user1.address);
             expect(ask.active).to.equal(true);
             expect(ask.executed).to.equal(false);
             expect(ask.numConfirm).to.equal(2);
@@ -327,7 +327,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user1).removeMember();
             try {
                 await insurance.connect(user2).confirmPayment(user1.address);
@@ -340,7 +340,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).removeMember();
             try {
                 await insurance.connect(user2).confirmPayment(user1.address);
@@ -353,7 +353,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             try {
                 await insurance.connect(user2).confirmPayment(user1.address);
@@ -368,15 +368,15 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             expect(
                 await insurance.confirmations(user1.address, user2.address)
             ).to.equal(true);
-            expect((await insurance.asks(user1.address)).numConfirm).to.equal(2);
+            expect((await insurance.claims(user1.address)).numConfirm).to.equal(2);
 
             await insurance.connect(user2).revokeConfirmation(user1.address);
-            expect((await insurance.asks(user1.address)).numConfirm).to.equal(1);
+            expect((await insurance.claims(user1.address)).numConfirm).to.equal(1);
             expect(
                 await insurance.confirmations(user1.address, user2.address)
             ).to.equal(false);
@@ -386,7 +386,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user1).removeMember();
             try {
@@ -400,7 +400,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user2).removeMember();
             try {
@@ -414,7 +414,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user2).revokeConfirmation(user1.address);
             try {
@@ -431,12 +431,12 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             expect(
                 await insurance.confirmations(user1.address, user2.address)
             ).to.equal(true);
-            expect((await insurance.asks(user1.address)).numConfirm).to.equal(2);
+            expect((await insurance.claims(user1.address)).numConfirm).to.equal(2);
             await insurance.connect(user1).executePayment();
         });
 
@@ -444,7 +444,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user1).removeMember();
             try {
@@ -458,7 +458,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user2).removeMember();
             try {
@@ -472,7 +472,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await hre.ethers.provider.send("evm_increaseTime", [38 * 86400]);
             try {
@@ -486,9 +486,9 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
-            await insurance.connect(user1).removeAsk();
+            await insurance.connect(user1).unclaim();
             try {
                 await insurance.connect(user1).executePayment();
             } catch (e) {
@@ -500,7 +500,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             await insurance.connect(user2).confirmPayment(user1.address);
             await insurance.connect(user1).executePayment();
             try {
@@ -514,7 +514,7 @@ describe("Insurance tests", () => {
             await insurance.addMember(user1.address);
             await insurance.addMember(user2.address);
             await web3.eth.sendTransaction({ from: user1.address, to: insurance.address, value: "0x04847b7925d28d5555" });
-            await insurance.connect(user1).askFunds();
+            await insurance.connect(user1).claim();
             try {
                 await insurance.connect(user1).executePayment();
             } catch (e) {
@@ -522,4 +522,4 @@ describe("Insurance tests", () => {
             }
         });
     });
-});*/
+});

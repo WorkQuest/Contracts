@@ -95,6 +95,10 @@ contract WQToken is AccessControl {
         _initialized = true;
         owner = msg.sender;
         _mint(owner, initialSupply);
+        _setupRole(DEFAULT_ADMIN_ROLE, owner);
+        _setupRole(ADMIN_ROLE, owner);
+        _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
     }
 
     /**

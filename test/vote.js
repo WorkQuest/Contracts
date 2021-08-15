@@ -9,7 +9,7 @@ const envConfig = dotenv.parse(fs.readFileSync(".env"));
 for (const k in envConfig) {
     process.env[k] = envConfig[k]
 }
-/*
+
 describe('Governance token test', () => {
     let token;
     let owner;
@@ -182,4 +182,4 @@ describe('Governance token test', () => {
             })
         })
     })
-})*/
+})

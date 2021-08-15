@@ -12,7 +12,7 @@ const stakePeriod = 86400;
 const claimPeriod = 86400;
 const minStake = parseEther("100");
 const maxStake = parseEther("100000");
-
+/*
 describe("Staking tests", () => {
     let staking;
     let token;
@@ -142,7 +142,7 @@ describe("Staking tests", () => {
         });
     });
 
-    /*describe("Unstake", () => {
+    describe("Unstake", () => {
         it("STEP1: unstake: success", async () => {
         });
         it("STEP2:", async () => {
@@ -168,5 +168,5 @@ describe("Staking tests", () => {
         });
         it("STEP3:", async () => {
         });
-    });*/
-});
+    });
+});*/

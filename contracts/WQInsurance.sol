@@ -164,7 +164,7 @@ contract WQInsurance {
     /**
      * @notice Cancel ask funds
      */
-    function removeAsk() external {
+    function unclaim() external {
         require(
             memberInfo[msg.sender].enabled,
             "WQInsurance: Member not found"
