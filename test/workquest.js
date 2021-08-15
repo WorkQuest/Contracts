@@ -19,6 +19,8 @@ const comission_after_forfeit = "8999999999967232";
 const double_comission_after_forfeit = parseEther("0.019");
 const acces_denied_err = "WorkQuest: Access denied or invalid status";
 const WORKQUEST_FEE = "10000000000000000";
+const PENSION_LOCK_TIME = "60";
+const PENSION_DEFAULT_FEE="10000000000000000";
 
 const JobStatus = Object.freeze({
   New: 0,
@@ -48,7 +50,7 @@ let arbiter;
 let feeReceiver;
 let work_quest_factory;
 let work_quest;
-/*
+
 describe("Work Quest test", () => {
   let call_flow;
 
@@ -57,7 +59,7 @@ describe("Work Quest test", () => {
     [work_quest_owner, employer, worker, arbiter, feeReceiver] = await ethers.getSigners();
 
     const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
-    const pension_fund = await PensionFund.deploy(60);
+    const pension_fund = await PensionFund.deploy(PENSION_LOCK_TIME, PENSION_DEFAULT_FEE);
     await pension_fund.deployed();
 
     const WorkQuestFactory = await hre.ethers.getContractFactory("WorkQuestFactory");
@@ -644,4 +646,4 @@ describe("Work Quest test", () => {
       }
     });
   });
-});*/
+});
