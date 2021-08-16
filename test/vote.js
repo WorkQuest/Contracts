@@ -127,24 +127,29 @@ describe('Governance token test', () => {
         })
         describe("Voting", () => {
             it("Should properly vote with enough votes", async () => {
-                await token.delegate(owner.address, ethers.utils.parseEther("100"));
+                await token.delegate(owner.address, ethers.utils.parseEther("1000"));
                 await vote.doVote(0, true, "");
-                expect((await vote.getReceipt(0, owner.address)).votes).to.equal(ethers.utils.parseEther("100"));
+                expect((await vote.getReceipt(0, owner.address)).votes).to.equal(ethers.utils.parseEther("1000"));
             })
             it("Shouldn't vote with wrong id", async () => {
+                await token.delegate(owner.address, ethers.utils.parseEther("1000"));
                 await expect(vote.doVote(1, true, "")).to.revertedWith("Invalid proposal id");
             })
             it("Shouldn't vote on expired votes", async () => {
+                await token.delegate(owner.address, ethers.utils.parseEther("1000"));
                 await vote.addProposal("", 0, ethers.utils.parseEther("10"));
                 await expect(vote.doVote(1, true, "")).to.revertedWith("Proposal expired");
             })
             it("Shouldn't vote multiple times", async () => {
+                await token.delegate(owner.address, ethers.utils.parseEther("1000"));
                 await vote.doVote(0, true, "");
+                await token.delegate(owner.address, ethers.utils.parseEther("1000"));
                 await expect(vote.doVote(0, true, "")).to.revertedWith("Voter has already voted");
 
             })
             it("Shouldn't vote on executed votes", async () => {
                 await vote.executeVoting(0);
+                await token.delegate(owner.address, ethers.utils.parseEther("1000"));
                 await expect(vote.doVote(0, true, "")).to.revertedWith("Voting is closed");
             })
         })

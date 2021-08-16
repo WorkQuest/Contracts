@@ -172,7 +172,7 @@ contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
         bool _support
     ) internal returns (uint256) {
         require(
-            token.balanceOf(msg.sender) > voteThreshold,
+            token.votePowerOf(msg.sender) > voteThreshold,
             "Voter votes below vote threshold"
         );
         require(proposalCount > _proposalId, "Invalid proposal id");
