@@ -14,14 +14,29 @@ const claimPeriod = 86400;
 const minStake = parseEther("100");
 const maxStake = parseEther("100000");
 
+async function getTimestamp() {
+    let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
+    let txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blockNumber, false]);
+    return parseInt(new BigNumber(txBlockNumber.timestamp).toString()) + 10
+}
+
 function getValidStakingTimestamp(offset) {
-    var result = Math.round(Date.now() / 1000);
+    let result = Math.round(Date.now() / 10000) + offset;
     console.log(`function getValidStakingTimestamp(): starting from ${result}`);
     while (!(result % 86400 >= 600 && result % 86400 <= 85800)) {
-        result++;
+        result += 100;
     }
-    result += offset
     console.log(`function getValidStakingTimestamp(): returning ${result}`);
+    return result;
+}
+
+function getInvalidStakingTimestamp(timestanp) {
+    var result = timestanp;
+    console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
+    while (result % 86400 >= 600 && result % 86400 <= 85800) {
+        result += 100;
+    }
+    console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
     return result;
 }
 
@@ -95,7 +110,7 @@ describe("2. Staking NATIVE tests", () => {
 
     describe("Stake", () => {
         it("STEP1: stake: success", async () => {
-            let timestamp = getValidStakingTimestamp(10454600);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address)
             expect(Math.floor(balanceBeforeStake / 1e18)).to.be.equal(10000);
@@ -179,7 +194,7 @@ describe("2. Staking NATIVE tests", () => {
 
     describe("Unstake", () => {
         it("STEP1: unstake: success", async () => {
-            let timestamp = getValidStakingTimestamp(10454917);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
@@ -202,7 +217,7 @@ describe("2. Staking NATIVE tests", () => {
         });
 
         it("STEP2: unstake greater than staked", async () => {
-            let timestamp = getValidStakingTimestamp(10454937 + stakePeriod * 30);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
@@ -228,7 +243,7 @@ describe("2. Staking NATIVE tests", () => {
         });
         it("STEP3: unstake earlier than unstake time", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(10454967 + 86400 + stakePeriod * 60);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
@@ -262,7 +277,7 @@ describe("2. Staking NATIVE tests", () => {
     describe("Claim", () => {
         it("STEP1: stake: success", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(stakePeriod * 1200);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;

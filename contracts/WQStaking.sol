@@ -126,7 +126,7 @@ contract WQStaking is AccessControl {
             "WQStaking: Staking time has not come yet"
         );
         require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
             "WQStaking: Daily lock from 23:50 to 00:10 UTC"
         );
         require(
@@ -171,7 +171,7 @@ contract WQStaking is AccessControl {
 
     function unstake(uint256 _amount) external {
         require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
             "WQStaking: Daily lock from 23:50 to 00:10 UTC"
         );
         require(!_entered, "WQStaking: Reentrancy guard");
@@ -203,7 +203,7 @@ contract WQStaking is AccessControl {
      */
     function claim() external returns (bool) {
         require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 >= 85800,
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
             "WQStaking: Daily lock from 23:50 to 00:10 UTC"
         );
         require(!_entered, "WQStaking: Reentrancy guard");

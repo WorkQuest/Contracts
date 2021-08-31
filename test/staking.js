@@ -14,14 +14,30 @@ const claimPeriod = 86400;
 const minStake = parseEther("100");
 const maxStake = parseEther("100000");
 
+async function getTimestamp() {
+    let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
+    let txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blockNumber, false]);
+    return parseInt(new BigNumber(txBlockNumber.timestamp).toString()) + 10
+}
+
 function getValidStakingTimestamp(offset) {
-    var result = Math.round(Date.now() / 1000);
+    let result = Math.round(Date.now() / 10000) + offset;
     console.log(`function getValidStakingTimestamp(): starting from ${result}`);
-    while (!(result % 86400 >= 600 && result % 86400 >= 85800)) {
-        result++;
+    while (!(result % 86400 >= 600 && result % 86400 <= 85800)) {
+        result += 100;
     }
     console.log(`function getValidStakingTimestamp(): returning ${result}`);
-    return (result + offset);
+    return result;
+}
+
+function getInvalidStakingTimestamp(timestanp) {
+    var result = timestanp;
+    console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
+    while (result % 86400 >= 600 && result % 86400 <= 85800) {
+        result += 100;
+    }
+    console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
+    return result;
 }
 
 describe("1. Staking tests", () => {
@@ -32,7 +48,7 @@ describe("1. Staking tests", () => {
     beforeEach(async () => {
         accounts = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory('WQToken');
-        token = await upgrades.deployProxy(WQToken, [parseEther("1000000000000")], { initializer: 'initialize' });
+        token = await upgrades.deployProxy(WQToken, [parseEther("100000000000000")], { initializer: 'initialize' });
         let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
         staking_deploy_block = await hre.ethers.provider.send("eth_getBlockByNumber", [bl_num, false]);
         await token.transfer(accounts[1].address, parseEther("500000"));
@@ -40,7 +56,7 @@ describe("1. Staking tests", () => {
         await token.transfer(accounts[3].address, parseEther("500000"));
         const Staking = await ethers.getContractFactory("WQStaking");
         staking = await upgrades.deployProxy(Staking, [parseInt(staking_deploy_block.timestamp), rewardDelta1, rewardDelta2, distributionTime, stakePeriod, claimPeriod, minStake, maxStake, token.address, token.address], { initializer: 'initialize' });
-        await token.transfer(staking.address, parseEther("200000000000"));
+        await token.transfer(staking.address, parseEther("40000000000000"));
     });
 
     describe("Staking deploy", () => {
@@ -88,7 +104,7 @@ describe("1. Staking tests", () => {
     describe("Stake", () => {
         it("STEP1: stake: success", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(0);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
@@ -168,7 +184,7 @@ describe("1. Staking tests", () => {
     describe("Unstake", () => {
         it("STEP1: unstake: success", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(300);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
@@ -186,7 +202,7 @@ describe("1. Staking tests", () => {
         });
         it("STEP2: unstake greater than staked", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(stakePeriod * 30 + 350);
+            let timestamp = getValidStakingTimestamp((await getTimestamp()));
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
@@ -204,7 +220,7 @@ describe("1. Staking tests", () => {
         });
         it("STEP3: unstake earlier than unstake time", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(stakePeriod * 60 + 86400);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
@@ -214,7 +230,9 @@ describe("1. Staking tests", () => {
             let balanceAfterStake = await token.balanceOf(accounts[1].address);
             expect(balanceAfterStake).to.equal(parseEther("499900"));
 
-            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong - 1]);
+            timestamp = getInvalidStakingTimestamp(timestamp);
+
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             await expect(staking.connect(accounts[1]).unstake(minStake)).to.be.revertedWith("WQStaking: Daily lock from 23:50 to 00:10 UTC");
 
             let balanceAfterUnstake = await token.balanceOf(accounts[1].address);
@@ -230,7 +248,7 @@ describe("1. Staking tests", () => {
     describe("Claim", () => {
         it("STEP1: stake: success", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(stakePeriod * 90 + 86500);
+            let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
