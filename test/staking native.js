@@ -1,4 +1,5 @@
 const { expect } = require("chai");
+const hre = require('hardhat');
 const { ethers, upgrades } = require("hardhat");
 const BigNumber = require('bignumber.js');
 BigNumber.config({ EXPONENTIAL_AT: 60 });
@@ -101,8 +102,8 @@ describe("2. Staking NATIVE tests", () => {
             expect(
                 user_info.amount
             ).to.equal(minStake);
-            
-            expect( 
+
+            expect(
                 user_info.rewardDebt
             ).to.equal(0);
             expect(
@@ -137,7 +138,7 @@ describe("2. Staking NATIVE tests", () => {
             }
         });
         it("STEP3: stake greater than maximum: fail", async () => {
-            await network.provider.send("hardhat_setBalance", [
+            await hre.network.provider.send("hardhat_setBalance", [
                 accounts[1].address,
                 "0x1A784C264BCDFD0000000"
               ]);
@@ -180,11 +181,11 @@ describe("2. Staking NATIVE tests", () => {
             }
             await staking.connect(accounts[1]).stake(overrides);
             let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);  
-            
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);
+
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
             await staking.connect(accounts[1]).unstake(minStake);
-            
+
             balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
 
             expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceBeforeStake / 1e18));
@@ -206,11 +207,11 @@ describe("2. Staking NATIVE tests", () => {
 
             let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
 
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);  
-            
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);
+
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
             await expect(staking.connect(accounts[1]).unstake(minStake + 1)).to.be.revertedWith("WQStaking: Not enough tokens to unstake");
-            
+
             let balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
 
             expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceAfterStake / 1e18));
@@ -231,11 +232,11 @@ describe("2. Staking NATIVE tests", () => {
             await staking.connect(accounts[1]).stake(overrides);
 
             let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999709);  
-            
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999709);
+
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong - 2000]);
             await expect(staking.connect(accounts[1]).unstake(minStake)).to.be.revertedWith("WQStaking: Daily lock");
-            
+
             let balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
             expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceAfterStake / 1e18));
         });
@@ -262,8 +263,8 @@ describe("2. Staking NATIVE tests", () => {
             await staking.connect(accounts[1]).stake(overrides);
 
             let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999609);  
-            
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999609);
+
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
 
             let _addressInfo = await staking.getInfoByAddress(accounts[1].address);
@@ -315,7 +316,7 @@ describe("2. Staking NATIVE tests", () => {
             let _rewardDelta1Contract = await staking.rewardDelta1();
             let _distributionTimeContract = await staking.producedTime();
             let blNum = await hre.ethers.provider.send("eth_blockNumber", []);
-            txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blNum, false]);    
+            txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blNum, false]);
             expect(_rewardDelta1Contract).to.equal(_rewardDelta1);
             expect(txBlockNumber.timestamp).to.equal(_distributionTimeContract);
         });

@@ -4,6 +4,7 @@ const BigNumber = require('bignumber.js');
 BigNumber.config({ EXPONENTIAL_AT: 60 });
 const Web3 = require('web3');
 const { parseEther } = require("ethers/lib/utils");
+const hre = require('hardhat');
 const web3 = new Web3(hre.network.provider);
 const rewardDelta1 = parseEther("76000");
 const rewardDelta2 = parseEther("1056800");
