@@ -99,6 +99,7 @@ contract WQBorrowing is AccessControl {
         uint256 returned = loan.amount + (fee * loan.amount) / 1e18;
         // Take native coins
         require(returned == msg.value, "WQBorrowing: Invalid refund amount");
+        // and send back to fund
         loan.fund.refund{value: msg.value}();
         //Send tokens
         loan.token.safeTransfer(msg.sender, loan.collateral);

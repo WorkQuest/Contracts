@@ -138,7 +138,7 @@ contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
             abi.encode(
                 DOMAIN_TYPEHASH,
                 keccak256(bytes(name)),
-                getChainIdInternal(),
+                block.chainid,
                 address(this)
             )
         );
@@ -223,13 +223,5 @@ contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
     function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, "subtraction underflow");
         return a - b;
-    }
-
-    function getChainIdInternal() internal view returns (uint256) {
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-        return chainId;
     }
 }

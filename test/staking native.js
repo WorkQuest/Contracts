@@ -8,8 +8,8 @@ const web3 = new Web3(hre.network.provider);
 const rewardDelta1 = parseEther("76000");
 const rewardDelta2 = parseEther("1056800");
 const distributionTime = 2678400; //31 day
-const stakePeriod = 86400;
-const claimPeriod = 86400;
+const stakePeriod = 1;
+const claimPeriod = 1;
 const minStake = parseEther("100");
 const maxStake = parseEther("100000");
 
@@ -19,11 +19,12 @@ function getValidStakingTimestamp(offset) {
     while (!(result % 86400 >= 600 && result % 86400 >= 85800)) {
         result++;
     }
+    result += offset
     console.log(`function getValidStakingTimestamp(): returning ${result}`);
-    return (result + offset);
+    return result;
 }
 
-describe("1. Staking tests", () => {
+describe("2. Staking NATIVE tests", () => {
     let staking;
     let token;
     let staking_deploy_block;
@@ -31,15 +32,12 @@ describe("1. Staking tests", () => {
     beforeEach(async () => {
         accounts = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory('WQToken');
-        token = await upgrades.deployProxy(WQToken, [parseEther("1000000000000")], { initializer: 'initialize' });
+        token = await upgrades.deployProxy(WQToken, [parseEther("25000000000000")], { initializer: 'initialize' });
         let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
         staking_deploy_block = await hre.ethers.provider.send("eth_getBlockByNumber", [bl_num, false]);
-        await token.transfer(accounts[1].address, parseEther("500000"));
-        await token.transfer(accounts[2].address, parseEther("500000"));
-        await token.transfer(accounts[3].address, parseEther("500000"));
-        const Staking = await ethers.getContractFactory("WQStaking");
-        staking = await upgrades.deployProxy(Staking, [parseInt(staking_deploy_block.timestamp), rewardDelta1, rewardDelta2, distributionTime, stakePeriod, claimPeriod, minStake, maxStake, token.address, token.address], { initializer: 'initialize' });
-        await token.transfer(staking.address, parseEther("200000000000"));
+        const Staking = await ethers.getContractFactory("WQStakingNative");
+        staking = await upgrades.deployProxy(Staking, [parseInt(staking_deploy_block.timestamp), rewardDelta1, rewardDelta2, distributionTime, stakePeriod, claimPeriod, minStake, maxStake, token.address], { initializer: 'initialize' });
+        await token.transfer(staking.address, parseEther("2500000000000"));
     });
 
     describe("Staking deploy", () => {
@@ -75,9 +73,9 @@ describe("1. Staking tests", () => {
             expect(
                 staking_info.totalDistributed
             ).to.to.equal(0);
-            expect(
-                staking_info.stakeTokenAddress
-            ).to.to.equal(token.address);
+            // expect(
+            //     staking_info.stakeTokenAddress
+            // ).to.to.equal(token.address);
             expect(
                 staking_info.rewardTokenAddress
             ).to.to.equal(token.address);
@@ -86,16 +84,16 @@ describe("1. Staking tests", () => {
 
     describe("Stake", () => {
         it("STEP1: stake: success", async () => {
-            await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(0);
+            let timestamp = getValidStakingTimestamp(10454600);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
-            let durationShort = 30;
-            let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await token.balanceOf(accounts[1].address);
-            expect(balanceBeforeStake).to.equal(parseEther("500000"));
-            await staking.connect(accounts[1]).stake(minStake, 30);
-            let balanceAfterStake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterStake).to.equal(parseEther("499900"));
+            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address)
+            expect(Math.floor(balanceBeforeStake / 1e18)).to.be.equal(9999);
+            let overrides = {
+                value: ethers.utils.parseEther("100")
+            }
+            await staking.connect(accounts[1]).stake(overrides);
+            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(9899);
             let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
             let cur_block = await hre.ethers.provider.send("eth_getBlockByNumber", [bl_num, false]);
             let block_time = parseInt(cur_block.timestamp);
@@ -103,8 +101,8 @@ describe("1. Staking tests", () => {
             expect(
                 user_info.amount
             ).to.equal(minStake);
-
-            expect(
+            
+            expect( 
                 user_info.rewardDebt
             ).to.equal(0);
             expect(
@@ -117,9 +115,6 @@ describe("1. Staking tests", () => {
                 user_info.claimedAt
             ).to.equal(0);
             expect(
-                user_info.unstakeTime
-            ).to.equal(block_time + durationLong);
-            expect(
                 await staking.totalStaked()
             ).to.equal(minStake);
             expect(
@@ -131,20 +126,26 @@ describe("1. Staking tests", () => {
         });
 
         it("STEP2: stake less than minimum: fail", async () => {
-            await token.connect(accounts[1]).approve(staking.address, parseEther("99"));
             try {
-                let durationShort = 30;
-                await staking.connect(accounts[1]).stake(parseEther("99"), durationShort);
+                let overrides = {
+                    value: ethers.utils.parseEther("99")
+                }
+                await staking.connect(accounts[1]).stake(overrides);
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQStaking: Amount should be greater than minimum stake");
             }
         });
         it("STEP3: stake greater than maximum: fail", async () => {
-            await token.connect(accounts[1]).approve(staking.address, parseEther("100001"));
+            await network.provider.send("hardhat_setBalance", [
+                accounts[1].address,
+                "0x1A784C264BCDFD0000000"
+              ]);
             try {
-                let durationShort = 30;
-                await staking.connect(accounts[1]).stake(parseEther("100001"), durationShort);
+                let overrides = {
+                    value: maxStake + 1
+                }
+                await staking.connect(accounts[1]).stake(overrides);
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQStaking: Amount should be less than maximum stake");
@@ -152,11 +153,12 @@ describe("1. Staking tests", () => {
         });
         it("STEP4: stake more often than a stake period: fail", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let durationShort = 30;
-            await staking.connect(accounts[1]).stake(minStake, durationShort);
-            await token.connect(accounts[1]).approve(staking.address, minStake);
+            let overrides = {
+                value: minStake
+            }
+            await staking.connect(accounts[1]).stake(overrides);
             try {
-                await staking.connect(accounts[1]).stake(minStake, durationShort);
+                await staking.connect(accounts[1]).stake(overrides);
                 throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include("WQStaking: You cannot stake tokens yet");
@@ -166,79 +168,102 @@ describe("1. Staking tests", () => {
 
     describe("Unstake", () => {
         it("STEP1: unstake: success", async () => {
-            await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(300);
+            let timestamp = getValidStakingTimestamp(10454917);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await token.balanceOf(accounts[1].address);
-            expect(balanceBeforeStake).to.equal(parseEther("500000"));
-            await staking.connect(accounts[1]).stake(minStake, 30);
-            let balanceAfterStake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterStake).to.equal(parseEther("499900"));
+            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
 
+            //expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999909);
+            let overrides = {
+                value: minStake
+            }
+            await staking.connect(accounts[1]).stake(overrides);
+            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);  
+            
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
             await staking.connect(accounts[1]).unstake(minStake);
+            
+            balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
 
-            let balanceAfterUnstake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterUnstake).to.equal(balanceBeforeStake);
+            expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceBeforeStake / 1e18));
         });
+
         it("STEP2: unstake greater than staked", async () => {
-            await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(stakePeriod * 30 + 350);
+            let timestamp = getValidStakingTimestamp(10454937 + stakePeriod * 30);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await token.balanceOf(accounts[1].address);
-            expect(balanceBeforeStake).to.equal(parseEther("500000"));
-            await staking.connect(accounts[1]).stake(minStake, 30);
-            let balanceAfterStake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterStake).to.equal(parseEther("499900"));
+            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
 
+            expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999909);
+            let overrides = {
+                value: minStake
+            }
+            await staking.connect(accounts[1]).stake(overrides);
+            await hre.ethers.provider.getBalance(accounts[1].address);
+
+            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
+
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);  
+            
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
             await expect(staking.connect(accounts[1]).unstake(minStake + 1)).to.be.revertedWith("WQStaking: Not enough tokens to unstake");
+            
+            let balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
 
-            let balanceAfterUnstake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterUnstake).to.equal(balanceAfterStake);
+            expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceAfterStake / 1e18));
         });
         it("STEP3: unstake earlier than unstake time", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(stakePeriod * 60 + 86400);
+            let timestamp = getValidStakingTimestamp(10454967 + 86400 + stakePeriod * 60);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await token.balanceOf(accounts[1].address);
-            expect(balanceBeforeStake).to.equal(parseEther("500000"));
-            await staking.connect(accounts[1]).stake(minStake, 30);
-            let balanceAfterStake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterStake).to.equal(parseEther("499900"));
+            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
 
-            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong - 1]);
-            await expect(staking.connect(accounts[1]).unstake(minStake)).to.be.revertedWith("WQStaking: Daily lock from 23:50 to 00:10 UTC");
+            expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999809);
 
-            let balanceAfterUnstake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterUnstake).to.equal(balanceAfterStake);
+            let overrides = {
+                value: minStake
+            }
+            await staking.connect(accounts[1]).stake(overrides);
+
+            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999709);  
+            
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong - 2000]);
+            await expect(staking.connect(accounts[1]).unstake(minStake)).to.be.revertedWith("WQStaking: Daily lock");
+            
+            let balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
+            expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceAfterStake / 1e18));
         });
     });
-    /**
-     *       "100.000000000000000000" - staked
-     *     "7 600.000000000000000000" - expected
-     195953232000.000000000000000000
-     * "7 600 000.000000000000000000" - actual
-     */
+/**
+ *       "100.000000000000000000" - staked
+ *     "7 600.000000000000000000" - expected
+ 195953232000.000000000000000000
+ * "7 600 000.000000000000000000" - actual
+ */
     describe("Claim", () => {
         it("STEP1: stake: success", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
-            let timestamp = getValidStakingTimestamp(stakePeriod * 90 + 86500);
+            let timestamp = getValidStakingTimestamp(stakePeriod * 1200);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await token.balanceOf(accounts[1].address);
-            expect(balanceBeforeStake).to.equal(parseEther("500000"));
-            await staking.connect(accounts[1]).stake(minStake, 30);
-            let balanceAfterStake = await token.balanceOf(accounts[1].address);
-            expect(balanceAfterStake).to.equal(parseEther("499900"));
+            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
 
+            expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999709);
+            let overrides = {
+                value: minStake
+            }
+            await staking.connect(accounts[1]).stake(overrides);
+
+            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
+            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999609);  
+            
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
 
             let _addressInfo = await staking.getInfoByAddress(accounts[1].address);
@@ -248,7 +273,12 @@ describe("1. Staking tests", () => {
             console.log(`Claim is              \'${_addressInfo.claim_}\'`) // какое-то сумасшедшее число
             console.log(`Staked                \'${_addressInfo.staked_}\'`)
             console.log(`Balance of staking is \'${await token.balanceOf(staking.address)}\'`)
+
+            let tokenBalanceBefore = await token.balanceOf(accounts[1].address);
+            expect(tokenBalanceBefore).to.equal(0);
             await staking.connect(accounts[1]).claim();
+            let tokenBalanceAfter = await token.balanceOf(accounts[1].address);
+            expect(tokenBalanceAfter > 1000000).to.be.true;
         });
     });
 
@@ -281,30 +311,23 @@ describe("1. Staking tests", () => {
 
         it("STEP3: Set reward (as admin)", async () => {
             let _rewardDelta1 = 10;
-            let _rewardDelta2 = 20;
-            await staking.setReward(_rewardDelta1, _rewardDelta2);
+            await staking.setReward(_rewardDelta1);
             let _rewardDelta1Contract = await staking.rewardDelta1();
-            let _rewardDelta2Contract = await staking.rewardDelta2();
             let _distributionTimeContract = await staking.producedTime();
             let blNum = await hre.ethers.provider.send("eth_blockNumber", []);
-            txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blNum, false]);
+            txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blNum, false]);    
             expect(_rewardDelta1Contract).to.equal(_rewardDelta1);
-            expect(_rewardDelta2Contract).to.equal(_rewardDelta2);
             expect(txBlockNumber.timestamp).to.equal(_distributionTimeContract);
         });
 
         it("STEP4: Set reward (as not admin)", async () => {
             let _rewardDelta1 = 10;
-            let _rewardDelta2 = 20;
             let _rewardDelta1ContractBefore = await staking.rewardDelta1();
-            let _rewardDelta2ContractBefore = await staking.rewardDelta2();
             let _distributionTimeContractBefore = await staking.producedTime();
-            await expect(staking.connect(accounts[1]).setReward(_rewardDelta1, _rewardDelta2)).to.be.revertedWith("is missing role");
+            await expect(staking.connect(accounts[1]).setReward(_rewardDelta1)).to.be.revertedWith("is missing role");
             let _rewardDelta1ContractAfter = await staking.rewardDelta1();
-            let _rewardDelta2ContractAfter = await staking.rewardDelta2();
             let _distributionTimeContractAfter = await staking.producedTime();
             expect(_rewardDelta1ContractAfter).to.equal(_rewardDelta1ContractBefore);
-            expect(_rewardDelta2ContractAfter).to.equal(_rewardDelta2ContractBefore);
             expect(_distributionTimeContractBefore).to.equal(_distributionTimeContractAfter);
         });
 
