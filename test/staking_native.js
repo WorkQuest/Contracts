@@ -25,6 +25,16 @@ function getValidStakingTimestamp(offset) {
     return result;
 }
 
+function getInvalidStakingTimestamp(timestanp) {
+    var result = timestanp;
+    console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
+    while (result % 86400 >= 600 && result % 86400 <= 85800) {
+        result += 100;
+    }
+    console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
+    return result;
+}
+
 describe("2. Staking NATIVE tests", () => {
     let staking;
     let token;
@@ -234,7 +244,9 @@ describe("2. Staking NATIVE tests", () => {
             let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
             expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999709);
 
-            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong - 2000]);
+            timestamp = getInvalidStakingTimestamp(timestamp);
+
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             await expect(staking.connect(accounts[1]).unstake(minStake)).to.be.revertedWith("WQStaking: Daily lock");
 
             let balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
