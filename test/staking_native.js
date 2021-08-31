@@ -9,15 +9,15 @@ const web3 = new Web3(hre.network.provider);
 const rewardDelta1 = parseEther("76000");
 const rewardDelta2 = parseEther("1056800");
 const distributionTime = 2678400; //31 day
-const stakePeriod = 1;
-const claimPeriod = 1;
+const stakePeriod = 86400;
+const claimPeriod = 86400;
 const minStake = parseEther("100");
 const maxStake = parseEther("100000");
 
 function getValidStakingTimestamp(offset) {
     var result = Math.round(Date.now() / 1000);
     console.log(`function getValidStakingTimestamp(): starting from ${result}`);
-    while (!(result % 86400 >= 600 && result % 86400 >= 85800)) {
+    while (!(result % 86400 >= 600 && result % 86400 <= 85800)) {
         result++;
     }
     result += offset
@@ -88,7 +88,7 @@ describe("2. Staking NATIVE tests", () => {
             let timestamp = getValidStakingTimestamp(10454600);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address)
-            expect(Math.floor(balanceBeforeStake / 1e18)).to.be.equal(9999);
+            expect(Math.floor(balanceBeforeStake / 1e18)).to.be.equal(10000);
             let overrides = {
                 value: ethers.utils.parseEther("100")
             }
