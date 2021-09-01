@@ -22,21 +22,21 @@ async function getTimestamp() {
 
 function getValidStakingTimestamp(offset) {
     let result = Math.round(Date.now() / 10000) + offset;
-    console.log(`function getValidStakingTimestamp(): starting from ${result}`);
+    // console.log(`function getValidStakingTimestamp(): starting from ${result}`);
     while (!(result % 86400 >= 600 && result % 86400 <= 85800)) {
         result += 100;
     }
-    console.log(`function getValidStakingTimestamp(): returning ${result}`);
+    // console.log(`function getValidStakingTimestamp(): returning ${result}`);
     return result;
 }
 
 function getInvalidStakingTimestamp(timestanp) {
     var result = timestanp;
-    console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
+    // console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
     while (result % 86400 >= 600 && result % 86400 <= 85800) {
         result += 100;
     }
-    console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
+    // console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
     return result;
 }
 

@@ -12,7 +12,7 @@ const distributionTime = 2678400; //31 day
 const stakePeriod = 86400;
 const claimPeriod = 86400;
 const minStake = parseEther("100");
-const maxStake = parseEther("100000");
+const maxStake = parseEther("500");
 
 async function getTimestamp() {
     let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
@@ -22,35 +22,25 @@ async function getTimestamp() {
 
 function getValidStakingTimestamp(offset) {
     let result = Math.round(Date.now() / 10000) + offset;
-    console.log(`function getValidStakingTimestamp(): starting from ${result}`);
+    // console.log(`function getValidStakingTimestamp(): starting from ${result}`);
     while (!(result % 86400 >= 600 && result % 86400 <= 85800)) {
         result += 100;
     }
-    console.log(`function getValidStakingTimestamp(): returning ${result}`);
+    // console.log(`function getValidStakingTimestamp(): returning ${result}`);
     return result;
 }
 
 function getInvalidStakingTimestamp(timestanp) {
     var result = timestanp;
-    console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
+    // console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
     while (result % 86400 >= 600 && result % 86400 <= 85800) {
         result += 100;
     }
-    console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
+    // console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
     return result;
 }
 
-function getInvalidStakingTimestamp(timestanp) {
-    var result = timestanp;
-    console.log(`function getInvalidStakingTimestamp(): starting from ${result}`);
-    while (result % 86400 >= 600 && result % 86400 <= 85800) {
-        result += 100;
-    }
-    console.log(`function getInvalidStakingTimestamp(): returning ${result}`);
-    return result;
-}
-
-describe("2. Staking NATIVE tests", () => {
+describe("2. Staking NATIVE coin tests", () => {
     let staking;
     let token;
     let staking_deploy_block;
@@ -112,14 +102,11 @@ describe("2. Staking NATIVE tests", () => {
         it("STEP1: stake: success", async () => {
             let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
-            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address)
-            expect(Math.floor(balanceBeforeStake / 1e18)).to.be.equal(10000);
             let overrides = {
-                value: ethers.utils.parseEther("100")
+                value: minStake
             }
             await staking.connect(accounts[1]).stake(overrides);
-            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(9899);
+
             let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
             let cur_block = await hre.ethers.provider.send("eth_getBlockByNumber", [bl_num, false]);
             let block_time = parseInt(cur_block.timestamp);
@@ -163,10 +150,6 @@ describe("2. Staking NATIVE tests", () => {
             }
         });
         it("STEP3: stake greater than maximum: fail", async () => {
-            await hre.network.provider.send("hardhat_setBalance", [
-                accounts[1].address,
-                "0x1A784C264BCDFD0000000"
-              ]);
             try {
                 let overrides = {
                     value: maxStake + 1
@@ -198,22 +181,30 @@ describe("2. Staking NATIVE tests", () => {
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
-
-            //expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999909);
             let overrides = {
                 value: minStake
             }
             await staking.connect(accounts[1]).stake(overrides);
-            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);
 
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
             await staking.connect(accounts[1]).unstake(minStake);
 
-            balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
-
-            expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceBeforeStake / 1e18));
+            let user_info = await staking.stakes(accounts[1].address);
+            expect(
+                user_info.amount
+            ).to.equal(0);
+            expect(
+                user_info.rewardDebt
+            ).to.equal(0);
+            expect(
+                user_info.distributed
+            ).to.equal(0);
+            expect(
+                user_info.stakedAt
+            ).to.equal(timestamp);
+            expect(
+                user_info.claimedAt
+            ).to.equal(0);
         });
 
         it("STEP2: unstake greater than staked", async () => {
@@ -221,25 +212,14 @@ describe("2. Staking NATIVE tests", () => {
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
-
-            expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999909);
             let overrides = {
                 value: minStake
             }
             await staking.connect(accounts[1]).stake(overrides);
             await hre.ethers.provider.getBalance(accounts[1].address);
 
-            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999809);
-
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
             await expect(staking.connect(accounts[1]).unstake(minStake + 1)).to.be.revertedWith("WQStaking: Not enough tokens to unstake");
-
-            let balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
-
-            expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceAfterStake / 1e18));
         });
         it("STEP3: unstake earlier than unstake time", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
@@ -247,25 +227,16 @@ describe("2. Staking NATIVE tests", () => {
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
-
-            expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999809);
 
             let overrides = {
                 value: minStake
             }
             await staking.connect(accounts[1]).stake(overrides);
 
-            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999709);
-
             timestamp = getInvalidStakingTimestamp(timestamp);
 
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             await expect(staking.connect(accounts[1]).unstake(minStake)).to.be.revertedWith("WQStaking: Daily lock");
-
-            let balanceAfterUnstake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterUnstake / 1e18)).to.equal(Math.floor(balanceAfterStake / 1e18));
         });
     });
 /**
@@ -275,28 +246,21 @@ describe("2. Staking NATIVE tests", () => {
  * "7 600 000.000000000000000000" - actual
  */
     describe("Claim", () => {
-        it("STEP1: stake: success", async () => {
+        it("STEP1: claim: success", async () => {
             await token.connect(accounts[1]).approve(staking.address, minStake);
             let timestamp = getValidStakingTimestamp(await getTimestamp());
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
             let durationShort = 30;
             let durationLong = stakePeriod * durationShort;
-            let balanceBeforeStake = await hre.ethers.provider.getBalance(accounts[1].address);
-
-            expect(Math.floor(balanceBeforeStake / 1e18)).to.equal(1999709);
             let overrides = {
                 value: minStake
             }
             await staking.connect(accounts[1]).stake(overrides);
 
-            let balanceAfterStake = await hre.ethers.provider.getBalance(accounts[1].address);
-            expect(Math.floor(balanceAfterStake / 1e18)).to.equal(1999609);
-
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [timestamp + durationLong]);
 
             let _addressInfo = await staking.getInfoByAddress(accounts[1].address);
             expect(_addressInfo.staked_).to.equal(minStake);
-            expect(_addressInfo._balance).to.equal(balanceAfterStake);
 
             console.log(`Claim is              \'${_addressInfo.claim_}\'`) // какое-то сумасшедшее число
             console.log(`Staked                \'${_addressInfo.staked_}\'`)
