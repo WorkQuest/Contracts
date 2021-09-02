@@ -270,6 +270,8 @@ describe("2. Staking NATIVE coin tests", () => {
             expect(tokenBalanceBefore).to.equal(0);
             await staking.connect(accounts[1]).claim();
             let tokenBalanceAfter = await token.balanceOf(accounts[1].address);
+            console.log(`Balance after is      \'${await token.balanceOf(staking.address)}\'`)
+
             expect(tokenBalanceAfter > 1000000).to.be.true;
         });
     });
