@@ -252,21 +252,23 @@ contract WQStakingNative is AccessControl {
      *
      */
     function produced() private view returns (uint256) {
+        uint decimalsTime = 10000;
         uint256 n = (block.timestamp - startTime) / distributionTime;
+        uint256 producedEarlier;
+        uint256 producedNextMonth;
         if (n <= 27) {
-            uint256 producedEarlier = (rewardDelta1 * n * (n + 1)) / 2;
-            return
-                producedEarlier +
-                rewardDelta1 *
-                (block.timestamp - (startTime + n * distributionTime));
+            producedEarlier = (rewardDelta1 * n * (n + 1)) / 2;
+            producedNextMonth = (rewardDelta1 * (n + 1) * (n + 2)) / 2;
         } else {
-            uint256 producedEarlier = (rewardDelta1 * 378) +
-                ((rewardDelta2 * (n - 27) * (n - 26)) / 2);
-            return
-                producedEarlier +
-                rewardDelta2 *
-                (block.timestamp - (startTime + n * distributionTime));
+            producedEarlier = (rewardDelta1 * 378) + ((rewardDelta2 * (n - 27) * (n - 26)) / 2);
+            producedNextMonth = (rewardDelta1 * 378) + ((rewardDelta2 * (n - 27 + 1) * (n - 26 + 1)) / 2);
         }
+        return
+            producedEarlier +
+            ((
+                (producedEarlier - producedNextMonth)
+                * ((block.timestamp * decimalsTime - startTime * decimalsTime) / distributionTime)
+            ) / decimalsTime);
     }
 
     function update() public {
