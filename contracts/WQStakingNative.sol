@@ -254,6 +254,7 @@ contract WQStakingNative is AccessControl {
 
     function update() public {
         uint256 rewardProducedAtNow = produced();
+        producedTime = block.timestamp;
         if (rewardProducedAtNow > rewardProduced) {
             uint256 producedNew = rewardProducedAtNow - rewardProduced;
             if (totalStaked > 0) {
