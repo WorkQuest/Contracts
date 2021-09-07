@@ -24,8 +24,7 @@ contract WQStaking is AccessControl {
     // StakeInfo contains info related to stake.
     struct StakeInfo {
         uint256 startTime;
-        uint256 rewardDelta1;
-        uint256 rewardDelta2;
+        uint256 rewardTotal;
         uint256 distributionTime;
         uint256 stakePeriod;
         uint256 claimPeriod;
@@ -48,10 +47,9 @@ contract WQStaking is AccessControl {
 
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
-    uint256 startTime;
+    uint256 public startTime;
     /// @notice Increase of rewards per distribution time
-    uint256 public rewardDelta1;
-    uint256 public rewardDelta2;
+    uint256 public rewardTotal;
     /// @notice Distribution time
     uint256 public distributionTime;
     /// @notice Staking period
@@ -81,8 +79,7 @@ contract WQStaking is AccessControl {
 
     function initialize(
         uint256 _startTime,
-        uint256 _rewardDelta1,
-        uint256 _rewardDelta2,
+        uint256 _rewardTotal,
         uint256 _distributionTime,
         uint256 _stakePeriod,
         uint256 _claimPeriod,
@@ -96,8 +93,7 @@ contract WQStaking is AccessControl {
             "WQStaking: Contract instance has already been initialized"
         );
         startTime = _startTime;
-        rewardDelta1 = _rewardDelta1;
-        rewardDelta2 = _rewardDelta2;
+        rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
         stakePeriod = _stakePeriod;
         claimPeriod = _claimPeriod;
@@ -241,8 +237,8 @@ contract WQStaking is AccessControl {
         Staker storage staker = stakes[_staker];
 
         reward =
-            (staker.amount * _tps) /
-            1e18 +
+            ((staker.amount * _tps) /
+            1e18) +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -272,21 +268,8 @@ contract WQStaking is AccessControl {
      *
      */
     function produced() private view returns (uint256) {
-        uint256 n = (block.timestamp - startTime) / distributionTime;
-        if (n <= 27) {
-            uint256 producedEarlier = (rewardDelta1 * n * (n + 1)) / 2;
-            return
-                producedEarlier +
-                rewardDelta1 *
-                (block.timestamp - (startTime + n * distributionTime));
-        } else {
-            uint256 producedEarlier = (rewardDelta1 * 378) +
-                ((rewardDelta2 * (n - 27) * (n - 26)) / 2);
-            return
-                producedEarlier +
-                rewardDelta2 *
-                (block.timestamp - (startTime + n * distributionTime));
-        }
+        return
+        allProduced + (rewardTotal * (block.timestamp - producedTime)) / distributionTime;
     }
 
     function update() public {
@@ -303,11 +286,10 @@ contract WQStaking is AccessControl {
     /**
      * @dev setReward - sets amount of reward during `distributionTime`
      */
-    function setReward(uint256 _rewardDelta1, uint256 _rewardDelta2) external onlyRole(ADMIN_ROLE) {
+    function setReward(uint256 _rewardTotal) external onlyRole(ADMIN_ROLE) {
         allProduced = produced();
         producedTime = block.timestamp;
-        rewardDelta1 = _rewardDelta1;
-        rewardDelta2 = _rewardDelta2;
+        rewardTotal = _rewardTotal;
     }
 
     /**
@@ -365,8 +347,7 @@ contract WQStaking is AccessControl {
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
             startTime: startTime,
-            rewardDelta1: rewardDelta1,
-            rewardDelta2: rewardDelta2,
+            rewardTotal: rewardTotal,
             distributionTime: distributionTime,
             stakePeriod: stakePeriod,
             claimPeriod: claimPeriod,

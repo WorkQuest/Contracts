@@ -40,15 +40,13 @@ describe("2. Staking NATIVE coin tests", () => {
 
     let staking;
     let token;
-    let staking_deploy_block;
     let validStartTime;
 
     const redeploy = async () => {
         accounts = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory('WQToken');
         token = await upgrades.deployProxy(WQToken, [parseEther("25000000000000")], { initializer: 'initialize' });
-        let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
-        staking_deploy_block = await hre.ethers.provider.send("eth_getBlockByNumber", [bl_num, false]);
+        // let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
         const Staking = await ethers.getContractFactory("WQStakingNative");
         validStartTime = getValidStakingTimestamp(await getTimestamp());
         await hre.ethers.provider.send("evm_setNextBlockTimestamp", [validStartTime]);
@@ -247,7 +245,6 @@ describe("2. Staking NATIVE coin tests", () => {
     describe("Claim", () => {
         it("STEP1: claim: success", async () => {
             await redeploy()
-            await token.connect(accounts[1]).approve(staking.address, minStake);
             let overrides = {
                 value: minStake
             }
