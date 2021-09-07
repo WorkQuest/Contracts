@@ -23,8 +23,7 @@ contract WQStakingNative is AccessControl {
     // StakeInfo contains info related to stake.
     struct StakeInfo {
         uint256 startTime;
-        uint256 rewardDelta1;
-        uint256 rewardDelta2;
+        uint256 rewardTotal;
         uint256 distributionTime;
         uint256 stakePeriod;
         uint256 claimPeriod;
@@ -43,10 +42,9 @@ contract WQStakingNative is AccessControl {
 
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
-    uint256 startTime;
+    uint256 public startTime;
     /// @notice Increase of rewards per distribution time
-    uint256 public rewardDelta1;
-    uint256 public rewardDelta2;
+    uint256 public rewardTotal;
     /// @notice Distribution time
     uint256 public distributionTime;
     /// @notice Staking period
@@ -76,8 +74,7 @@ contract WQStakingNative is AccessControl {
 
     function initialize(
         uint256 _startTime,
-        uint256 _rewardDelta1,
-        uint256 _rewardDelta2,
+        uint256 _rewardTotal,
         uint256 _distributionTime,
         uint256 _stakePeriod,
         uint256 _claimPeriod,
@@ -90,8 +87,7 @@ contract WQStakingNative is AccessControl {
             "WQStaking: Contract instance has already been initialized"
         );
         startTime = _startTime;
-        rewardDelta1 = _rewardDelta1;
-        rewardDelta2 = _rewardDelta2;
+        rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
         stakePeriod = _stakePeriod;
         claimPeriod = _claimPeriod;
@@ -221,8 +217,8 @@ contract WQStakingNative is AccessControl {
         Staker storage staker = stakes[_staker];
 
         reward =
-            (staker.amount * _tps) /
-            1e18 +
+            ((staker.amount * _tps) /
+            1e18) +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -252,23 +248,8 @@ contract WQStakingNative is AccessControl {
      *
      */
     function produced() private view returns (uint256) {
-        uint decimalsTime = 10000;
-        uint256 n = (block.timestamp - startTime) / distributionTime;
-        uint256 producedPastMonth;
-        uint256 producedNextMonth;
-        if (n <= 27) {
-            producedPastMonth = (rewardDelta1 * n * (n + 1)) / 2;
-            producedNextMonth = (rewardDelta1 * (n + 1) * (n + 2)) / 2;
-        } else {
-            producedPastMonth = (rewardDelta1 * 378) + ((rewardDelta2 * (n - 27) * (n - 26)) / 2);
-            producedNextMonth = (rewardDelta1 * 378) + ((rewardDelta2 * (n - 27 + 1) * (n - 26 + 1)) / 2);
-        }
         return
-            producedPastMonth +
-            ((
-                (producedPastMonth - producedNextMonth)
-                * ((block.timestamp * decimalsTime - startTime * decimalsTime) / distributionTime)
-            ) / decimalsTime);
+        allProduced + (rewardTotal * (block.timestamp - producedTime)) / distributionTime;
     }
 
     function update() public {
@@ -288,7 +269,7 @@ contract WQStakingNative is AccessControl {
     function setReward(uint256 _amount) external onlyRole(ADMIN_ROLE) {
         allProduced = produced();
         producedTime = block.timestamp;
-        rewardDelta1 = _amount;
+        rewardTotal = _amount;
     }
 
     /**
@@ -346,8 +327,7 @@ contract WQStakingNative is AccessControl {
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
             startTime: startTime,
-            rewardDelta1: rewardDelta1,
-            rewardDelta2: rewardDelta2,
+            rewardTotal: rewardTotal,
             distributionTime: distributionTime,
             stakePeriod: stakePeriod,
             claimPeriod: claimPeriod,
