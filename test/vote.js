@@ -23,7 +23,7 @@ describe('Governance token test', () => {
         const WQToken = await ethers.getContractFactory('WQToken');
         token = await upgrades.deployProxy(WQToken, [ethers.utils.parseEther("100000000")], {initializer: 'initialize'});
 
-        const DAOBallot = await ethers.getContractFactory("WQDAOBallot");
+        const DAOBallot = await ethers.getContractFactory("WQDAOVote");
         vote = await DAOBallot.deploy(owner.address, token.address);
         await vote.addProposal("", 6000, 2);
     });

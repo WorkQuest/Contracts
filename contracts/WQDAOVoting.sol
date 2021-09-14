@@ -1,11 +1,107 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "./WQDAOVoteInterface.sol";
-import "./WQTInterface.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./WQTInterface.sol";
 
-contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
+contract WQDAOVoting is AccessControl {
+    string public constant name = "WorkQuest DAO Voting";
+
+    /// @notice The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256(
+            "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
+        );
+
+    /// @notice The EIP-712 typehash for the ballot struct used by the contract
+    bytes32 public constant BALLOT_TYPEHASH =
+        keccak256("Ballot(uint256 proposalId,uint8 support)");
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant CHAIRPERSON_ROLE = keccak256("CHAIRPERSON_ROLE");
+
+    struct Proposal {
+        //Unique id for looking up a proposal
+        uint256 id;
+        //Creator of the proposal
+        address proposer;
+        // Current number of votes in favor of this proposal
+        uint256 forVotes;
+        // Current number of votes in opposition to this proposal
+        uint256 againstVotes;
+        // Current number of voters in this proposal
+        uint256 numVoters;
+        // Expire time of proposal
+        uint256 proposalExpireTime;
+        // Flag marking whether the proposal is active
+        bool active;
+        address recipient;
+        bytes byteCode;
+        string description;
+        // Receipts of ballots for the entire set of voters
+        mapping(address => Receipt) receipts;
+    }
+
+    /// @notice Ballot receipt record for a voter
+    struct Receipt {
+        // Whether or not a vote has been cast
+        bool hasVoted;
+        // Whether or not the voter supports the proposal or abstains
+        bool support;
+        // The number of votes the voter had, which were cast
+        uint256 votes;
+    }
+
+    struct VoteResult {
+        bool succeded;
+        bool defeated;
+    }
+
+    // Administrator for this contract
+    address public admin;
+
+    // The duration of voting on a proposal, in blocks
+    uint256 public votingPeriod;
+
+    uint256 public minimumQuorum;
+
+    // The total number of proposals
+    uint256 public proposalCount;
+
+    // Minimum quantity of tokens for proposals
+    uint256 public proposalThreshold = 10000e18; //10,000
+
+    // Minimum quantity of tokens for voting
+    uint256 public voteThreshold = 100e18; //100
+
+    //The address of the governance token
+    WQTInterface public token;
+
+    //The record of all proposals ever proposed
+    mapping(uint256 => Proposal) public proposals;
+    mapping(uint256 => VoteResult) public voteResults;
+
+    /// @notice An event emitted when a new proposal is created
+    event ProposalCreated(
+        uint256 id,
+        address proposer,
+        string description,
+        uint256 votingPeriod,
+        uint256 minimumQuorum
+    );
+
+    /// @notice An event emitted when a vote has been cast on a proposal
+    event VoteCast(
+        address indexed voter,
+        uint256 proposalId,
+        bool support,
+        uint256 votes,
+        string reason
+    );
+
+    /// @notice An event emitted when a proposal has been executed in the Timelock
+    event ProposalExecuted(uint256 id);
+
     /**
      * @notice Initializes the contract
      * @param chairPerson Chairperson address
@@ -22,14 +118,13 @@ contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
     /**
      * @notice Function used to propose a new proposal. Sender must have delegates above the proposal threshold
      * @param _description String description of the proposal
-     * @param _votingPeriod The initial voting period
-     * @param _minimumQuorum The initial number of members must vote on a proposal for it to be executed
+     
      * @return Proposal id of new proposal
      */
     function addProposal(
+        address _recipient,
         string memory _description,
-        uint256 _votingPeriod,
-        uint256 _minimumQuorum
+        bytes memory _byteCode
     ) public returns (uint256) {
         require(
             token.balanceOf(msg.sender) > proposalThreshold,
@@ -44,10 +139,10 @@ contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
         proposal.forVotes = 0;
         proposal.againstVotes = 0;
         proposal.active = true;
-        proposal.proposalExpireTime = block.timestamp + _votingPeriod;
-
-        votingPeriod = _votingPeriod;
-        minimumQuorum = _minimumQuorum;
+        proposal.proposalExpireTime = block.timestamp + votingPeriod;
+        proposal.recipient = _recipient;
+        proposal.byteCode = _byteCode;
+        proposal.description = _description;
 
         emit ProposalCreated(
             proposal.id,
@@ -99,7 +194,9 @@ contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
             proposal.forVotes > proposal.againstVotes &&
             proposal.numVoters > minimumQuorum
         ) {
-            result.succeded = true;
+            (result.succeded, ) = proposal.recipient.call{value: 0}(
+                proposal.byteCode
+            );
         } else result.defeated = true;
     }
 
@@ -223,5 +320,17 @@ contract WQDAOBallot is DAODelegateStorage, DAOEvents, AccessControl {
     function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, "subtraction underflow");
         return a - b;
+    }
+
+    /**
+     * @param _minimumQuorum The initial number of members must vote on a proposal for it to be executed
+     * @param _votingPeriod The initial voting period
+     */
+    function changeVotingRules(uint256 _minimumQuorum, uint256 _votingPeriod)
+        external
+    {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Caller is not an admin");
+        minimumQuorum = _minimumQuorum;
+        votingPeriod = _votingPeriod;
     }
 }
