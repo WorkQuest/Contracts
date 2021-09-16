@@ -139,7 +139,7 @@ contract WQStaking is AccessControl {
                 duration == 30 || duration == 60 || duration == 90,
                 "WQStaking: duration must be 30, 60 or 90 days"
             );
-            staker.unstakeTime = block.timestamp + duration * 86400;
+            staker.unstakeTime = block.timestamp + duration * 60;   // ATTENTION change duration from days to minutes to accelerate process
         }
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
@@ -359,5 +359,17 @@ contract WQStaking is AccessControl {
             rewardTokenAddress: address(rewardToken)
         });
         return info_;
+    }
+
+    // ATTENTION functions below were added for testing 
+
+    function updateStartTime(uint256 _startTimeNew) external {
+        require(hasRole(ADMIN_ROLE, msg.sender), "WQStaking: only owner can change start time");
+        startTime = _startTimeNew;
+    }
+
+    function updateProducedTime(uint256 _producedTime) external {
+        require(hasRole(ADMIN_ROLE, msg.sender), "WQStaking: only owner can change produced time");
+        producedTime = _producedTime;
     }
 }
