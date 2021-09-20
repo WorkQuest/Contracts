@@ -315,7 +315,7 @@ contract WQLiquidityMining is AccessControl {
         external
         onlyRole(ADMIN_ROLE)
     {
-        requrie(startTime > block.timestamp, "WQLiquidityMining: Staking time has already come");
+        require(startTime > block.timestamp, "WQLiquidityMining: Staking time has already come");
         startTime = _startTimeNew;
         producedTime = _startTimeNew;
     }
