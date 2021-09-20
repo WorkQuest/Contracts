@@ -60,7 +60,7 @@ contract WQInsurance is AccessControl{
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
-        _setupRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
         contributionPeriod = _contributionPeriod;
         contributionAmount = _contributionAmount;
     }
