@@ -30,8 +30,8 @@ contract WQInsuranceFactory {
         uint256 usersNum;
     }
 
-    mapping(ContributionPeriod => mapping(PolicyType => address)) getLastProperInsuarance;
-    mapping(address => insuranceInfo) insurancesData;
+    mapping(ContributionPeriod => mapping(PolicyType => address )) getLastProperInsuarance;
+    mapping(address  => insuranceInfo) insurancesData;
 
     constructor() {}
 
@@ -40,16 +40,15 @@ contract WQInsuranceFactory {
         PolicyType _policy,
         address _user
     ) external {
-        address  insuarance = getLastProperInsuarance[_period][_policy];
+        address payable insuarance = payable(getLastProperInsuarance[_period][_policy]);
         insuranceInfo storage data = insurancesData[insuarance];
         if (data.usersNum == 10) {
             // create new insuarance 
-            address  newInsurance =  _newInsurance(_period, _policy);
-            insuranceInfo storage newData;
+            address newInsurance =  _newInsurance(_period, _policy);
+            insuranceInfo storage newData = insurancesData[newInsurance];
             newData.period = _period;
             newData.policy = _policy;
             newData.usersNum = 1;
-            insurancesData[newInsurance] = newData;
             getLastProperInsuarance[_period][_policy] = newInsurance;
         } else {
             // add to existance one
