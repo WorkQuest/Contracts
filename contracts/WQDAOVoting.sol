@@ -7,16 +7,6 @@ import "./WQTInterface.sol";
 contract WQDAOVoting is AccessControl {
     string public constant name = "WorkQuest DAO Voting";
 
-    /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256(
-            "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
-        );
-
-    /// @notice The EIP-712 typehash for the ballot struct used by the contract
-    bytes32 public constant BALLOT_TYPEHASH =
-        keccak256("Ballot(uint256 proposalId,uint8 support)");
-
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant CHAIRPERSON_ROLE = keccak256("CHAIRPERSON_ROLE");
 
@@ -217,42 +207,6 @@ contract WQDAOVoting is AccessControl {
             _support,
             castVoteInternal(msg.sender, _proposalId, _support),
             _justification
-        );
-    }
-
-    /**
-     * @notice Cast a vote for a proposal by signature
-     * @dev External function that accepts EIP-712 signatures for voting on proposals.
-     */
-    function castVoteBySig(
-        uint256 _proposalId,
-        bool _support,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public {
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                DOMAIN_TYPEHASH,
-                keccak256(bytes(name)),
-                block.chainid,
-                address(this)
-            )
-        );
-        bytes32 structHash = keccak256(
-            abi.encode(BALLOT_TYPEHASH, _proposalId, _support)
-        );
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, structHash)
-        );
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "Invalid signature");
-        emit VoteCast(
-            signatory,
-            _proposalId,
-            _support,
-            castVoteInternal(signatory, _proposalId, _support),
-            ""
         );
     }
 
