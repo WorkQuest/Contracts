@@ -34,10 +34,12 @@
     "dotenv": "^10.0.0",
     "dotenv-stringify": "^2.0.6",
     "ethereum-waffle": "^3.3.0",
-    "ethers": "^5.4.6",
+    "ethers": "^5.4.7",
     "hardhat": "^2.6.4",
     "hardhat-deploy": "^0.7.0-beta.48",
     "hardhat-docgen": "^1.1.2",
+    "hardhat-ethers": "^1.0.1",
+    "hardhat-upgrades": "0.0.0",
     "hardhat-waffle": "0.0.1-security",
     "mocha": "^8.3.2",
     "web3": "^1.4.0"
