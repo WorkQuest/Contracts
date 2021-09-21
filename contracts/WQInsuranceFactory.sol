@@ -11,7 +11,7 @@ contract WQInsuranceFactory {
     uint256 constant mediumContribution = 2000e18;
     uint256 constant maximalContribution = 3000e18;
 
-    address[] insurances;
+    address[] insurances;   // TO_ASK Is it needed? 
 
     enum PolicyType {
         Minimal,
@@ -24,9 +24,40 @@ contract WQInsuranceFactory {
         Yearly
     }
 
+    struct insuranceInfo {
+        ContributionPeriod period;
+        PolicyType policy; 
+        uint256 usersNum;
+    }
+
+    mapping(ContributionPeriod => mapping(PolicyType => address )) getLastProperInsuarance;
+    mapping(address  => insuranceInfo) insurancesData;
+
     constructor() {}
 
-    function newInsurance(ContributionPeriod _period, PolicyType policyType) external {
+    function addUserToInsuarance(
+        ContributionPeriod _period,
+        PolicyType _policy,
+        address _user
+    ) external {
+        address payable insuarance = payable(getLastProperInsuarance[_period][_policy]);
+        insuranceInfo storage data = insurancesData[insuarance];
+        if (data.usersNum == 10) {
+            // create new insuarance 
+            address newInsurance =  _newInsurance(_period, _policy);
+            insuranceInfo storage newData = insurancesData[newInsurance];
+            newData.period = _period;
+            newData.policy = _policy;
+            newData.usersNum = 1;
+            getLastProperInsuarance[_period][_policy] = newInsurance;
+        } else {
+            // add to existance one
+            WQInsurance(insuarance).addMember(_user);
+            data.usersNum++;
+        }
+    }
+
+    function _newInsurance(ContributionPeriod _period, PolicyType policyType) internal returns (address insurance_){
         uint256 _contributionPeriod;
         if (_period == ContributionPeriod.Monthly) {
             _contributionPeriod = MONTH;
@@ -44,6 +75,7 @@ contract WQInsuranceFactory {
         insurances.push(
             address(new WQInsurance(_contributionPeriod, _contributionAmount))
         );
+        insurance_ = insurances[insurances.length-1];
     }
 
     function getInsurances() external view returns (address[] memory){

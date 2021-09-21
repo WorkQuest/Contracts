@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-contract WQInsurance {
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract WQInsurance is AccessControl{
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
+    
     struct MemberInfo {
         uint256 firstContribution;
         uint256 lastContribution;
@@ -52,6 +57,10 @@ contract WQInsurance {
      *
      */
     constructor(uint256 _contributionPeriod, uint256 _contributionAmount) {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(FACTORY_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
         contributionPeriod = _contributionPeriod;
         contributionAmount = _contributionAmount;
     }
@@ -68,6 +77,10 @@ contract WQInsurance {
      * Emits a {MemberAdded} event
      */
     function addMember(address member) external {
+        require(
+            hasRole(FACTORY_ROLE, msg.sender),
+            "WQInsuarance: Only factory can add members to contract" 
+        );
         require(
             memberCount < MAX_MEMBERS,
             "WQInsurance: Members quantity should be less than 10"
