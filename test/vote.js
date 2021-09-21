@@ -224,19 +224,6 @@ describe('Governance token test', () => {
                 await token.withdrawVotingRights(userOne.address, tenMln)
                 await token.delegate(userTwo.address, tenMln)
             })
-            it('Delegate twice, second time more than first time', async () => {
-                await token.transfer(userOne.address, fifty)
-                await token.connect(userOne).delegate(userTwo.address, twenty)
-                await token.connect(userOne).delegate(userThree.address, thirty)
-                expect( await token.votePowerOf(userThree.address)).to.equal(
-                    fifty
-                )
-            })
-            // another test scenarios 
-            // redelegate less than first time  
-            // redelegates zero amount 
-            // 
-
         })
     })
     describe('Vote test', () => {
