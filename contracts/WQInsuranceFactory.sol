@@ -2,6 +2,9 @@
 pragma solidity =0.8.4;
 
 import "./WQInsurance.sol";
+// ATTENTION for testing only 
+import 'hardhat/console.sol';
+
 
 contract WQInsuranceFactory {
     uint256 constant MONTH = 2592000;
@@ -12,6 +15,8 @@ contract WQInsuranceFactory {
     uint256 constant maximalContribution = 3000e18;
 
     address[] insurances;   // TO_ASK Is it needed? 
+
+    uint constant enableConsoleLog = 0;
 
     enum PolicyType {
         Minimal,
@@ -42,9 +47,13 @@ contract WQInsuranceFactory {
     ) external {
         address payable insuarance = payable(getLastProperInsuarance[_period][_policy]);
         insuranceInfo storage data = insurancesData[insuarance];
-        if (data.usersNum == 10) {
+        if (data.usersNum == 10 || insuarance == address(0)) {
             // create new insuarance 
+            if (enableConsoleLog == 1) {
+                console.log('create new instance'); // ATTENTION
+            } 
             address newInsurance =  _newInsurance(_period, _policy);
+            WQInsurance(payable(newInsurance)).addMember(_user);
             insuranceInfo storage newData = insurancesData[newInsurance];
             newData.period = _period;
             newData.policy = _policy;
@@ -52,10 +61,16 @@ contract WQInsuranceFactory {
             getLastProperInsuarance[_period][_policy] = newInsurance;
         } else {
             // add to existance one
-            WQInsurance(insuarance).addMember(_user);
+            if (enableConsoleLog == 1) {
+                console.log('add to old one'); // ATTENTION
+            }
+            WQInsurance(insuarance).addMember(_user); 
             data.usersNum++;
         }
     }
+
+
+
 
     function _newInsurance(ContributionPeriod _period, PolicyType policyType) internal returns (address insurance_){
         uint256 _contributionPeriod;
