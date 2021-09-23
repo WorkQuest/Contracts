@@ -1,4 +1,4 @@
-const hre = require("hardhat");
+const { hre, ethers, upgrades } = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
@@ -22,8 +22,7 @@ async function main() {
 
     console.log("Deploying...");
     const Bridge = await hre.ethers.getContractFactory("WQBridge");
-    const bridge = await Bridge.deploy(process.env.CHAIN_ID);
-    await bridge.deployed();
+    const bridge = await upgrades.deployProxy(Bridge, [process.env.CHAIN_ID], { initializer: 'initialize'});
     console.log("WorkQuest Bridge has been deployed to:", bridge.address);
 
     envConfig["BRIDGE"] = bridge.address;

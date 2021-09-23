@@ -1,4 +1,4 @@
-const hre = require("hardhat");
+const {hre, ethers, upgrades} = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
@@ -23,8 +23,7 @@ async function main() {
 
   console.log("Deploying...");
   const DAOBallot = await hre.ethers.getContractFactory("WQDAOVote");
-  const dao_ballot = await DAOBallot.deploy(process.env.DAO_CHAIR_PERSON, process.env.WORK_QUEST_TOKEN);
-  await dao_ballot.deployed();
+  const dao_ballot = await upgrades.deployProxy(DAOBallot, [process.env.DAO_CHAIR_PERSON, process.env.WORK_QUEST_TOKEN], { initializer: 'initialize'})
   console.log("DAO Ballot has been deployed to:", dao_ballot.address);
 
   envConfig["DAO_BALLOT"] = dao_ballot.address;
