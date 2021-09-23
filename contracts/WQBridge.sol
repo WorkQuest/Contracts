@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "./WQBridgeTokenInterface.sol";
+import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import './WQBridgeTokenInterface.sol';
 
 contract WQBridge is AccessControl {
+    using ECDSA for bytes32;
+
     /// @notice Statuses of a swap
     enum State {
         Empty,
@@ -32,10 +34,10 @@ contract WQBridge is AccessControl {
     }
 
     /// @notice Admin role constant
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     /// @notice Validator role constant
-    bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
+    bytes32 public constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
 
     /// @notice 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
     uint256 public immutable chainId;
@@ -54,31 +56,40 @@ contract WQBridge is AccessControl {
     /**
      * @dev Emitted when swap created
      * @param timestamp Current block timestamp
-     * @param nonce Transaction number
-     * @param initiator Initiator of transaction
+     * @param sender Initiator of transaction
      * @param recipient Recipient address
      * @param amount Amount of tokens
+     * @param chainFrom Source chain id
      * @param chainTo Destination chain id
+     * @param nonce Transaction number
      */
     event SwapInitialized(
         uint256 timestamp,
-        uint256 nonce,
-        address indexed initiator,
+        address indexed sender,
         address recipient,
         uint256 amount,
-        uint256 chainTo
+        uint256 chainFrom,
+        uint256 chainTo,
+        uint256 nonce
     );
 
     /**
      * @dev Emitted when swap redeemed
      * @param timestamp Current block timestamp
+     * @param sender Initiator of transaction
+     * @param recipient Recipient address
+     * @param amount Amount of tokens
+     * @param chainFrom Source chain id
      * @param nonce Transaction number
-     * @param initiator Initiator of transaction
      */
     event SwapRedeemed(
         uint256 timestamp,
-        uint256 nonce,
-        address indexed initiator
+        address indexed sender,
+        address recipient,
+        uint256 amount,
+        uint256 chainFrom,
+        uint256 chainTo,
+        uint256 nonce
     );
 
     /** @notice Bridge constructor
@@ -110,12 +121,12 @@ contract WQBridge is AccessControl {
         address recipient,
         string memory symbol
     ) external payable {
-        require(chainTo != chainId, "WorkQuest Bridge: Invalid chainTo id");
-        require(chains[chainTo], "WorkQuest Bridge: ChainTo ID is not allowed");
+        require(chainTo != chainId, 'WorkQuest Bridge: Invalid chainTo id');
+        require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
         require(
             token.enabled,
-            "WorkQuest Bridge: This token not registered or disabled"
+            'WorkQuest Bridge: This token not registered or disabled'
         );
 
         bytes32 message = keccak256(
@@ -123,25 +134,26 @@ contract WQBridge is AccessControl {
         );
         require(
             swaps[message].state == State.Empty,
-            "WorkQuest Bridge: Swap is not empty state or duplicate transaction"
+            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
         if (token.native) {
             require(
                 msg.value == amount,
-                "WorkQuest Bridge: Amount value is not equal to transfered funds"
+                'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
         emit SwapInitialized(
             block.timestamp,
-            nonce,
             msg.sender,
             recipient,
             amount,
-            chainTo
+            chainId,
+            chainTo,
+            nonce
         );
     }
 
@@ -166,15 +178,14 @@ contract WQBridge is AccessControl {
         bytes32 s,
         string memory symbol
     ) external {
-        require(chainFrom != chainId, "WorkQuest Bridge: Invalid chainFrom ID");
+        require(chainFrom != chainId, 'WorkQuest Bridge: Invalid chainFrom ID');
         require(
             chains[chainFrom],
-            "WorkQuest Bridge: ChainFrom ID is not allowed"
+            'WorkQuest Bridge: ChainFrom ID is not allowed'
         );
-        TokenSettings storage token = tokens[symbol];
         require(
-            token.enabled,
-            "WorkQuest Bridge: This token not registered or disabled"
+            tokens[symbol].enabled,
+            'WorkQuest Bridge: This token not registered or disabled'
         );
 
         bytes32 message = keccak256(
@@ -189,24 +200,36 @@ contract WQBridge is AccessControl {
         );
         require(
             swaps[message].state == State.Empty,
-            "WorkQuest Bridge: Swap is not empty state or duplicate transaction"
+            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
         );
 
-        bytes32 hashedMsg = ECDSA.toEthSignedMessageHash(message);
-        address signer = ECDSA.recover(hashedMsg, v, r, s);
         require(
-            hasRole(VALIDATOR_ROLE, signer),
-            "WorkQuest Bridge: Validator address is invalid or signature is faked"
+            hasRole(
+                VALIDATOR_ROLE,
+                message.toEthSignedMessageHash().recover(v, r, s)
+            ),
+            'WorkQuest Bridge: Validator address is invalid or signature is faked'
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
-        if (token.native) {
+        if (tokens[symbol].native) {
             recipient.transfer(amount);
         } else {
-            WQBridgeTokenInterface(token.token).mint(recipient, amount);
+            WQBridgeTokenInterface(tokens[symbol].token).mint(
+                recipient,
+                amount
+            );
         }
 
-        emit SwapRedeemed(block.timestamp, nonce, msg.sender);
+        emit SwapRedeemed(
+            block.timestamp,
+            msg.sender,
+            recipient,
+            amount,
+            chainFrom,
+            chainId,
+            nonce
+        );
     }
 
     /**
@@ -225,7 +248,7 @@ contract WQBridge is AccessControl {
     function updateChain(uint256 _chainId, bool enabled) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WorkQuest Bridge: Caller is not an admin"
+            'WorkQuest Bridge: Caller is not an admin'
         );
         chains[_chainId] = enabled;
     }
@@ -245,11 +268,11 @@ contract WQBridge is AccessControl {
     ) public {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WorkQuest Bridge: Caller is not an admin"
+            'WorkQuest Bridge: Caller is not an admin'
         );
         require(
             bytes(symbol).length > 0,
-            "WorkQuest Bridge: Symbol length must be greater than 0"
+            'WorkQuest Bridge: Symbol length must be greater than 0'
         );
         tokens[symbol] = TokenSettings({
             token: token,
