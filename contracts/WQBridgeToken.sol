@@ -45,7 +45,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function mint(address to, uint256 amount) external {
         require(
             hasRole(MINTER_ROLE, msg.sender),
-            "You should have a bridge role"
+            "BridgeToken: You should have a minter role"
         );
         _mint(to, amount);
     }
@@ -61,7 +61,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function burn(address from, uint256 amount) external {
         require(
             hasRole(BURNER_ROLE, msg.sender),
-            "You should have a bridge role"
+            "BridgeToken: You should have a burner role"
         );
         _burn(from, amount);
     }
