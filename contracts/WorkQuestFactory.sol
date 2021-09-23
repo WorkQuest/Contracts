@@ -41,6 +41,7 @@ contract WorkQuestFactory is AccessControl {
         address workquest,
         uint256 createdAt
     );
+    bool private initialized;
 
     /**
      * @notice Create new WorkQuestFactory contract
@@ -48,11 +49,13 @@ contract WorkQuestFactory is AccessControl {
      * @param _feeReceiver Address of reciever of fee
      * @param _pensionFund Address of pension fund contract
      */
-    constructor(
+    function initialize (
         uint256 _fee,
         address payable _feeReceiver,
         address payable _pensionFund
-    ) {
+    ) public {
+        require(!initialized, "Contract WorkQuestFactory has already been initialized");
+        initialized = true;
         fee = _fee;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;

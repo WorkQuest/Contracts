@@ -80,21 +80,19 @@ contract WQBridge is AccessControl {
         uint256 nonce,
         address indexed initiator
     );
-
+    bool private initialized;
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    constructor(uint256 _chainId) {
-        // Grant the contract deployer the default admin role: it will be able
-        // to grant and revoke any roles
+    function initialized(uint256 _chainId) public {
+        require(!initialized, "Contract WQBridge has already been initialized");
+        initialized = true;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-        // Sets `ADMIN_ROLE` as `VALIDATOR_ROLE`'s admin role.
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
-
-        chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC
+        chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?   
     }
-
+    
     /**
      * @dev Creates new swap. Emits a {SwapInitialized} event.
      * @param nonce Number of transaction

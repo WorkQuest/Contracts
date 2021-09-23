@@ -16,9 +16,11 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
 
     event AddedBlockList(address user);
     event RemovedBlockList(address user);
+    bool private initialized;
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        owner = msg.sender;
+    function initialize(string memory name, string memory symbol) ERC20(name, symbol) public {      // TO_ASK is it right ???  
+        require(!initialized, "Contract WQBridgeToken has already been initialized");
+        initialized = true;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);

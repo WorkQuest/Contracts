@@ -102,19 +102,22 @@ contract WQDAOVoting is AccessControl {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint256 id);
 
+    bool private initialized;
+    
     /**
      * @notice Initializes the contract
      * @param chairPerson Chairperson address
      * @param _voteToken The address of the DAO token
      */
-    constructor(address chairPerson, address _voteToken) {
+    function initialize(address chairPerson, address _voteToken) public {
+        require(!initialized, "Contract WQDAOVoting has already been initialized");
+        initialized = true;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(CHAIRPERSON_ROLE, chairPerson);
         _setRoleAdmin(CHAIRPERSON_ROLE, ADMIN_ROLE);
         token = WQTInterface(_voteToken);
-    }
-
+    } 
     /**
      * @notice Function used to propose a new proposal. Sender must have delegates above the proposal threshold
      * @param _description String description of the proposal

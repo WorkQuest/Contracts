@@ -2,9 +2,6 @@
 pragma solidity =0.8.4;
 
 import "./WQInsurance.sol";
-// ATTENTION for testing only 
-import 'hardhat/console.sol';
-
 
 contract WQInsuranceFactory {
     uint256 constant MONTH = 2592000;
@@ -15,8 +12,6 @@ contract WQInsuranceFactory {
     uint256 constant maximalContribution = 3000e18;
 
     address[] insurances;   // TO_ASK Is it needed? 
-
-    uint constant enableConsoleLog = 0;
 
     enum PolicyType {
         Minimal,
@@ -37,8 +32,16 @@ contract WQInsuranceFactory {
 
     mapping(ContributionPeriod => mapping(PolicyType => address )) getLastProperInsuarance;
     mapping(address  => insuranceInfo) insurancesData;
-
-    constructor() {}
+    bool private initialized;
+    
+    /** 
+     * @notice initialize the contract 
+     *
+     */
+    function initialize() public {
+        require(!initialized, "Contract WQDAOInsuarance has already been initialized");
+        initialized = true;
+    }
 
     function addUserToInsuarance(
         ContributionPeriod _period,
@@ -47,11 +50,7 @@ contract WQInsuranceFactory {
     ) external {
         address payable insuarance = payable(getLastProperInsuarance[_period][_policy]);
         insuranceInfo storage data = insurancesData[insuarance];
-        if (data.usersNum == 10 || insuarance == address(0)) {
-            // create new insuarance 
-            if (enableConsoleLog == 1) {
-                console.log('create new instance'); // ATTENTION
-            } 
+        if (data.usersNum == 10 || insuarance == address(0)) { 
             address newInsurance =  _newInsurance(_period, _policy);
             WQInsurance(payable(newInsurance)).addMember(_user);
             insuranceInfo storage newData = insurancesData[newInsurance];
@@ -60,17 +59,10 @@ contract WQInsuranceFactory {
             newData.usersNum = 1;
             getLastProperInsuarance[_period][_policy] = newInsurance;
         } else {
-            // add to existance one
-            if (enableConsoleLog == 1) {
-                console.log('add to old one'); // ATTENTION
-            }
             WQInsurance(insuarance).addMember(_user); 
             data.usersNum++;
         }
     }
-
-
-
 
     function _newInsurance(ContributionPeriod _period, PolicyType policyType) internal returns (address insurance_){
         uint256 _contributionPeriod;

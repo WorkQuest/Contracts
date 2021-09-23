@@ -53,10 +53,19 @@ contract WQInsurance is AccessControl{
 
     event PaymentExecuted(uint256 timestamp, uint256 amount, address user);
 
-    /**
+    bool private initialized;
+    
+    /** @notice Initialize the contract
      *
+     *  @param _contributionPeriod how often users pay for insurance
+     *  @param _contributionAmount amount of insurance 
      */
-    constructor(uint256 _contributionPeriod, uint256 _contributionAmount) {
+     function initialize(
+        uint256 _contributionPeriod,
+        uint256 _contributionAmount
+     ) public {
+        require(!initialized, "Contract WQDAOInsuarance has already been initialized");
+        initialized = true;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
