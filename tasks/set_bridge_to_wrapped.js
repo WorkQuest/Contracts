@@ -9,9 +9,7 @@ task("set_bridge_to_wrapped", "Set bridge address to token")
         const dotenv = require('dotenv');
         dotenv.config();
         const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-        for (const k in envConfig) {
-            process.env[k] = envConfig[k]
-        }
+        for (const k in envConfig) { process.env[k] = envConfig[k]; }
         if (!process.env.BRIDGE) {
             throw new Error(`Please set your BRIDGE in a .env-${network} file`);
         }
@@ -23,10 +21,10 @@ task("set_bridge_to_wrapped", "Set bridge address to token")
         console.log("Bridge:", process.env.BRIDGE);
         console.log("Token:", process.env.STAKE_TOKEN);
 
+        const token = await hre.ethers.getContractAt("WQBridgeToken", process.env.STAKE_TOKEN);
         let minter_role = await token.MINTER_ROLE();
         let burner_role = await token.BURNER_ROLE();
 
-        const token = await hre.ethers.getContractAt("BridgeToken", process.env.STAKE_TOKEN);
         await token.grantRole(minter_role, process.env.BRIDGE);
         await token.grantRole(burner_role, process.env.BRIDGE);
 

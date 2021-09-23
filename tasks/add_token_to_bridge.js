@@ -9,9 +9,7 @@ task("add_token_to_bridge", "Add token settings to bridge")
         const fs = require('fs');
         const dotenv = require('dotenv');
         const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-        for (const k in envConfig) {
-            process.env[k] = envConfig[k]
-        }
+        for (const k in envConfig) {process.env[k] = envConfig[k];}
         if (!process.env.BRIDGE) {
             throw new Error(`Please set your BRIDGE in a .env-${network} file`);
         }
