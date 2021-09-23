@@ -18,7 +18,7 @@ async function main() {
   }
 
   console.log("Upgrade...");
-  const WQLiquidityMining = await ethers.getContractFactory("WQStaking");
+  const WQLiquidityMining = await ethers.getContractFactory("WQLiquidityMining");
   const mining = await upgrades.upgradeProxy(process.env.LIQUIDITY_MINING, WQLiquidityMining);
   console.log("Token has been upgraded to:", mining.address);
 }
