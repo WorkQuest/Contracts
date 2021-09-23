@@ -4,6 +4,7 @@ pragma solidity =0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import "./WQTInterface.sol";
 
 contract WQReferal is AccessControl {
@@ -68,7 +69,7 @@ contract WQReferal is AccessControl {
     /**
      * @dev Utils function for check whether an address has the referrer
      */
-    function hasReferrer(address addr) public view returns (bool) {
+    function hasReferrer(address addr) external view returns (bool) {
         return accounts[addr].referrer != address(0);
     }
 
@@ -76,7 +77,7 @@ contract WQReferal is AccessControl {
      * @dev Pay referal to registered referrer
      */
 
-    function payReferral() external {
+    function payReferral() external nonReentrant {
         require(
             token.balanceOf(address(this)) > referralBonus,
             "WQReferal: Balance on contract too low"
@@ -87,8 +88,9 @@ contract WQReferal is AccessControl {
             userAccount.referrer != address(0),
             "WQReferal: Address is not registered"
         );
+        userAccount.paid = true;
         accounts[userAccount.referrer].reward += referralBonus;
-        token.transfer(userAccount.referrer, referralBonus);
+        token.safeTransfer(userAccount.referrer, referralBonus);
         emit PaidReferral(msg.sender, userAccount.referrer, referralBonus);
     }
 }
