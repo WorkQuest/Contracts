@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import "./WQTInterface.sol";
+import './WQTInterface.sol';
 
-contract WQReferal is AccessControl {
+contract WQReferal is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /**
@@ -26,7 +26,7 @@ contract WQReferal is AccessControl {
 
     bool private _initialized;
 
-    WQTInterface token;
+    IERC20 token;
     uint256 referralBonus;
 
     mapping(address => Account) public accounts;
@@ -37,9 +37,9 @@ contract WQReferal is AccessControl {
     function initialize(address _token, uint256 _referralBonus) external {
         require(
             !_initialized,
-            "WQReferal: Contract instance has already been initialized"
+            'WQReferal: Contract instance has already been initialized'
         );
-        token = WQTInterface(_token);
+        token = IERC20(_token);
         referralBonus = _referralBonus;
         _initialized = true;
     }
@@ -47,16 +47,16 @@ contract WQReferal is AccessControl {
     function addReferrer(address referrer) internal returns (bool) {
         require(
             referrer != address(0),
-            "WQReferal: Referrer cannot be zero address"
+            'WQReferal: Referrer cannot be zero address'
         );
         require(
             referrer != msg.sender,
-            "WQReferal: Referrer cannot be sender address"
+            'WQReferal: Referrer cannot be sender address'
         );
         Account storage userAccount = accounts[msg.sender];
         require(
             userAccount.referrer == address(0),
-            "WQReferal: Address is already registered"
+            'WQReferal: Address is already registered'
         );
         Account storage parentAccount = accounts[referrer];
         userAccount.referrer = referrer;
@@ -80,13 +80,13 @@ contract WQReferal is AccessControl {
     function payReferral() external nonReentrant {
         require(
             token.balanceOf(address(this)) > referralBonus,
-            "WQReferal: Balance on contract too low"
+            'WQReferal: Balance on contract too low'
         );
         Account storage userAccount = accounts[msg.sender];
-        require(!userAccount.paid, "WQReferal: Bonus already paid");
+        require(!userAccount.paid, 'WQReferal: Bonus already paid');
         require(
             userAccount.referrer != address(0),
-            "WQReferal: Address is not registered"
+            'WQReferal: Address is not registered'
         );
         userAccount.paid = true;
         accounts[userAccount.referrer].reward += referralBonus;
