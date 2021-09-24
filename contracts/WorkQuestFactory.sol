@@ -15,13 +15,13 @@ contract WorkQuestFactory is AccessControl {
     uint256 lastArbiter;
 
     /// @notice Fee amount
-    uint256 public immutable fee;
+    uint256 public fee;
 
     /// @notice Address of Fee receiver
     address payable public feeReceiver;
 
     /// @notice Address of pension fund contract
-    address payable public immutable pensionFund;
+    address payable public pensionFund;
 
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
@@ -41,6 +41,7 @@ contract WorkQuestFactory is AccessControl {
         address workquest,
         uint256 createdAt
     );
+    bool private initialized;
 
     /**
      * @notice Create new WorkQuestFactory contract
@@ -48,11 +49,13 @@ contract WorkQuestFactory is AccessControl {
      * @param _feeReceiver Address of reciever of fee
      * @param _pensionFund Address of pension fund contract
      */
-    constructor(
+    function initialize (
         uint256 _fee,
         address payable _feeReceiver,
         address payable _pensionFund
-    ) {
+    ) public {
+        require(!initialized, "Contract WorkQuestFactory has already been initialized");
+        initialized = true;
         fee = _fee;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
@@ -94,17 +97,17 @@ contract WorkQuestFactory is AccessControl {
         uint256 cost,
         uint256 deadline
     ) external returns (address workquest) {
-        workquest = address(
-            new WorkQuest(
-                jobHash,
-                fee,
-                cost,
-                deadline,
-                feeReceiver,
-                pensionFund,
-                payable(msg.sender),
-                getArbiter()
-            )
+        workquest = address(0
+            // new WorkQuest(
+            //     jobHash,
+            //     fee,
+            //     cost,
+            //     deadline,
+            //     feeReceiver,
+            //     pensionFund,
+            //     payable(msg.sender),
+            //     getArbiter()
+            // )
         );
         workquests[msg.sender].push(workquest);
         emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp);

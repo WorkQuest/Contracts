@@ -4,6 +4,16 @@ require('./tasks');
 require('hardhat-docgen');
 require('dotenv').config();
 
+require('@nomiclabs/hardhat-etherscan')
+require('@nomiclabs/hardhat-ethers')
+require('@nomiclabs/hardhat-web3')
+// import '@typechain/hardhat'
+require('solidity-coverage')
+require('hardhat-docgen')
+require('@openzeppelin/hardhat-upgrades')
+require("@nomiclabs/hardhat-etherscan")
+
+
 const chainIds = {
   ganache: 1337,
   goerli: 5,

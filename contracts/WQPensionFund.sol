@@ -9,7 +9,9 @@ contract WQPensionFund is WQFundInterface, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant BORROWER_ROLE = keccak256("BORROWER_ROLE");
 
-    uint256 public immutable lockTime;
+    // uint256 public immutable lockTime;    // ATTENTION change to just public because it's not possible to write
+                                             //           in initialize() if upgradeable contract is wanted  
+    uint256 public lockTime;    
     uint256 public defaultFee;
     uint256 public contributed;
     uint256 public borrowed;
@@ -34,7 +36,14 @@ contract WQPensionFund is WQFundInterface, AccessControl {
     /// @notice Pension wallet info of worker
     mapping(address => PensionWallet) public wallets;
 
-    constructor(uint256 _lockTime, uint256 _defaultFee) {
+    bool private initialized;
+    
+    /**
+     * @notice initialize the contract 
+     */
+    function initialize (uint256 _lockTime, uint256 _defaultFee ) public {
+        require(!initialized, "Contract WQPensionFund has already been initialized");
+        initialized = true;
         lockTime = _lockTime;
         defaultFee = _defaultFee;
     }

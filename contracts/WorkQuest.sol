@@ -24,15 +24,15 @@ contract WorkQuest is AccessControl{
     }
 
     /// @notice Fee coefficient of workquest
-    uint256 public immutable fee;
+    uint256 public fee;
     /// @notice Fee receiver address
     address payable public feeReceiver;
     /// @notice Pension wallet factory contract address
-    address payable public immutable pensionFund;
+    address payable public pensionFund;
     /// @notice Address of employer
-    address payable public immutable employer;
+    address payable public employer;
     /// @notice Address of arbiter
-    address payable public immutable arbiter;
+    address payable public arbiter;
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
@@ -91,6 +91,8 @@ contract WorkQuest is AccessControl{
     /// @notice Event emitted when
     event ArbitrationRejectWork();
 
+    bool private initialized;
+
     /**
      * @notice Create new WorkQuest contract
      * @param _jobHash Hash of job agreement
@@ -101,8 +103,7 @@ contract WorkQuest is AccessControl{
      * @param _employer External address of employer
      * @param _arbiter External address of arbiter
      */
-
-    constructor(
+    function initialize(
         bytes32 _jobHash,
         uint256 _fee,
         uint256 _cost,
@@ -111,7 +112,9 @@ contract WorkQuest is AccessControl{
         address payable _pensionFund,
         address payable _employer,
         address payable _arbiter
-    ) {
+    ) public {
+        require(!initialized, "Contract WorkQuest has already been initialized");
+        initialized = true;
         jobHash = _jobHash;
         fee = _fee;
         cost = _cost;
@@ -120,7 +123,11 @@ contract WorkQuest is AccessControl{
         pensionFund = _pensionFund;
         employer = _employer;
         arbiter = _arbiter;
-        // TODO: grant admin role to admin
+        // TODO: grant admin role to admin  // CHECK
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+
         emit WorkQuestCreated(jobHash);
     }
 

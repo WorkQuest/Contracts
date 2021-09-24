@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-contract WQBridgeToken is ERC20Pausable, AccessControl {
+contract WQBridgeToken is ERC20PausableUpgradeable, AccessControlUpgradeable {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
@@ -16,9 +16,14 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
 
     event AddedBlockList(address user);
     event RemovedBlockList(address user);
+    bool private initialized;
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        owner = msg.sender;
+    function initialize(string memory name, string memory symbol) external {
+        require(!initialized, "Contract WQBridgeToken has already been initialized");
+        initialized = true;
+        __AccessControl_init();
+        __ERC20_init(name, symbol);
+        __ERC20Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
@@ -128,7 +133,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
         address to,
         uint256 amount
     ) internal virtual override {
-        ERC20Pausable._beforeTokenTransfer(from, to, amount);
+        ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
         require(isBlockListed[from] == false, "Address from is blocklisted");
         require(isBlockListed[to] == false, "Address to is blocklisted");
     }

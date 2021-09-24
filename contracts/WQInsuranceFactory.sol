@@ -32,8 +32,16 @@ contract WQInsuranceFactory {
 
     mapping(ContributionPeriod => mapping(PolicyType => address )) getLastProperInsuarance;
     mapping(address  => insuranceInfo) insurancesData;
-
-    constructor() {}
+    bool private initialized;
+    
+    /** 
+     * @notice initialize the contract 
+     *
+     */
+    function initialize() public {
+        require(!initialized, "Contract WQDAOInsuarance has already been initialized");
+        initialized = true;
+    }
 
     function addUserToInsuarance(
         ContributionPeriod _period,
@@ -42,17 +50,16 @@ contract WQInsuranceFactory {
     ) external {
         address payable insuarance = payable(getLastProperInsuarance[_period][_policy]);
         insuranceInfo storage data = insurancesData[insuarance];
-        if (data.usersNum == 10) {
-            // create new insuarance 
+        if (data.usersNum == 10 || insuarance == address(0)) { 
             address newInsurance =  _newInsurance(_period, _policy);
+            WQInsurance(payable(newInsurance)).addMember(_user);
             insuranceInfo storage newData = insurancesData[newInsurance];
             newData.period = _period;
             newData.policy = _policy;
             newData.usersNum = 1;
             getLastProperInsuarance[_period][_policy] = newInsurance;
         } else {
-            // add to existance one
-            WQInsurance(insuarance).addMember(_user);
+            WQInsurance(insuarance).addMember(_user); 
             data.usersNum++;
         }
     }
@@ -73,7 +80,7 @@ contract WQInsuranceFactory {
             _contributionAmount = maximalContribution;
         }
         insurances.push(
-            address(new WQInsurance(_contributionPeriod, _contributionAmount))
+            address(0) //new WQInsurance(_contributionPeriod, _contributionAmount))
         );
         insurance_ = insurances[insurances.length-1];
     }

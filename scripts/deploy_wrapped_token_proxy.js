@@ -1,4 +1,4 @@
-const hre = require("hardhat");
+const {hre, ethers, upgrades} = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
@@ -23,9 +23,16 @@ async function main() {
     }
 
     const BridgeToken = await hre.ethers.getContractFactory("WQBridgeToken");
+
     console.log("Deploying...");
-    const bridge_token = await BridgeToken.deploy(process.env.BRIDGE_TOKEN_NAME, process.env.BRIDGE_TOKEN_SYMBOL);
-    await bridge_token.deployed();
+    const bridge_token = await upgrades.deployProxy(
+        BridgeToken,
+        [
+            process.env.BRIDGE_TOKEN_NAME,
+            process.env.BRIDGE_TOKEN_SYMBOL
+        ],
+        { initializer: 'initialize'}
+    );
     console.log(`${process.env.BRIDGE_TOKEN_NAME} has been deployed to:`, bridge_token.address);
 
     envConfig[`STAKE_TOKEN`] = bridge_token.address;

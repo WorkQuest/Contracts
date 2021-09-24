@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/access/AccessControl.sol';
-import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import './WQBridgeTokenInterface.sol';
+import './WQBridgePool.sol';
 
-contract WQBridge is AccessControl {
-    using ECDSA for bytes32;
+contract WQBridge is AccessControlUpgradeable {
+    using ECDSAUpgradeable for bytes32;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Statuses of a swap
     enum State {
@@ -31,6 +35,7 @@ contract WQBridge is AccessControl {
         address token;
         bool enabled;
         bool native;
+        bool lockable;
     }
 
     /// @notice Admin role constant
@@ -40,9 +45,9 @@ contract WQBridge is AccessControl {
     bytes32 public constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
 
     /// @notice 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
-    uint256 public immutable chainId;
+    uint256 public chainId;
 
-    bool private _initialized;
+    address public pool;
 
     /// @notice List of enabled chain ID's
     mapping(uint256 => bool) public chains;
@@ -92,18 +97,19 @@ contract WQBridge is AccessControl {
         uint256 nonce
     );
 
+    bool private initialized;
+
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    constructor(uint256 _chainId) {
-        // Grant the contract deployer the default admin role: it will be able
-        // to grant and revoke any roles
+    function initialize(uint256 _chainId, address _pool) public {
+        require(!initialized, 'WorkQuest Bridge: The contract has already been initialized');
+        initialized = true;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-        // Sets `ADMIN_ROLE` as `VALIDATOR_ROLE`'s admin role.
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
-
-        chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC
+        chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?
+        pool = _pool;
     }
 
     /**
@@ -143,6 +149,8 @@ contract WQBridge is AccessControl {
                 msg.value == amount,
                 'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
+        } else if (token.lockable) {
+            IERC20Upgradeable(token.token).safeTransferFrom(msg.sender, pool, amount);
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
@@ -214,6 +222,12 @@ contract WQBridge is AccessControl {
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
         if (tokens[symbol].native) {
             recipient.transfer(amount);
+        } else if (tokens[symbol].lockable) {
+            WQBridgePool(pool).transfer(
+                msg.sender,
+                amount,
+                tokens[symbol].token
+            );
         } else {
             WQBridgeTokenInterface(tokens[symbol].token).mint(
                 recipient,
@@ -254,6 +268,18 @@ contract WQBridge is AccessControl {
     }
 
     /**
+     * @notice Set address of pool
+     * @param _pool Address of pool
+     */
+    function updatePool(address _pool) external {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'WorkQuest Bridge: Caller is not an admin'
+        );
+        pool = _pool;
+    }
+
+    /**
      * @notice Update token settings
      * @param token Address of token. Ignored in swap and redeem when native is true.
      * @param enabled True - enabled, false - disabled
@@ -264,6 +290,7 @@ contract WQBridge is AccessControl {
         address token,
         bool enabled,
         bool native,
+        bool lockable,
         string memory symbol
     ) public {
         require(
@@ -277,7 +304,8 @@ contract WQBridge is AccessControl {
         tokens[symbol] = TokenSettings({
             token: token,
             enabled: enabled,
-            native: native
+            native: native,
+            lockable: lockable
         });
     }
 }
