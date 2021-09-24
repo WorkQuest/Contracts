@@ -103,7 +103,10 @@ contract WQBridge is AccessControlUpgradeable {
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
     function initialize(uint256 _chainId, address _pool) public {
-        require(!initialized, 'WorkQuest Bridge: The contract has already been initialized');
+        require(
+            !initialized,
+            'WorkQuest Bridge: The contract has already been initialized'
+        );
         initialized = true;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -150,7 +153,11 @@ contract WQBridge is AccessControlUpgradeable {
                 'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
         } else if (token.lockable) {
-            IERC20Upgradeable(token.token).safeTransferFrom(msg.sender, pool, amount);
+            IERC20Upgradeable(token.token).safeTransferFrom(
+                msg.sender,
+                pool,
+                amount
+            );
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }

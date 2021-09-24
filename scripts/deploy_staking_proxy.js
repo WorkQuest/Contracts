@@ -45,17 +45,15 @@ async function main() {
     const WQStaking = await ethers.getContractFactory("WQStaking");
     const staking = await upgrades.deployProxy(
         WQStaking,
-        [
-            process.env.START_TIME,
-            process.env.REWARD_TOTAL,
-            process.env.DISTRIBUTION_TIME,
-            process.env.STAKE_PERIOD,
-            process.env.CLAIM_PERIOD,
-            process.env.MIN_STAKE,
-            process.env.MAX_STAKE,
-            process.env.REWARD_TOKEN,
-            process.env.STAKE_TOKEN
-        ],
+        [process.env.START_TIME,
+         process.env.REWARD_TOTAL,
+         process.env.DISTRIBUTION_TIME,
+         process.env.STAKE_PERIOD,
+         process.env.CLAIM_PERIOD,
+         process.env.MIN_STAKE,
+         process.env.MAX_STAKE,
+         process.env.REWARD_TOKEN,
+         process.env.STAKE_TOKEN],
         { initializer: 'initialize' }
     );
     console.log("Proxy of Staking has been deployed to:", staking.address);

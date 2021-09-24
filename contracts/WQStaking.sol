@@ -92,6 +92,7 @@ contract WQStaking is AccessControl {
             !_initialized,
             "WQStaking: Contract instance has already been initialized"
         );
+        _initialized = true;
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
@@ -106,7 +107,6 @@ contract WQStaking is AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
 
-        _initialized = true;
     }
 
     /**
