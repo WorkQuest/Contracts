@@ -22,7 +22,7 @@ async function main() {
   }
 
   console.log("Deploying...");
-  const DAOBallot = await hre.ethers.getContractFactory("WQDAOVote");
+  const DAOBallot = await hre.ethers.getContractFactory("WQDAOVoting");
   const dao_ballot = await upgrades.deployProxy(DAOBallot, [process.env.DAO_CHAIR_PERSON, process.env.WORK_QUEST_TOKEN], { initializer: 'initialize'})
   console.log("DAO Ballot has been deployed to:", dao_ballot.address);
 
