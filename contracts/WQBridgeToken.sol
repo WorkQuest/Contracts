@@ -19,7 +19,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     event AddedBlockList(address user);
     event RemovedBlockList(address user);
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol){      // TO_ASK is it right ???  
+    constructor (string memory name, string memory symbol) ERC20(name, symbol){      // TO_ASK is it right ???  
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
