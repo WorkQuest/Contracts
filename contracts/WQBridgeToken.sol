@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
+
+// import "@openzeppelin/contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -16,11 +18,8 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
 
     event AddedBlockList(address user);
     event RemovedBlockList(address user);
-    bool private initialized;
 
-    function initialize(string memory name, string memory symbol) ERC20(name, symbol) public {      // TO_ASK is it right ???  
-        require(!initialized, "Contract WQBridgeToken has already been initialized");
-        initialized = true;
+    constructor(string memory name, string memory symbol) ERC20(name, symbol){      // TO_ASK is it right ???  
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);

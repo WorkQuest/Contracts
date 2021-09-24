@@ -15,13 +15,13 @@ contract WorkQuestFactory is AccessControl {
     uint256 lastArbiter;
 
     /// @notice Fee amount
-    uint256 public immutable fee;
+    uint256 public fee;
 
     /// @notice Address of Fee receiver
     address payable public feeReceiver;
 
     /// @notice Address of pension fund contract
-    address payable public immutable pensionFund;
+    address payable public pensionFund;
 
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;

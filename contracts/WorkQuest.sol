@@ -101,9 +101,7 @@ contract WorkQuest is AccessControl{
      * @param _employer External address of employer
      * @param _arbiter External address of arbiter
      */
-    bool private initialized;
-
-    function initialize(
+    constructor(
         bytes32 _jobHash,
         uint256 _fee,
         uint256 _cost,
@@ -112,9 +110,7 @@ contract WorkQuest is AccessControl{
         address payable _pensionFund,
         address payable _employer,
         address payable _arbiter
-    ) public {
-        require(!initialized, "Contract WorkQuest has already been initialized");
-        initialized = true;
+    ) {
         jobHash = _jobHash;
         fee = _fee;
         cost = _cost;

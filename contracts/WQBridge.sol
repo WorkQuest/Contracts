@@ -38,7 +38,7 @@ contract WQBridge is AccessControl {
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
 
     /// @notice 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
-    uint256 public immutable chainId;
+    uint256 public chainId;
 
     bool private _initialized;
 
@@ -80,11 +80,13 @@ contract WQBridge is AccessControl {
         uint256 nonce,
         address indexed initiator
     );
+
     bool private initialized;
+
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialized(uint256 _chainId) public {
+    function initialize(uint256 _chainId) public {
         require(!initialized, "Contract WQBridge has already been initialized");
         initialized = true;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
