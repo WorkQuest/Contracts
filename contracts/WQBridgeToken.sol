@@ -11,6 +11,7 @@ contract WQBridgeToken is ERC20PausableUpgradeable, AccessControlUpgradeable {
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     address private owner;
+    bool private initialized;
 
     mapping(address => bool) public isBlockListed;
 

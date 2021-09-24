@@ -1,7 +1,6 @@
 task("add_token_to_bridge", "Add token settings to bridge")
     .addParam("symbol", "The token symbol")
-    .addOptionalParam("token", "The token address", "0x0000000000000000000000000000000000000000")
-    .addOptionalParam("lockable", "Is token lockable", false)
+    .addOptionalParam("lockable", "Is token lockable")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
         const accounts = await ethers.getSigners();
@@ -22,13 +21,16 @@ task("add_token_to_bridge", "Add token settings to bridge")
 
         const bridge = await hre.ethers.getContractAt("WQBridge", process.env.BRIDGE);
         let native = false;
-        let token_addr = args.token;
+        let token_addr = process.env[`${args.symbol}_TOKEN`];
         let lockable = true;
         if (!args.lockable) { lockable = false; }
         if (args.symbol == process.env.NATIVE_COIN) {
             native = true;
-            token_addr = ;
+            token_addr = "0x0000000000000000000000000000000000000000";
             lockable = false;
+        }
+        if(!token_addr){
+            throw new Error(`Please set your ${args.symbol}_TOKEN in a .env-${network} file`);
         }
         console.log(`Trying add ${args.symbol} token to bridge ${bridge.address}`);
         await bridge.updateToken(token_addr, true, native, lockable, args.symbol);

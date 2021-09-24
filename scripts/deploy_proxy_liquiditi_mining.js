@@ -26,7 +26,7 @@ async function main() {
     throw new Error(`Please set your REWARD_TOKEN in a .env-${network} file`);
   }
   if (!process.env.LIQUIDITY_MINING_STAKE_TOKEN) {
-    throw new Error(`Please set your STAKE_TOKEN in a .env-${network} file`);
+    throw new Error(`Please set your LIQUIDITY_MINING_STAKE_TOKEN in a .env-${network} file`);
   }
 
   console.log("Deploying...");

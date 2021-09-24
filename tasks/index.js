@@ -6,3 +6,4 @@ require('./set_bridge_to_wqt.js');
 require('./set_bridge_to_wrapped.js');
 require('./set_dao_as_admin.js');
 require('./exchange_wqt.js');
+require('./check_bridge_tokens.js');

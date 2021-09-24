@@ -97,17 +97,17 @@ contract WorkQuestFactory is AccessControl {
         uint256 cost,
         uint256 deadline
     ) external returns (address workquest) {
-        workquest = address(0
-            // new WorkQuest(
-            //     jobHash,
-            //     fee,
-            //     cost,
-            //     deadline,
-            //     feeReceiver,
-            //     pensionFund,
-            //     payable(msg.sender),
-            //     getArbiter()
-            // )
+        workquest = address(
+            new WorkQuest(
+                jobHash,
+                fee,
+                cost,
+                deadline,
+                feeReceiver,
+                pensionFund,
+                payable(msg.sender),
+                getArbiter()
+            )
         );
         workquests[msg.sender].push(workquest);
         emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp);
