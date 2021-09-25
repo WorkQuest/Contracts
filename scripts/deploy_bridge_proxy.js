@@ -22,7 +22,7 @@ async function main() {
     const Pool = await hre.ethers.getContractFactory("WQBridgePool");
     const pool = await upgrades.deployProxy(Pool, [], { initializer: 'initialize' });
     await pool.deployed();
-    envConfig["POOL"] = pool.address;
+    envConfig["BRIDGE_POOL"] = pool.address;
 
     const Bridge = await hre.ethers.getContractFactory("WQBridge");
     const bridge = await upgrades.deployProxy(Bridge, [process.env.CHAIN_ID, pool.address], { initializer: 'initialize' });
