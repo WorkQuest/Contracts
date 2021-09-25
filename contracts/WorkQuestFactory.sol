@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./WorkQuest.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import './WorkQuest.sol';
 
-contract WorkQuestFactory is AccessControl {
-    bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
+contract WorkQuestFactory is AccessControlUpgradeable {
+    bytes32 public ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     struct ArbiterInfo {
         uint256 idx;
@@ -49,13 +49,17 @@ contract WorkQuestFactory is AccessControl {
      * @param _feeReceiver Address of reciever of fee
      * @param _pensionFund Address of pension fund contract
      */
-    function initialize (
+    function initialize(
         uint256 _fee,
         address payable _feeReceiver,
         address payable _pensionFund
     ) public {
-        require(!initialized, "Contract WorkQuestFactory has already been initialized");
+        require(
+            !initialized,
+            'Contract WorkQuestFactory has already been initialized'
+        );
         initialized = true;
+        __AccessControl_init();
         fee = _fee;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
@@ -69,7 +73,7 @@ contract WorkQuestFactory is AccessControl {
     modifier onlyAdmin() {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WorkQuestFactory: You should have an admin role"
+            'WorkQuestFactory: You should have an admin role'
         );
         _;
     }
