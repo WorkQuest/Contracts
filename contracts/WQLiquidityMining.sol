@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
-contract WQLiquidityMining is AccessControl {
-    using SafeERC20 for IERC20;
+contract WQLiquidityMining is AccessControlUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     // Staker contains info related to each staker.
     struct Staker {
@@ -33,10 +33,10 @@ contract WQLiquidityMining is AccessControl {
     mapping(address => Staker) public stakes;
 
     // ERC20 token staked to the contract.
-    IERC20 public stakeToken;
+    IERC20Upgradeable public stakeToken;
 
     // ERC20 token earned by stakers as reward.
-    IERC20 public rewardToken;
+    IERC20Upgradeable public rewardToken;
 
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
@@ -71,19 +71,18 @@ contract WQLiquidityMining is AccessControl {
     ) external {
         require(
             !_initialized,
-            "WQLiquidityMining: Contract instance has already been initialized"
+            'WQLiquidityMining: Contract instance has already been initialized'
         );
+        _initialized = true;
+        __AccessControl_init();
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
-        rewardToken = IERC20(_rewardToken);
-        stakeToken = IERC20(_stakeToken);
+        rewardToken = IERC20Upgradeable(_rewardToken);
+        stakeToken = IERC20Upgradeable(_stakeToken);
         producedTime = _startTime;
-
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-
-        _initialized = true;
     }
 
     /**
@@ -96,7 +95,7 @@ contract WQLiquidityMining is AccessControl {
     function stake(uint256 _amount) external {
         require(
             block.timestamp > startTime,
-            "WQLiquidityMining: Staking time has not come yet"
+            'WQLiquidityMining: Staking time has not come yet'
         );
         Staker storage staker = stakes[msg.sender];
         if (totalStaked > 0) {
@@ -119,12 +118,12 @@ contract WQLiquidityMining is AccessControl {
      */
 
     function unstake(uint256 _amount) external {
-        require(!_entered, "WQLiquidityMining: Reentrancy guard");
+        require(!_entered, 'WQLiquidityMining: Reentrancy guard');
         _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
             staker.amount >= _amount,
-            "WQLiquidityMining: Not enough tokens to unstake"
+            'WQLiquidityMining: Not enough tokens to unstake'
         );
         update();
         staker.rewardAllowed += (_amount * tokensPerStake) / 1e18;
@@ -139,18 +138,18 @@ contract WQLiquidityMining is AccessControl {
      * @dev claim available rewards
      */
     function claim() external returns (bool) {
-        require(!_entered, "WQLiquidityMining: Reentrancy guard");
+        require(!_entered, 'WQLiquidityMining: Reentrancy guard');
         _entered = true;
         if (totalStaked > 0) {
             update();
         }
         uint256 reward = calcReward(msg.sender, tokensPerStake);
-        require(reward > 0, "WQLiquidityMining: Nothing to claim");
+        require(reward > 0, 'WQLiquidityMining: Nothing to claim');
         Staker storage staker = stakes[msg.sender];
         staker.distributed += reward;
         totalDistributed += reward;
 
-        IERC20(rewardToken).safeTransfer(msg.sender, reward);
+        rewardToken.safeTransfer(msg.sender, reward);
         emit tokensClaimed(reward, block.timestamp, msg.sender);
         _entered = false;
         return true;
@@ -198,9 +197,11 @@ contract WQLiquidityMining is AccessControl {
      */
     function produced() private view returns (uint256) {
         return
-            allProduced +
-            (rewardTotal * (block.timestamp - producedTime)) /
-            distributionTime;
+            block.timestamp > startTime + distributionTime
+                ? rewardTotal
+                : allProduced +
+                    (rewardTotal * (block.timestamp - producedTime)) /
+                    distributionTime;
     }
 
     function update() public {
@@ -243,8 +244,8 @@ contract WQLiquidityMining is AccessControl {
         external
         onlyRole(ADMIN_ROLE)
     {
-        rewardToken = IERC20(_rewardToken);
-        stakeToken = IERC20(_stakeToken);
+        rewardToken = IERC20Upgradeable(_rewardToken);
+        stakeToken = IERC20Upgradeable(_stakeToken);
     }
 
     function setTime(uint256 _startTime, uint256 _distributionTime)
@@ -315,7 +316,10 @@ contract WQLiquidityMining is AccessControl {
         external
         onlyRole(ADMIN_ROLE)
     {
-        require(startTime > block.timestamp, "WQLiquidityMining: Staking time has already come");
+        require(
+            startTime > block.timestamp,
+            'WQLiquidityMining: Staking time has already come'
+        );
         startTime = _startTimeNew;
         producedTime = _startTimeNew;
     }

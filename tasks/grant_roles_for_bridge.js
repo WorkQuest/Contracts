@@ -29,7 +29,7 @@ task("grant_roles_for_bridge", "Grant roles for bridge in tokens and pool")
         let burner_role = await wqt.BURNER_ROLE();
         // await wqt.grantRole(minter_role, process.env.BRIDGE);
         // await wqt.grantRole(burner_role, process.env.BRIDGE);
-        console.log('wqt minter:', wqt.hasRole(minter_role, process.env.BRIDGE), 'wqt burner:',  wqt.hasRole(burner_role, process.env.BRIDGE));
+        console.log('wqt minter:', await wqt.hasRole(minter_role, process.env.BRIDGE), 'wqt burner:', await wqt.hasRole(burner_role, process.env.BRIDGE));
 
         if (process.env.NATIVE_COIN != "ETH") {
             console.log("Grant roles in ETH Token:", process.env.ETH_TOKEN);
@@ -38,7 +38,7 @@ task("grant_roles_for_bridge", "Grant roles for bridge in tokens and pool")
             let burner_role = await eth_token.BURNER_ROLE();
             // await eth_token.grantRole(minter_role, process.env.BRIDGE);
             // await eth_token.grantRole(burner_role, process.env.BRIDGE);
-            console.log('eth minter:', eth_token.hasRole(minter_role, process.env.BRIDGE), 'eth burner:',  eth_token.hasRole(burner_role, process.env.BRIDGE));
+            console.log('eth minter:', await eth_token.hasRole(minter_role, process.env.BRIDGE), 'eth burner:', await eth_token.hasRole(burner_role, process.env.BRIDGE));
         }
 
         if (process.env.NATIVE_COIN != "BNB") {
@@ -48,13 +48,13 @@ task("grant_roles_for_bridge", "Grant roles for bridge in tokens and pool")
             let burner_role = await bnb_token.BURNER_ROLE();
             // await bnb_token.grantRole(minter_role, process.env.BRIDGE);
             // await bnb_token.grantRole(burner_role, process.env.BRIDGE);
-            console.log('bnb minter:', eth_token.hasRole(minter_role, process.env.BRIDGE), 'bnb burner:',  eth_token.hasRole(burner_role, process.env.BRIDGE));
+            console.log('bnb minter:', await bnb_token.hasRole(minter_role, process.env.BRIDGE), 'bnb burner:', await bnb_token.hasRole(burner_role, process.env.BRIDGE));
         }
 
         console.log("Grant roles in pool:", process.env.BRIDGE_POOL);
         const pool = await hre.ethers.getContractAt("WQBridgePool", process.env.BRIDGE_POOL);
-        let bridge_role = await bnb_token.BRIDGE_ROLE();
-        console.log('pool bridge:', eth_token.hasRole(bridge_role, process.env.BRIDGE));
+        let bridge_role = await pool.BRIDGE_ROLE();
         // await pool.grantRole(bridge_role, process.env.BRIDGE);
+        console.log('pool bridge:', await pool.hasRole(bridge_role, process.env.BRIDGE));
         console.log("Done");
     });
