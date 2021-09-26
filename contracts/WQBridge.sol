@@ -75,7 +75,8 @@ contract WQBridge is AccessControlUpgradeable {
         uint256 amount,
         uint256 chainFrom,
         uint256 chainTo,
-        uint256 nonce
+        uint256 nonce,
+        string symbol
     );
 
     /**
@@ -94,7 +95,8 @@ contract WQBridge is AccessControlUpgradeable {
         uint256 amount,
         uint256 chainFrom,
         uint256 chainTo,
-        uint256 nonce
+        uint256 nonce,
+        string symbol
     );
 
     bool private initialized;
@@ -168,7 +170,8 @@ contract WQBridge is AccessControlUpgradeable {
             amount,
             chainId,
             chainTo,
-            nonce
+            nonce,
+            symbol
         );
     }
 
@@ -249,7 +252,8 @@ contract WQBridge is AccessControlUpgradeable {
             amount,
             chainFrom,
             chainId,
-            nonce
+            nonce,
+            symbol
         );
     }
 
