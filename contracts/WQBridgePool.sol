@@ -14,10 +14,17 @@ contract WQBridgePool is AccessControlUpgradeable, PausableUpgradeable {
 
     bool private initialized;
 
-    event Transferred(address recipient, uint256 amount, address token);
+    mapping(address => bool) public isBlockListed;
+
+    event AddedBlockList(address user);
+    event RemovedBlockList(address user);
+    event Transferred(address token, address recipient, uint256 amount);
 
     function initialize() external {
-        require(!initialized, 'WQBridgePool: The contract has already been initialized');
+        require(
+            !initialized,
+            'WQBridgePool: The contract has already been initialized'
+        );
         initialized = true;
         __AccessControl_init();
         __Pausable_init();
@@ -31,8 +38,12 @@ contract WQBridgePool is AccessControlUpgradeable, PausableUpgradeable {
         uint256 amount,
         address token
     ) external onlyRole(BRIDGE_ROLE) whenNotPaused {
+        require(
+            isBlockListed[recipient] == false,
+            'Recipient address is blocklisted'
+        );
         IERC20Upgradeable(token).safeTransfer(recipient, amount);
-        emit Transferred(recipient, amount, token);
+        emit Transferred(token, recipient, amount);
     }
 
     function pause() external onlyRole(ADMIN_ROLE) {
@@ -41,5 +52,34 @@ contract WQBridgePool is AccessControlUpgradeable, PausableUpgradeable {
 
     function unpause() external onlyRole(ADMIN_ROLE) {
         _unpause();
+    }
+
+    /**
+     * @dev Add user address to blocklist
+     *
+     * Requirements
+     *
+     * - `user` address of user.
+     */
+    function addBlockList(address user) external {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'BridgeToken: You should have an admin role'
+        );
+        isBlockListed[user] = true;
+        emit AddedBlockList(user);
+    }
+
+    /**
+     * @notice Remove user address from blocklist
+     * @param user address of user.
+     */
+    function removeBlockList(address user) external {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'BridgeToken: You should have an admin role'
+        );
+        isBlockListed[user] = false;
+        emit RemovedBlockList(user);
     }
 }

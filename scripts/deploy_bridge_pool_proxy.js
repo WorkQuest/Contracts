@@ -17,14 +17,13 @@ async function main() {
         throw new Error(`Please set your CHAIN_ID in a .env-${network} file`);
     }
 
-
     console.log("Deploying...");
+    const Pool = await hre.ethers.getContractFactory("WQBridgePool");
+    const pool = await upgrades.deployProxy(Pool, [], { initializer: 'initialize' });
+    await pool.deployed();
+    envConfig["BRIDGE_POOL"] = pool.address;
+    console.log("Bridge pool has been deployed to:", pool.address);
 
-    const Bridge = await hre.ethers.getContractFactory("WQBridge");
-    const bridge = await upgrades.deployProxy(Bridge, [process.env.CHAIN_ID, process.env.BRIDGE_POOL], { initializer: 'initialize' });
-    console.log("WorkQuest Bridge has been deployed to:", bridge.address);
-
-    envConfig["BRIDGE"] = bridge.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 
