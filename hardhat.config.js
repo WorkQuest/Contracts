@@ -1,18 +1,13 @@
-require('@openzeppelin/hardhat-upgrades');
 require("@nomiclabs/hardhat-waffle");
-require('./tasks');
-require('hardhat-docgen');
-require('dotenv').config();
-
-require('@nomiclabs/hardhat-etherscan')
 require('@nomiclabs/hardhat-ethers')
 require('@nomiclabs/hardhat-web3')
-// import '@typechain/hardhat'
 require('solidity-coverage')
 require('hardhat-docgen')
-require('@openzeppelin/hardhat-upgrades')
 require("@nomiclabs/hardhat-etherscan")
+require('@openzeppelin/hardhat-upgrades')
+require('./tasks');
 
+require('dotenv').config();
 
 const chainIds = {
   ganache: 1337,
@@ -44,7 +39,7 @@ function createNetworkConfig(network) {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 50000000000,
+    gasPrice: 10000000000,
     url: url
   };
 }

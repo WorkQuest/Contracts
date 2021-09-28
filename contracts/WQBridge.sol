@@ -4,11 +4,17 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import './WQBridgeTokenInterface.sol';
 import './WQBridgePool.sol';
 
-contract WQBridge is AccessControlUpgradeable {
+contract WQBridge is
+    Initializable,
+    AccessControlUpgradeable,
+    PausableUpgradeable
+{
     using ECDSAUpgradeable for bytes32;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -99,17 +105,14 @@ contract WQBridge is AccessControlUpgradeable {
         string symbol
     );
 
-    bool private initialized;
+    event Transferred(address token, address recipient, uint256 amount);
 
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialize(uint256 _chainId, address _pool) public {
-        require(
-            !initialized,
-            'WorkQuest Bridge: The contract has already been initialized'
-        );
-        initialized = true;
+    function initialize(uint256 _chainId, address _pool) external initializer {
+        __AccessControl_init();
+        __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
@@ -131,7 +134,7 @@ contract WQBridge is AccessControlUpgradeable {
         uint256 amount,
         address recipient,
         string memory symbol
-    ) external payable {
+    ) external payable whenNotPaused {
         require(chainTo != chainId, 'WorkQuest Bridge: Invalid chainTo id');
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
@@ -149,16 +152,16 @@ contract WQBridge is AccessControlUpgradeable {
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
-        if (token.native) {
-            require(
-                msg.value == amount,
-                'WorkQuest Bridge: Amount value is not equal to transfered funds'
-            );
-        } else if (token.lockable) {
+        if (token.lockable) {
             IERC20Upgradeable(token.token).safeTransferFrom(
                 msg.sender,
                 pool,
                 amount
+            );
+        } else if (token.native) {
+            require(
+                msg.value == amount,
+                'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
@@ -195,11 +198,11 @@ contract WQBridge is AccessControlUpgradeable {
         bytes32 r,
         bytes32 s,
         string memory symbol
-    ) external {
+    ) external whenNotPaused {
         require(chainFrom != chainId, 'WorkQuest Bridge: Invalid chainFrom ID');
         require(
             chains[chainFrom],
-            'WorkQuest Bridge: ChainFrom ID is not allowed'
+            'WorkQuest Bridge: chainFrom ID is not allowed'
         );
         require(
             tokens[symbol].enabled,
@@ -230,14 +233,14 @@ contract WQBridge is AccessControlUpgradeable {
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
-        if (tokens[symbol].native) {
-            recipient.transfer(amount);
-        } else if (tokens[symbol].lockable) {
+        if (tokens[symbol].lockable) {
             WQBridgePool(pool).transfer(
                 msg.sender,
                 amount,
                 tokens[symbol].token
             );
+        } else if (tokens[symbol].native) {
+            recipient.transfer(amount);
         } else {
             WQBridgeTokenInterface(tokens[symbol].token).mint(
                 recipient,
@@ -270,11 +273,10 @@ contract WQBridge is AccessControlUpgradeable {
      * @param _chainId Id of chain
      * @param enabled True - enabled, false - disabled direction
      */
-    function updateChain(uint256 _chainId, bool enabled) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WorkQuest Bridge: Caller is not an admin'
-        );
+    function updateChain(uint256 _chainId, bool enabled)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         chains[_chainId] = enabled;
     }
 
@@ -282,11 +284,7 @@ contract WQBridge is AccessControlUpgradeable {
      * @notice Set address of pool
      * @param _pool Address of pool
      */
-    function updatePool(address _pool) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WorkQuest Bridge: Caller is not an admin'
-        );
+    function updatePool(address _pool) external onlyRole(ADMIN_ROLE) {
         pool = _pool;
     }
 
@@ -303,11 +301,7 @@ contract WQBridge is AccessControlUpgradeable {
         bool native,
         bool lockable,
         string memory symbol
-    ) public {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WorkQuest Bridge: Caller is not an admin'
-        );
+    ) public onlyRole(ADMIN_ROLE) {
         require(
             bytes(symbol).length > 0,
             'WorkQuest Bridge: Symbol length must be greater than 0'
@@ -318,5 +312,22 @@ contract WQBridge is AccessControlUpgradeable {
             native: native,
             lockable: lockable
         });
+    }
+
+    function pause() external onlyRole(ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(ADMIN_ROLE) {
+        _unpause();
+    }
+
+    function removeLiquidity(
+        address recipient,
+        uint256 amount,
+        address token
+    ) external onlyRole(ADMIN_ROLE) {
+        IERC20Upgradeable(token).safeTransfer(recipient, amount);
+        emit Transferred(token, recipient, amount);
     }
 }

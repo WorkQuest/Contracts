@@ -16,7 +16,9 @@ async function main() {
     if (!process.env.CHAIN_ID) {
         throw new Error(`Please set your CHAIN_ID in a .env-${network} file`);
     }
-
+    if (!process.env.BRIDGE_POOL) {
+        throw new Error(`Please set your BRIDGE_POOL in a .env-${network} file`);
+    }
 
     console.log("Deploying...");
 

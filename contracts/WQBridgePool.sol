@@ -5,8 +5,13 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-contract WQBridgePool is AccessControlUpgradeable, PausableUpgradeable {
+contract WQBridgePool is
+    Initializable,
+    AccessControlUpgradeable,
+    PausableUpgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
@@ -20,12 +25,7 @@ contract WQBridgePool is AccessControlUpgradeable, PausableUpgradeable {
     event RemovedBlockList(address user);
     event Transferred(address token, address recipient, uint256 amount);
 
-    function initialize() external {
-        require(
-            !initialized,
-            'WQBridgePool: The contract has already been initialized'
-        );
-        initialized = true;
+    function initialize() external initializer {
         __AccessControl_init();
         __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -61,11 +61,7 @@ contract WQBridgePool is AccessControlUpgradeable, PausableUpgradeable {
      *
      * - `user` address of user.
      */
-    function addBlockList(address user) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'BridgeToken: You should have an admin role'
-        );
+    function addBlockList(address user) external onlyRole(ADMIN_ROLE) {
         isBlockListed[user] = true;
         emit AddedBlockList(user);
     }
@@ -74,11 +70,7 @@ contract WQBridgePool is AccessControlUpgradeable, PausableUpgradeable {
      * @notice Remove user address from blocklist
      * @param user address of user.
      */
-    function removeBlockList(address user) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'BridgeToken: You should have an admin role'
-        );
+    function removeBlockList(address user) external onlyRole(ADMIN_ROLE) {
         isBlockListed[user] = false;
         emit RemovedBlockList(user);
     }

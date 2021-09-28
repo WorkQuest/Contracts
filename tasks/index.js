@@ -7,3 +7,6 @@ require('./set_dao_as_admin.js');
 require('./exchange_wqt.js');
 require('./check_bridge_tokens.js');
 require('./stake_liquidity.js');
+require('./bridge_swap.js');
+require('./bridge_redeem.js');
+require('./add_chains_to_bridge.js');
