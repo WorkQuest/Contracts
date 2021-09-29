@@ -1,30 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
+import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import '@openzeppelin/contracts/security/Pausable.sol';
 
 import './WQBridgeTokenInterface.sol';
 
-contract WQTExchange is
-    Initializable,
-    AccessControlUpgradeable,
-    ReentrancyGuardUpgradeable,
-    PausableUpgradeable,
-    UUPSUpgradeable
-{
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+contract WQTExchange is AccessControl, ReentrancyGuard, Pausable {
+    using SafeERC20 for IERC20;
 
     /// @notice Admin role constant
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
-    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
-    IERC20Upgradeable public oldToken;
+    IERC20 public oldToken;
     WQBridgeTokenInterface public newToken;
 
     uint256 public totalSwapped;
@@ -38,28 +29,12 @@ contract WQTExchange is
         _;
     }
 
-    function initialize(address _oldToken, address _newToken)
-        public
-        initializer
-    {
-        __AccessControl_init();
-        __ReentrancyGuard_init();
-        __Pausable_init();
-        __UUPSUpgradeable_init();
-
+    constructor(address _oldToken, address _newToken) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-        _setupRole(UPGRADER_ROLE, msg.sender);
-        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        oldToken = IERC20Upgradeable(_oldToken);
+        oldToken = IERC20(_oldToken);
         newToken = WQBridgeTokenInterface(_newToken);
     }
-
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
-        onlyRole(UPGRADER_ROLE)
-    {}
 
     function swap(uint256 amount)
         external
@@ -78,7 +53,7 @@ contract WQTExchange is
             hasRole(ADMIN_ROLE, msg.sender),
             'WQTExchange: You do not have an admin role'
         );
-        oldToken = IERC20Upgradeable(_oldToken);
+        oldToken = IERC20(_oldToken);
         newToken = WQBridgeTokenInterface(_newToken);
     }
 
@@ -112,5 +87,17 @@ contract WQTExchange is
             'WQTExchange: You do not have an admin role'
         );
         _unpause();
+    }
+
+    function removeAnyToken(
+        address token,
+        address account,
+        uint256 amount
+    ) external {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'WQTExchange: You do not have an admin role'
+        );
+        IERC20(token).safeTransfer(account, amount);
     }
 }
