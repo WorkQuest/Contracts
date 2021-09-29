@@ -10,3 +10,4 @@ require('./stake_liquidity.js');
 require('./bridge_swap.js');
 require('./bridge_redeem.js');
 require('./add_chains_to_bridge.js');
+require('./grant_roles_for_exchange.js');

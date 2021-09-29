@@ -50,6 +50,7 @@ contract WQTExchange is
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         oldToken = IERC20Upgradeable(_oldToken);
         newToken = WQBridgeTokenInterface(_newToken);
     }
