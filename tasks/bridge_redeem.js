@@ -20,15 +20,15 @@ task("bridge_redeem", "Redeem token on bridge")
         console.log("Redeem on bridge:", process.env.BRIDGE);
         const bridge = await hre.ethers.getContractAt("WQBridge", process.env.BRIDGE);
         message = await web3.utils.soliditySha3(
-            { t: 'uint', v: 2 },
-            { t: 'uint', v: "1001000000000000000000" },
-            { t: 'address', v: "0xE24f99419d788003c0D5212f05F47B1572cDC38a" },
-            { t: 'uint256', v: 3 },
+            { t: 'uint', v: 1 },
+            { t: 'uint', v: "1000000000000000000" },
+            { t: 'address', v: "0xB2e4bdBf8EceC7486C9CAd1510d9529e03D1dc45" },
             { t: 'uint256', v: 2 },
+            { t: 'uint256', v: 3 },
             { t: 'string', v: "WQT" }
         );
         let signature = await web3.eth.sign(message, validator);
         let sig = ethers.utils.splitSignature(signature);
-        await bridge.redeem(2, 3, "1001000000000000000000", "0xE24f99419d788003c0D5212f05F47B1572cDC38a", sig.v, sig.r, sig.s, "WQT");
+        await bridge.redeem(1, 2, "1000000000000000000", "0xB2e4bdBf8EceC7486C9CAd1510d9529e03D1dc45", sig.v, sig.r, sig.s, "WQT", {gasLimit: 500000});
         console.log("Done");
     });

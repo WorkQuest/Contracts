@@ -39,7 +39,7 @@ function createNetworkConfig(network) {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 10000000000,
+    gasPrice: 80000000000,
     url: url
   };
 }
@@ -57,17 +57,17 @@ module.exports = {
       chainId: 20210811
     },
     bsctestnet: {
-      url: "https://data-seed-prebsc-2-s1.binance.org:8545",
+      url: "https://data-seed-prebsc-2-s2.binance.org:8545",
       chainId: 97,
       gas: "auto",
-      gasPrice: 15000000000,
+      gasPrice: 10000000000,
       accounts: { mnemonic: mnemonic }
     },
     bscmainnet: {
       url: "https://bsc-dataseed.binance.org/",
       chainId: 56,
       gas: "auto",
-      gasPrice: 15000000000,
+      gasPrice: 10000000000,
       accounts: { mnemonic: mnemonic }
     },
     mainnet: createNetworkConfig('mainnet'),

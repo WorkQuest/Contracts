@@ -53,7 +53,7 @@ contract WQBridge is
     /// @notice 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
     uint256 public chainId;
 
-    address public pool;
+    address payable public pool;
 
     /// @notice List of enabled chain ID's
     mapping(uint256 => bool) public chains;
@@ -110,7 +110,7 @@ contract WQBridge is
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialize(uint256 _chainId, address _pool) external initializer {
+    function initialize(uint256 _chainId, address payable _pool) external initializer {
         __AccessControl_init();
         __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -163,6 +163,7 @@ contract WQBridge is
                 msg.value == amount,
                 'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
+            pool.transfer(amount);
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
@@ -235,12 +236,12 @@ contract WQBridge is
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
         if (tokens[symbol].lockable) {
             WQBridgePool(pool).transfer(
-                msg.sender,
+                payable(msg.sender),
                 amount,
                 tokens[symbol].token
             );
         } else if (tokens[symbol].native) {
-            recipient.transfer(amount);
+            WQBridgePool(pool).transfer(payable(msg.sender), amount, address(0));
         } else {
             WQBridgeTokenInterface(tokens[symbol].token).mint(
                 recipient,
@@ -284,7 +285,7 @@ contract WQBridge is
      * @notice Set address of pool
      * @param _pool Address of pool
      */
-    function updatePool(address _pool) external onlyRole(ADMIN_ROLE) {
+    function updatePool(address payable _pool) external onlyRole(ADMIN_ROLE) {
         pool = _pool;
     }
 
@@ -327,7 +328,11 @@ contract WQBridge is
         uint256 amount,
         address token
     ) external onlyRole(ADMIN_ROLE) {
-        IERC20Upgradeable(token).safeTransfer(recipient, amount);
+        if (token != address(0)) {
+            IERC20Upgradeable(token).safeTransfer(recipient, amount);
+        } else {
+            payable(recipient).transfer(amount);
+        }
         emit Transferred(token, recipient, amount);
     }
 }

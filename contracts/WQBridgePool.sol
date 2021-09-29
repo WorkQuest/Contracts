@@ -24,6 +24,7 @@ contract WQBridgePool is
     event AddedBlockList(address user);
     event RemovedBlockList(address user);
     event Transferred(address token, address recipient, uint256 amount);
+    event TransferredNative(address sender, uint256 amount);
 
     function initialize() external initializer {
         __AccessControl_init();
@@ -34,7 +35,7 @@ contract WQBridgePool is
     }
 
     function transfer(
-        address recipient,
+        address payable recipient,
         uint256 amount,
         address token
     ) external onlyRole(BRIDGE_ROLE) whenNotPaused {
@@ -42,7 +43,28 @@ contract WQBridgePool is
             isBlockListed[recipient] == false,
             'Recipient address is blocklisted'
         );
-        IERC20Upgradeable(token).safeTransfer(recipient, amount);
+        if (token != address(0)) {
+            IERC20Upgradeable(token).safeTransfer(recipient, amount);
+        } else {
+            recipient.transfer(amount);
+        }
+        emit Transferred(token, recipient, amount);
+    }
+
+    receive() external payable {
+        emit TransferredNative(msg.sender, msg.value);
+    }
+
+    function removeLiquidity(
+        address recipient,
+        uint256 amount,
+        address token
+    ) external onlyRole(ADMIN_ROLE) {
+        if (token != address(0)) {
+            IERC20Upgradeable(token).safeTransfer(recipient, amount);
+        } else {
+            payable(recipient).transfer(amount);
+        }
         emit Transferred(token, recipient, amount);
     }
 

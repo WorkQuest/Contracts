@@ -32,7 +32,7 @@ task("add_token_to_bridge", "Add token settings to bridge")
         if(!token_addr){
             throw new Error(`Please set your ${args.symbol}_TOKEN in a .env-${network} file`);
         }
-        console.log(`Trying add ${args.symbol} token to bridge ${bridge.address}`);
+        console.log(`Trying add ${args.symbol} token ${token_addr} to bridge ${bridge.address}`);
         await bridge.updateToken(token_addr, true, native, lockable, args.symbol);
         console.log("Done")
     });
