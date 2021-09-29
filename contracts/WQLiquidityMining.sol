@@ -4,11 +4,18 @@ pragma solidity =0.8.4;
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract WQLiquidityMining is AccessControlUpgradeable {
+contract WQLiquidityMining is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     // Staker contains info related to each staker.
     struct Staker {
@@ -54,8 +61,6 @@ contract WQLiquidityMining is AccessControlUpgradeable {
     uint256 public totalStaked;
     uint256 public totalDistributed;
 
-    bool private _initialized;
-
     bool private _entered;
 
     event tokensStaked(uint256 amount, uint256 time, address indexed sender);
@@ -68,13 +73,10 @@ contract WQLiquidityMining is AccessControlUpgradeable {
         uint256 _distributionTime,
         address _rewardToken,
         address _stakeToken
-    ) external {
-        require(
-            !_initialized,
-            'WQLiquidityMining: Contract instance has already been initialized'
-        );
-        _initialized = true;
+    ) public initializer {
         __AccessControl_init();
+        __UUPSUpgradeable_init();
+
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
@@ -83,7 +85,14 @@ contract WQLiquidityMining is AccessControlUpgradeable {
         producedTime = _startTime;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @dev stake `amount` of tokens to the contract

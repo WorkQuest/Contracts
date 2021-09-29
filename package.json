@@ -49,6 +49,7 @@
     "web3": "^1.4.0"
   },
   "dependencies": {
+    "@openzeppelin/upgrades-core": "^1.9.0",
     "coverage": "^0.4.1"
   }
 }

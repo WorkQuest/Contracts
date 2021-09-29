@@ -45,7 +45,7 @@ describe('Governance token test', () => {
         })
 
         const DAOBallot = await ethers.getContractFactory('WQDAOVoting')
-        vote = await DAOBallot.deploy(owner.address, token.address)
+        vote = await upgrades.deployProxy(DAOBallot, [owner.address, token.address], { initializer: 'initialize' });
         await vote.deployed()
         vote.changeVotingRules(minimumQuorum, votingPeriod)
 
@@ -273,7 +273,7 @@ describe('Governance token test', () => {
                     'Drink on thursdays',
                     123
                 )
-            
+
                 await ethers.provider.send("evm_increaseTime", [moreThanDay]);
                 await ethers.provider.send("evm_mine", []);
 

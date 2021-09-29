@@ -1,7 +1,7 @@
-import chai, {expect} from "chai";
+import chai, { expect } from "chai";
 import { deployContract } from "ethereum-waffle";
-import {ethers} from "hardhat";
-import {utils, BigNumber, BigNumberish,Contract} from "ethers";
+import { ethers, upgrades } from "hardhat";
+import { utils, BigNumber, BigNumberish, Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe('Governance token test', () => {
@@ -15,10 +15,10 @@ describe('Governance token test', () => {
         [owner, user_one, user_two, user_three] = await ethers.getSigners();
 
         const WQToken = await ethers.getContractFactory('WQToken');
-        token = await upgrades.deployProxy(WQToken, [ethers.utils.parseEther("100000000")], {initializer: 'initialize'});
+        token = await upgrades.deployProxy(WQToken, [ethers.utils.parseEther("100000000")], { initializer: 'initialize' });
 
         const DAOBallot = await ethers.getContractFactory("WQDAOVoting");
-        vote = await DAOBallot.deploy(owner.address, token.address);
+        vote = await upgrades.deployProxy(DAOBallot, [owner.address, token.address], { initializer: 'initialize' });
         await vote.addProposal("", 6000, 2);
     });
     describe("Deploy test", () => {
