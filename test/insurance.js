@@ -60,7 +60,7 @@ describe('Insurance tests', () => {
         const InsuranceFactory = await ethers.getContractFactory(
             'WQInsuranceFactory'
         )
-        insuranceFactory = await InsuranceFactory.deploy()
+        insuranceFactory = await upgrades.deployProxy(InsuranceFactory, [])  //await InsuranceFactory.deploy()
         await insuranceFactory.deployed();
         await insuranceFactory.addUserToInsuarance(
             ContributionPeriod.Monthly,
@@ -71,7 +71,7 @@ describe('Insurance tests', () => {
             'WQInsurance',
             (await insuranceFactory.getInsurances()).slice(-1).pop()
         )
-        
+
         await ethers.provider.send("evm_mine", []);
     })
 
@@ -85,7 +85,7 @@ describe('Insurance tests', () => {
     })
 
     describe('Creating insurances of different types', () => {
-        it('type 2: monthly, medium contribution', async () =>{
+        it('type 2: monthly, medium contribution', async () => {
             await insuranceFactory.addUserToInsuarance(
                 ContributionPeriod.Monthly,
                 PolicyType.Medium,
@@ -98,7 +98,7 @@ describe('Insurance tests', () => {
             expect(await newInsurance.contributionPeriod()).to.equal(month)
             expect(await newInsurance.contributionAmount()).to.equal(mediumContribution)
         })
-        it('type 3: monthly, maximal contribution', async () =>{
+        it('type 3: monthly, maximal contribution', async () => {
             await insuranceFactory.addUserToInsuarance(
                 ContributionPeriod.Monthly,
                 PolicyType.Maximal,
@@ -111,7 +111,7 @@ describe('Insurance tests', () => {
             expect(await newInsurance.contributionPeriod()).to.equal(month)
             expect(await newInsurance.contributionAmount()).to.equal(maximalContribution)
         })
-        it('type 4: yearly, minimal contribution', async () =>{
+        it('type 4: yearly, minimal contribution', async () => {
             await insuranceFactory.addUserToInsuarance(
                 ContributionPeriod.Yearly,
                 PolicyType.Minimal,
@@ -124,7 +124,7 @@ describe('Insurance tests', () => {
             expect(await newInsurance.contributionPeriod()).to.equal(year)
             expect(await newInsurance.contributionAmount()).to.equal(minimalContribution)
         })
-        it('type 5: yearly, medium contribution', async () =>{
+        it('type 5: yearly, medium contribution', async () => {
             await insuranceFactory.addUserToInsuarance(
                 ContributionPeriod.Yearly,
                 PolicyType.Medium,
@@ -137,7 +137,7 @@ describe('Insurance tests', () => {
             expect(await newInsurance.contributionPeriod()).to.equal(year)
             expect(await newInsurance.contributionAmount()).to.equal(mediumContribution)
         })
-        it('type 6: yearly, maximal contribution', async () =>{
+        it('type 6: yearly, maximal contribution', async () => {
             await insuranceFactory.addUserToInsuarance(
                 ContributionPeriod.Yearly,
                 PolicyType.Maximal,
@@ -186,13 +186,13 @@ describe('Insurance tests', () => {
         // })
 
         it('STEP3: Add member again: fail', async () => {
-            expect( insuranceFactory.addUserToInsuarance(
-                    ContributionPeriod.Monthly,
-                    PolicyType.Minimal,
-                    user0.address
-                )).to.be.revertedWith(
-                    "WQInsurance: Member already registered in contract"
-            );  
+            expect(insuranceFactory.addUserToInsuarance(
+                ContributionPeriod.Monthly,
+                PolicyType.Minimal,
+                user0.address
+            )).to.be.revertedWith(
+                "WQInsurance: Member already registered in contract"
+            );
         })
     })
 
@@ -203,7 +203,7 @@ describe('Insurance tests', () => {
                 PolicyType.Minimal,
                 user1.address
             )
-            expect (await insurance.memberCount()).to.equal(2)
+            expect(await insurance.memberCount()).to.equal(2)
             await insurance.connect(user1).removeMember()
             expect(await insurance.memberCount()).to.equal(1)
             expect(
@@ -214,7 +214,7 @@ describe('Insurance tests', () => {
         it('STEP2: Remove member again: fail', async () => {
             await insurance.connect(user0).removeMember()
             expect(await insurance.memberCount()).to.equal(0)
-            expect( 
+            expect(
                 insurance.connect(user0).removeMember()
             ).to.be.revertedWith(
                 "WQInsurance: Member already removed from contract"
@@ -317,7 +317,7 @@ describe('Insurance tests', () => {
                 user3.address
             )
             await insurance.connect(user1).removeMember()
-            expect( 
+            expect(
                 insurance.connect(user1).claim()
             ).to.be.revertedWith(
                 'WQInsurance: Member not found'
@@ -325,7 +325,7 @@ describe('Insurance tests', () => {
         })
 
         it('STEP3: Claim funds with alone member: fail', async () => {
-            expect (
+            expect(
                 insurance.connect(user0).claim()
             ).to.be.revertedWith(
                 'WQInsurance: The contract must have more than one members'
@@ -344,7 +344,7 @@ describe('Insurance tests', () => {
                 value: magicValueOne,
             })
             await hre.ethers.provider.send('evm_increaseTime', [38 * 86400])  // TODO connection between insuarance parameters and time increase
-            expect (
+            expect(
                 insurance.connect(user1).claim()
             ).to.be.revertedWith(
                 "WQInsurance: You haven't contributed funds for a long time"
@@ -363,7 +363,7 @@ describe('Insurance tests', () => {
                 value: magicValueOne,
             })
             await insurance.connect(user1).claim()
-            expect( 
+            expect(
                 insurance.connect(user1).claim()
             ).to.be.revertedWith(
                 'WQInsurance: Payment is already asked'
@@ -384,7 +384,7 @@ describe('Insurance tests', () => {
             await insurance.connect(user1).claim()
             await insurance.connect(user0).confirmPayment(user1.address)
             await insurance.connect(user1).executePayment()
-            expect (
+            expect(
                 insurance.connect(user1).claim()
             ).to.be.revertedWith(
                 'WQInsurance: Payment is already executed'
@@ -466,7 +466,7 @@ describe('Insurance tests', () => {
             await insurance.connect(user1).claim()
             await insurance.connect(user0).confirmPayment(user1.address)
             await insurance.connect(user1).executePayment()
-            expect (
+            expect(
                 insurance.connect(user1).unclaim()
             ).to.be.revertedWith(
                 'WQInsurance: Payment is already executed'
@@ -504,8 +504,8 @@ describe('Insurance tests', () => {
                 user1.address
             )
             await web3.eth.sendTransaction({
-            from: user1.address,
-            to: insurance.address,
+                from: user1.address,
+                to: insurance.address,
                 value: magicValueOne,
             })
             await insurance.connect(user1).claim()
@@ -712,8 +712,8 @@ describe('Insurance tests', () => {
             await insurance.connect(user0).removeMember()
             expect(
                 insurance.connect(user1).executePayment()
-                ).to.be.revertedWith(
-                    'WQInsurance: The contract must have more than one members'          
+            ).to.be.revertedWith(
+                'WQInsurance: The contract must have more than one members'
             )
         })
 
@@ -736,7 +736,7 @@ describe('Insurance tests', () => {
             ).to.be.revertedWith(
                 "WQInsurance: You haven't contributed funds for a long time"
             )
-            
+
         })
 
         it('STEP5: Execute payment when ask removed: fail', async () => {

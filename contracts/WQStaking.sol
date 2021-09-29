@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract WQStaking is AccessControl {
-    using SafeERC20 for IERC20;
+contract WQStaking is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     // Staker contains info related to each staker.
     struct Staker {
@@ -40,10 +43,10 @@ contract WQStaking is AccessControl {
     mapping(address => Staker) public stakes;
 
     // ERC20 token staked to the contract.
-    IERC20 public stakeToken;
+    IERC20Upgradeable public stakeToken;
 
     // ERC20 token earned by stakers as reward.
-    IERC20 public rewardToken;
+    IERC20Upgradeable public rewardToken;
 
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
@@ -69,8 +72,6 @@ contract WQStaking is AccessControl {
     uint256 public totalStaked;
     uint256 public totalDistributed;
 
-    bool private _initialized;
-
     bool private _entered;
 
     event tokensStaked(uint256 amount, uint256 time, address indexed sender);
@@ -87,12 +88,10 @@ contract WQStaking is AccessControl {
         uint256 _maxStake,
         address _rewardToken,
         address _stakeToken
-    ) external {
-        require(
-            !_initialized,
-            "WQStaking: Contract instance has already been initialized"
-        );
-        _initialized = true;
+    ) public initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
@@ -100,14 +99,20 @@ contract WQStaking is AccessControl {
         claimPeriod = _claimPeriod;
         minStake = _minStake;
         maxStake = _maxStake;
-        rewardToken = IERC20(_rewardToken);
-        stakeToken = IERC20(_stakeToken);
+        rewardToken = IERC20Upgradeable(_rewardToken);
+        stakeToken = IERC20Upgradeable(_stakeToken);
         producedTime = _startTime;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-
+        _setupRole(UPGRADER_ROLE, msg.sender);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @dev stake `amount` of tokens to the contract
@@ -119,31 +124,31 @@ contract WQStaking is AccessControl {
     function stake(uint256 _amount, uint256 duration) external {
         require(
             block.timestamp > startTime,
-            "WQStaking: Staking time has not come yet"
+            'WQStaking: Staking time has not come yet'
         );
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
+            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
         );
         require(
             _amount >= minStake,
-            "WQStaking: Amount should be greater than minimum stake"
+            'WQStaking: Amount should be greater than minimum stake'
         );
         Staker storage staker = stakes[msg.sender];
         require(
             _amount + staker.amount <= maxStake,
-            "WQStaking: Amount should be less than maximum stake"
+            'WQStaking: Amount should be less than maximum stake'
         );
         if (block.timestamp >= staker.unstakeTime) {
             require(
                 duration == 30 || duration == 60 || duration == 90,
-                "WQStaking: duration must be 30, 60 or 90 days"
+                'WQStaking: duration must be 30, 60 or 90 days'
             );
-            staker.unstakeTime = block.timestamp + duration * 60;   // ATTENTION change duration from days to minutes to accelerate process
+            staker.unstakeTime = block.timestamp + duration * 60; // ATTENTION change duration from days to minutes to accelerate process
         }
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
-            "WQStaking: You cannot stake tokens yet"
+            'WQStaking: You cannot stake tokens yet'
         );
         if (totalStaked > 0) {
             update();
@@ -168,18 +173,18 @@ contract WQStaking is AccessControl {
     function unstake(uint256 _amount) external {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
+            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
         );
-        require(!_entered, "WQStaking: Reentrancy guard");
+        require(!_entered, 'WQStaking: Reentrancy guard');
         _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
             staker.unstakeTime <= block.timestamp,
-            "WQStaking: You cannot unstake token yet"
+            'WQStaking: You cannot unstake token yet'
         );
         require(
             staker.amount >= _amount,
-            "WQStaking: Not enough tokens to unstake"
+            'WQStaking: Not enough tokens to unstake'
         );
 
         update();
@@ -200,14 +205,14 @@ contract WQStaking is AccessControl {
     function claim() external returns (bool) {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            "WQStaking: Daily lock from 23:50 to 00:10 UTC"
+            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
         );
-        require(!_entered, "WQStaking: Reentrancy guard");
+        require(!_entered, 'WQStaking: Reentrancy guard');
         _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
             block.timestamp - staker.claimedAt > claimPeriod,
-            "WQStaking: You cannot stake tokens yet"
+            'WQStaking: You cannot stake tokens yet'
         );
 
         if (totalStaked > 0) {
@@ -215,12 +220,12 @@ contract WQStaking is AccessControl {
         }
 
         uint256 reward = calcReward(msg.sender, tokensPerStake);
-        require(reward > 0, "WQStaking: Nothing to claim");
+        require(reward > 0, 'WQStaking: Nothing to claim');
         staker.distributed += reward;
         staker.claimedAt = block.timestamp;
         totalDistributed += reward;
 
-        IERC20(rewardToken).safeTransfer(msg.sender, reward);
+        IERC20Upgradeable(rewardToken).safeTransfer(msg.sender, reward);
         emit tokensClaimed(reward, block.timestamp, msg.sender);
         _entered = false;
         return true;
@@ -237,8 +242,7 @@ contract WQStaking is AccessControl {
         Staker storage staker = stakes[_staker];
 
         reward =
-            ((staker.amount * _tps) /
-            1e18) +
+            ((staker.amount * _tps) / 1e18) +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -269,7 +273,9 @@ contract WQStaking is AccessControl {
      */
     function produced() private view returns (uint256) {
         return
-        allProduced + (rewardTotal * (block.timestamp - producedTime)) / distributionTime;
+            allProduced +
+            (rewardTotal * (block.timestamp - producedTime)) /
+            distributionTime;
     }
 
     function update() public {
@@ -361,15 +367,21 @@ contract WQStaking is AccessControl {
         return info_;
     }
 
-    // ATTENTION functions below were added for testing 
+    // ATTENTION functions below were added for testing
 
     function updateStartTime(uint256 _startTimeNew) external {
-        require(hasRole(ADMIN_ROLE, msg.sender), "WQStaking: only owner can change start time");
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'WQStaking: only owner can change start time'
+        );
         startTime = _startTimeNew;
     }
 
     function updateProducedTime(uint256 _producedTime) external {
-        require(hasRole(ADMIN_ROLE, msg.sender), "WQStaking: only owner can change produced time");
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'WQStaking: only owner can change produced time'
+        );
         producedTime = _producedTime;
     }
 }

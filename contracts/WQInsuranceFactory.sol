@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "./WQInsurance.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract WQInsuranceFactory {
+import './WQInsurance.sol';
+
+contract WQInsuranceFactory is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+
     uint256 constant MONTH = 2592000;
     uint256 constant YEAR = 31536000;
 
@@ -11,7 +21,7 @@ contract WQInsuranceFactory {
     uint256 constant mediumContribution = 2000e18;
     uint256 constant maximalContribution = 3000e18;
 
-    address[] insurances;   // TO_ASK Is it needed? 
+    address[] insurances; // TO_ASK Is it needed?
 
     enum PolicyType {
         Minimal,
@@ -26,32 +36,42 @@ contract WQInsuranceFactory {
 
     struct insuranceInfo {
         ContributionPeriod period;
-        PolicyType policy; 
+        PolicyType policy;
         uint256 usersNum;
     }
 
-    mapping(ContributionPeriod => mapping(PolicyType => address )) getLastProperInsuarance;
-    mapping(address  => insuranceInfo) insurancesData;
-    bool private initialized;
-    
-    /** 
-     * @notice initialize the contract 
+    mapping(ContributionPeriod => mapping(PolicyType => address)) getLastProperInsuarance;
+    mapping(address => insuranceInfo) insurancesData;
+
+    /**
+     * @notice initialize the contract
      *
      */
-    function initialize() public {
-        require(!initialized, "Contract WQDAOInsuarance has already been initialized");
-        initialized = true;
+    function initialize() public initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     function addUserToInsuarance(
         ContributionPeriod _period,
         PolicyType _policy,
         address _user
     ) external {
-        address payable insuarance = payable(getLastProperInsuarance[_period][_policy]);
+        address payable insuarance = payable(
+            getLastProperInsuarance[_period][_policy]
+        );
         insuranceInfo storage data = insurancesData[insuarance];
-        if (data.usersNum == 10 || insuarance == address(0)) { 
-            address newInsurance =  _newInsurance(_period, _policy);
+        if (data.usersNum == 10 || insuarance == address(0)) {
+            address newInsurance = _newInsurance(_period, _policy);
             WQInsurance(payable(newInsurance)).addMember(_user);
             insuranceInfo storage newData = insurancesData[newInsurance];
             newData.period = _period;
@@ -59,12 +79,15 @@ contract WQInsuranceFactory {
             newData.usersNum = 1;
             getLastProperInsuarance[_period][_policy] = newInsurance;
         } else {
-            WQInsurance(insuarance).addMember(_user); 
+            WQInsurance(insuarance).addMember(_user);
             data.usersNum++;
         }
     }
 
-    function _newInsurance(ContributionPeriod _period, PolicyType policyType) internal returns (address insurance_){
+    function _newInsurance(ContributionPeriod _period, PolicyType policyType)
+        internal
+        returns (address insurance_)
+    {
         uint256 _contributionPeriod;
         if (_period == ContributionPeriod.Monthly) {
             _contributionPeriod = MONTH;
@@ -82,10 +105,10 @@ contract WQInsuranceFactory {
         insurances.push(
             address(0) //new WQInsurance(_contributionPeriod, _contributionAmount))
         );
-        insurance_ = insurances[insurances.length-1];
+        insurance_ = insurances[insurances.length - 1];
     }
 
-    function getInsurances() external view returns (address[] memory){
+    function getInsurances() external view returns (address[] memory) {
         return insurances;
     }
 }
