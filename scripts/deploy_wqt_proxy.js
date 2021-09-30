@@ -23,7 +23,7 @@ async function main() {
   const wqt_token = await upgrades.deployProxy(WQToken, [process.env.TOKEN_TOTAL_SUPPLY], { initializer: 'initialize' });
   console.log("Proxy of WQT has been deployed to:", wqt_token.address);
 
-  envConfig["WORK_QUEST_TOKEN"] = wqt_token.address;
+  envConfig["WQT_TOKEN"] = wqt_token.address;
   fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 

@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
 contract WQLiquidityMining is
     Initializable,
     AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -61,11 +63,13 @@ contract WQLiquidityMining is
     uint256 public totalStaked;
     uint256 public totalDistributed;
 
-    bool private _entered;
+    bool public stakingPaused;
+    bool public unstakingPaused;
+    bool public claimingPaused;
 
-    event tokensStaked(uint256 amount, uint256 time, address indexed sender);
-    event tokensClaimed(uint256 amount, uint256 time, address indexed sender);
-    event tokensUnstaked(uint256 amount, uint256 time, address indexed sender);
+    event Staked(uint256 amount, uint256 time, address indexed sender);
+    event Claimed(uint256 amount, uint256 time, address indexed sender);
+    event Unstaked(uint256 amount, uint256 time, address indexed sender);
 
     function initialize(
         uint256 _startTime,
@@ -75,6 +79,7 @@ contract WQLiquidityMining is
         address _stakeToken
     ) public initializer {
         __AccessControl_init();
+        __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
         startTime = _startTime;
@@ -102,6 +107,7 @@ contract WQLiquidityMining is
      * - `_amount` - stake amount
      */
     function stake(uint256 _amount) external {
+        require(!stakingPaused, 'WQLiquidityMining: Staking is paused');
         require(
             block.timestamp > startTime,
             'WQLiquidityMining: Staking time has not come yet'
@@ -109,13 +115,15 @@ contract WQLiquidityMining is
         Staker storage staker = stakes[msg.sender];
         if (totalStaked > 0) {
             update();
+        } else {
+            startTime = block.timestamp;
+            producedTime = block.timestamp;
         }
-        staker.rewardDebt += (_amount * tokensPerStake) / 1e18;
+        staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
         totalStaked += _amount;
         staker.amount += _amount;
-        // Transfer specified amount of staking tokens to the contract
         stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
-        emit tokensStaked(_amount, block.timestamp, msg.sender);
+        emit Staked(_amount, block.timestamp, msg.sender);
     }
 
     /**
@@ -126,29 +134,26 @@ contract WQLiquidityMining is
      * - `_amount` - stake amount
      */
 
-    function unstake(uint256 _amount) external {
-        require(!_entered, 'WQLiquidityMining: Reentrancy guard');
-        _entered = true;
+    function unstake(uint256 _amount) external nonReentrant {
+        require(!unstakingPaused, 'WQLiquidityMining: Unstaking is paused');
         Staker storage staker = stakes[msg.sender];
         require(
             staker.amount >= _amount,
             'WQLiquidityMining: Not enough tokens to unstake'
         );
         update();
-        staker.rewardAllowed += (_amount * tokensPerStake) / 1e18;
+        staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
         staker.amount -= _amount;
         totalStaked -= _amount;
         stakeToken.safeTransfer(msg.sender, _amount);
-        emit tokensUnstaked(_amount, block.timestamp, msg.sender);
-        _entered = false;
+        emit Unstaked(_amount, block.timestamp, msg.sender);
     }
 
     /**
      * @dev claim available rewards
      */
-    function claim() external returns (bool) {
-        require(!_entered, 'WQLiquidityMining: Reentrancy guard');
-        _entered = true;
+    function claim() external nonReentrant {
+        require(!claimingPaused, 'WQLiquidityMining: Claiming is paused');
         if (totalStaked > 0) {
             update();
         }
@@ -159,9 +164,7 @@ contract WQLiquidityMining is
         totalDistributed += reward;
 
         rewardToken.safeTransfer(msg.sender, reward);
-        emit tokensClaimed(reward, block.timestamp, msg.sender);
-        _entered = false;
-        return true;
+        emit Claimed(reward, block.timestamp, msg.sender);
     }
 
     /**
@@ -175,7 +178,7 @@ contract WQLiquidityMining is
         Staker storage staker = stakes[_staker];
 
         reward =
-            ((staker.amount * _tps) / 1e18) +
+            ((staker.amount * _tps) / 1e20) +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -192,7 +195,7 @@ contract WQLiquidityMining is
             uint256 rewardProducedAtNow = produced();
             if (rewardProducedAtNow > rewardProduced) {
                 uint256 producedNew = rewardProducedAtNow - rewardProduced;
-                _tps += (producedNew * 1e18) / totalStaked;
+                _tps += (producedNew * 1e20) / totalStaked;
             }
         }
         reward = calcReward(_staker, _tps);
@@ -218,7 +221,7 @@ contract WQLiquidityMining is
         if (rewardProducedAtNow > rewardProduced) {
             uint256 producedNew = rewardProducedAtNow - rewardProduced;
             if (totalStaked > 0) {
-                tokensPerStake += (producedNew * 1e18) / totalStaked;
+                tokensPerStake += (producedNew * 1e20) / totalStaked;
             }
             rewardProduced = rewardProducedAtNow;
         }
@@ -319,8 +322,6 @@ contract WQLiquidityMining is
         return info_;
     }
 
-    // ATTENTION functions below were added for testing
-
     function updateStartTime(uint256 _startTimeNew)
         external
         onlyRole(ADMIN_ROLE)
@@ -331,5 +332,41 @@ contract WQLiquidityMining is
         );
         startTime = _startTimeNew;
         producedTime = _startTimeNew;
+    }
+
+    function stakingPause() external onlyRole(ADMIN_ROLE) {
+        stakingPaused = true;
+    }
+
+    function stakingUnpause() external onlyRole(ADMIN_ROLE) {
+        stakingPaused = false;
+    }
+
+    function unstakingPause() external onlyRole(ADMIN_ROLE) {
+        unstakingPaused = true;
+    }
+
+    function unstakingUnpause() external onlyRole(ADMIN_ROLE) {
+        unstakingPaused = false;
+    }
+
+    function claimingPause() external onlyRole(ADMIN_ROLE) {
+        claimingPaused = true;
+    }
+
+    function claimingUnpause() external onlyRole(ADMIN_ROLE) {
+        claimingPaused = false;
+    }
+
+    function pause() external onlyRole(ADMIN_ROLE) {
+        stakingPaused = true;
+        unstakingPaused = true;
+        claimingPaused = true;
+    }
+
+    function unpause() external onlyRole(ADMIN_ROLE) {
+        stakingPaused = false;
+        unstakingPaused = false;
+        claimingPaused = false;
     }
 }

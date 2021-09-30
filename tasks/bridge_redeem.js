@@ -14,7 +14,7 @@ task("bridge_redeem", "Redeem token on bridge")
             throw new Error(`Please set your BRIDGE in a .env-${network} file`);
         }
         if (!process.env.WQT_TOKEN) {
-            throw new Error('Please set your WORK_QUEST_TOKEN in a .env file');
+            throw new Error('Please set your WQT_TOKEN in a .env file');
         }
 
         console.log("Redeem on bridge:", process.env.BRIDGE);

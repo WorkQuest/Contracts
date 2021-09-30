@@ -21,7 +21,7 @@ task("grant_roles_for_exchange", "Grant minter role to exchange")
         console.log("Grant minter role to WQT Exchange:", process.env.WQT_EXCHANGE);
         const token = await hre.ethers.getContractAt("WQBridgeToken", process.env.WQT_TOKEN);
         let minter_role = await token.MINTER_ROLE();
-        // await token.grantRole(minter_role, process.env.WQT_EXCHANGE);
+        await token.grantRole(minter_role, process.env.WQT_EXCHANGE);
         console.log('WQT Exchange has minter role:', await token.hasRole(minter_role, process.env.WQT_EXCHANGE));
 
         console.log("Done");

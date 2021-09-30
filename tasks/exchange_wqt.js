@@ -12,8 +12,8 @@ task("exchange_wqt", "Change old WQT tokens with new")
         if (!process.env.OLD_WQT_TOKEN) {
             throw new Error(`Please set your OLD_WQT_TOKEN in a .env-${network} file`);
         }
-        if (!process.env.WORK_QUEST_TOKEN) {
-            throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
+        if (!process.env.WQT_TOKEN) {
+            throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
         }
 
         console.log("Sender address: ", sender);

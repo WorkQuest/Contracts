@@ -13,13 +13,13 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.WORK_QUEST_TOKEN) {
-    throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
+  if (!process.env.WQT_TOKEN) {
+    throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
   }
 
   console.log("Upgrade...");
   const WQToken = await ethers.getContractFactory("WQToken");
-  const wqt_token = await upgrades.upgradeProxy(process.env.WORK_QUEST_TOKEN, WQToken);
+  const wqt_token = await upgrades.upgradeProxy(process.env.WQT_TOKEN, WQToken);
   console.log("Token has been upgraded to:", wqt_token.address);
 }
 

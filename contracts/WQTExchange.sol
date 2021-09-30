@@ -6,7 +6,6 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/security/Pausable.sol';
-
 import './WQBridgeTokenInterface.sol';
 
 contract WQTExchange is AccessControl, ReentrancyGuard, Pausable {
@@ -48,44 +47,27 @@ contract WQTExchange is AccessControl, ReentrancyGuard, Pausable {
         emit Swapped(block.timestamp, msg.sender, amount);
     }
 
-    function setTokens(address _oldToken, address _newToken) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQTExchange: You do not have an admin role'
-        );
+    function setTokens(address _oldToken, address _newToken)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         oldToken = IERC20(_oldToken);
         newToken = WQBridgeTokenInterface(_newToken);
     }
 
-    function setTotalSwapped(uint256 amount) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQTExchange: You do not have an admin role'
-        );
+    function setTotalSwapped(uint256 amount) external onlyRole(ADMIN_ROLE) {
         totalSwapped = amount;
     }
 
-    function addToBlacklist(address account) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQTExchange: You do not have an admin role'
-        );
+    function addToBlacklist(address account) external onlyRole(ADMIN_ROLE) {
         blacklist[account] = true;
     }
 
-    function pause() external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQTExchange: You do not have an admin role'
-        );
+    function pause() external onlyRole(ADMIN_ROLE) {
         _pause();
     }
 
-    function unpause() external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQTExchange: You do not have an admin role'
-        );
+    function unpause() external onlyRole(ADMIN_ROLE) {
         _unpause();
     }
 
@@ -93,11 +75,7 @@ contract WQTExchange is AccessControl, ReentrancyGuard, Pausable {
         address token,
         address account,
         uint256 amount
-    ) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQTExchange: You do not have an admin role'
-        );
+    ) external onlyRole(ADMIN_ROLE) {
         IERC20(token).safeTransfer(account, amount);
     }
 }

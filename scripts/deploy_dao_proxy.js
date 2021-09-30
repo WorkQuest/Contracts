@@ -17,13 +17,13 @@ async function main() {
   if (!process.env.DAO_CHAIR_PERSON) {
     throw new Error(`Please set your DAO_CHAIR_PERSON in a .env-${network} file`);
   }
-  if (!process.env.WORK_QUEST_TOKEN) {
-    throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
+  if (!process.env.WQT_TOKEN) {
+    throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
   }
 
   console.log("Deploying...");
   const DAOBallot = await hre.ethers.getContractFactory("WQDAOVoting");
-  const dao_ballot = await upgrades.deployProxy(DAOBallot, [process.env.DAO_CHAIR_PERSON, process.env.WORK_QUEST_TOKEN], { initializer: 'initialize'})
+  const dao_ballot = await upgrades.deployProxy(DAOBallot, [process.env.DAO_CHAIR_PERSON, process.env.WQT_TOKEN], { initializer: 'initialize'})
   console.log("DAO Ballot has been deployed to:", dao_ballot.address);
 
   envConfig["DAO_BALLOT"] = dao_ballot.address;
