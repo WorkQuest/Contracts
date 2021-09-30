@@ -53,7 +53,7 @@ contract WQLiquidityMining is
     /// @notice Increase of rewards per distribution time
     uint256 public rewardTotal;
     /// @notice Distribution time
-    // uint256 public distributionTime;
+    uint256 public distributionTime;
 
     uint256 public tokensPerStake;
     uint256 public rewardProduced;
