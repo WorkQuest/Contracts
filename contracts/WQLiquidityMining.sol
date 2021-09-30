@@ -59,7 +59,6 @@ contract WQLiquidityMining is
     uint256 public rewardProduced;
     uint256 public allProduced;
     uint256 public producedTime;
-
     uint256 public totalStaked;
     uint256 public totalDistributed;
 
@@ -106,7 +105,7 @@ contract WQLiquidityMining is
      *
      * - `_amount` - stake amount
      */
-    function stake(uint256 _amount) external {
+    function stake(uint256 _amount) external nonReentrant {
         require(!stakingPaused, 'WQLiquidityMining: Staking is paused');
         require(
             block.timestamp > startTime,
@@ -209,11 +208,9 @@ contract WQLiquidityMining is
      */
     function produced() private view returns (uint256) {
         return
-            block.timestamp > startTime + distributionTime
-                ? rewardTotal
-                : allProduced +
-                    (rewardTotal * (block.timestamp - producedTime)) /
-                    distributionTime;
+            allProduced +
+            (rewardTotal * (block.timestamp - producedTime)) /
+            distributionTime;
     }
 
     function update() public {
@@ -225,67 +222,6 @@ contract WQLiquidityMining is
             }
             rewardProduced = rewardProducedAtNow;
         }
-    }
-
-    /**
-     * @dev setReward - sets amount of reward during `distributionTime`
-     */
-    function setReward(uint256 _rewardTotal) external onlyRole(ADMIN_ROLE) {
-        allProduced = produced();
-        producedTime = block.timestamp;
-        rewardTotal = _rewardTotal;
-    }
-
-    /**
-     * @dev updateStakingInfo - synchronize the smart contracts
-     */
-    function updateStakingInfo(
-        uint256 _tps,
-        uint256 _totalStaked,
-        uint256 _totalDistributed
-    ) external onlyRole(ADMIN_ROLE) {
-        tokensPerStake = _tps;
-        totalStaked = _totalStaked;
-        totalDistributed = _totalDistributed;
-    }
-
-    /**
-     * @dev Set reward token and stake token addresses
-     */
-    function setTokens(address _rewardToken, address _stakeToken)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        rewardToken = IERC20Upgradeable(_rewardToken);
-        stakeToken = IERC20Upgradeable(_stakeToken);
-    }
-
-    function setTime(uint256 _startTime, uint256 _distributionTime)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        startTime = _startTime;
-        distributionTime = _distributionTime;
-        allProduced = produced();
-        producedTime = block.timestamp;
-    }
-
-    /**
-     * @dev updateStakerInfo - update user information
-     */
-    function updateStakerInfo(
-        address _user,
-        uint256 _amount,
-        uint256 _rewardAllowed,
-        uint256 _rewardDebt,
-        uint256 _distributed
-    ) external onlyRole(ADMIN_ROLE) {
-        Staker storage staker = stakes[_user];
-
-        staker.amount = _amount;
-        staker.rewardAllowed = _rewardAllowed;
-        staker.rewardDebt = _rewardDebt;
-        staker.distributed = _distributed;
     }
 
     /**
@@ -307,7 +243,7 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev getStakingInfo - return information about the stake
+     * @dev Return information about the stake
      */
     function getStakingInfo() external view returns (StakeInfo memory info_) {
         info_ = StakeInfo({
@@ -322,10 +258,40 @@ contract WQLiquidityMining is
         return info_;
     }
 
-    function updateStartTime(uint256 _startTimeNew)
+    /**
+     * @dev Update start time and remember old values
+     */
+    function updateStartTime(uint256 _startTime) external onlyRole(ADMIN_ROLE) {
+        allProduced = produced();
+        producedTime = block.timestamp;
+        startTime = _startTime;
+    }
+
+    /**
+     * @dev Update distribution time and remember old values
+     */
+    function updateDistributionTime(uint256 _distributionTime)
         external
         onlyRole(ADMIN_ROLE)
     {
+        allProduced = produced();
+        producedTime = block.timestamp;
+        distributionTime = _distributionTime;
+    }
+
+    /**
+     * @dev Update distribution rewards and remember old values
+     */
+    function updateReward(uint256 _rewardTotal) external onlyRole(ADMIN_ROLE) {
+        allProduced = produced();
+        producedTime = block.timestamp;
+        rewardTotal = _rewardTotal;
+    }
+
+    /**
+     * @dev Set start time when staking has not started yet
+     */
+    function setStartTime(uint256 _startTimeNew) external onlyRole(ADMIN_ROLE) {
         require(
             startTime > block.timestamp,
             'WQLiquidityMining: Staking time has already come'
@@ -334,39 +300,121 @@ contract WQLiquidityMining is
         producedTime = _startTimeNew;
     }
 
+    /**
+     * @dev Set reward token and stake token addresses
+     */
+    function setTokens(address _rewardToken, address _stakeToken)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        rewardToken = IERC20Upgradeable(_rewardToken);
+        stakeToken = IERC20Upgradeable(_stakeToken);
+    }
+
+    /**
+     * @dev updateStakingInfo - synchronize the smart contracts
+     */
+    function updateStakingInfo(
+        uint256 _tps,
+        uint256 _totalStaked,
+        uint256 _totalDistributed
+    ) external onlyRole(ADMIN_ROLE) {
+        tokensPerStake = _tps;
+        totalStaked = _totalStaked;
+        totalDistributed = _totalDistributed;
+    }
+
+    /**
+     * @dev updateStakerInfo - update user information
+     */
+    function updateStakerInfo(
+        address _user,
+        uint256 _amount,
+        uint256 _rewardAllowed,
+        uint256 _rewardDebt,
+        uint256 _distributed
+    ) external onlyRole(ADMIN_ROLE) {
+        Staker storage staker = stakes[_user];
+
+        staker.amount = _amount;
+        staker.rewardAllowed = _rewardAllowed;
+        staker.rewardDebt = _rewardDebt;
+        staker.distributed = _distributed;
+    }
+
+    /**
+     * @dev
+     */
     function stakingPause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = true;
     }
 
+    /**
+     * @dev
+     */
     function stakingUnpause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = false;
     }
 
+    /**
+     * @dev
+     */
     function unstakingPause() external onlyRole(ADMIN_ROLE) {
         unstakingPaused = true;
     }
 
+    /**
+     * @dev
+     */
     function unstakingUnpause() external onlyRole(ADMIN_ROLE) {
         unstakingPaused = false;
     }
 
+    /**
+     * @dev
+     */
     function claimingPause() external onlyRole(ADMIN_ROLE) {
         claimingPaused = true;
     }
 
+    /**
+     * @dev
+     */
     function claimingUnpause() external onlyRole(ADMIN_ROLE) {
         claimingPaused = false;
     }
 
+    /**
+     * @dev
+     */
     function pause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = true;
         unstakingPaused = true;
         claimingPaused = true;
     }
 
+    /**
+     * @dev
+     */
     function unpause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = false;
         unstakingPaused = false;
         claimingPaused = false;
+    }
+
+    /**
+     * @dev Removes any token from the contract by its address
+     * @param _token Token's address
+     * @param _to Recipient address
+     * @param _amount An amount to be removed from the contract
+     */
+    function removeTokenByAddress(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) external onlyRole(ADMIN_ROLE) {
+        require(_token != address(0), 'Invalid token address');
+        require(_to != address(0), 'Invalid recipient address');
+        IERC20Upgradeable(_token).safeTransfer(_to, _amount);
     }
 }
