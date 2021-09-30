@@ -65,6 +65,7 @@ contract WQLiquidityMining is
     bool public stakingPaused;
     bool public unstakingPaused;
     bool public claimingPaused;
+    bool public paused;
 
     event Staked(uint256 amount, uint256 time, address indexed sender);
     event Claimed(uint256 amount, uint256 time, address indexed sender);
@@ -211,6 +212,7 @@ contract WQLiquidityMining is
     }
 
     function update() public {
+        require(!paused, 'WQLiquidityMining: Updating is paused');
         uint256 rewardProducedAtNow = produced();
         if (rewardProducedAtNow > rewardProduced) {
             uint256 producedNew = rewardProducedAtNow - rewardProduced;
@@ -276,13 +278,13 @@ contract WQLiquidityMining is
     /**
      * @dev Set start time when staking has not started yet
      */
-    function setStartTime(uint256 _startTimeNew) external onlyRole(ADMIN_ROLE) {
+    function setStartTime(uint256 _startTime) external onlyRole(ADMIN_ROLE) {
         require(
             startTime > block.timestamp,
             'WQLiquidityMining: Staking time has already come'
         );
-        startTime = _startTimeNew;
-        producedTime = _startTimeNew;
+        startTime = _startTime;
+        producedTime = _startTime;
     }
 
     /**
@@ -330,61 +332,30 @@ contract WQLiquidityMining is
     /**
      * @dev Pause staking
      */
-    function stakingPause() external onlyRole(ADMIN_ROLE) {
-        stakingPaused = true;
-    }
-
-    /**
-     * @dev Unpause staking
-     */
-    function stakingUnpause() external onlyRole(ADMIN_ROLE) {
-        stakingPaused = false;
+    function stakingPause(bool _paused) external onlyRole(ADMIN_ROLE) {
+        stakingPaused = _paused;
     }
 
     /**
      * @dev Pause unstaking
      */
-    function unstakingPause() external onlyRole(ADMIN_ROLE) {
-        unstakingPaused = true;
+    function unstakingPause(bool _paused) external onlyRole(ADMIN_ROLE) {
+        unstakingPaused = _paused;
     }
 
-    /**
-     * @dev Unpause unstaking
-     */
-    function unstakingUnpause() external onlyRole(ADMIN_ROLE) {
-        unstakingPaused = false;
-    }
-
-    /**
-     * @dev Pause claiming
-     */
-    function claimingPause() external onlyRole(ADMIN_ROLE) {
-        claimingPaused = true;
-    }
 
     /**
      * @dev Unpause claiming
      */
-    function claimingUnpause() external onlyRole(ADMIN_ROLE) {
-        claimingPaused = false;
+    function claimingPause(bool _paused) external onlyRole(ADMIN_ROLE) {
+        claimingPaused = _paused;
     }
 
     /**
      * @dev Pause all
      */
-    function pause() external onlyRole(ADMIN_ROLE) {
-        stakingPaused = true;
-        unstakingPaused = true;
-        claimingPaused = true;
-    }
-
-    /**
-     * @dev Unpause all
-     */
-    function unpause() external onlyRole(ADMIN_ROLE) {
-        stakingPaused = false;
-        unstakingPaused = false;
-        claimingPaused = false;
+    function updatingPause(bool _paused) external onlyRole(ADMIN_ROLE) {
+        paused = _paused;
     }
 
     /**
