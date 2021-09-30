@@ -53,7 +53,7 @@ contract WQLiquidityMining is
     /// @notice Increase of rewards per distribution time
     uint256 public rewardTotal;
     /// @notice Distribution time
-    uint256 public distributionTime;
+    // uint256 public distributionTime;
 
     uint256 public tokensPerStake;
     uint256 public rewardProduced;
@@ -258,15 +258,6 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev Update start time and remember old values
-     */
-    function updateStartTime(uint256 _startTime) external onlyRole(ADMIN_ROLE) {
-        allProduced = produced();
-        producedTime = block.timestamp;
-        startTime = _startTime;
-    }
-
-    /**
      * @dev Update distribution rewards and remember old values
      */
     function updateReward(uint256 _rewardTotal) external onlyRole(ADMIN_ROLE) {
@@ -280,34 +271,61 @@ contract WQLiquidityMining is
      */
     function setStartTime(uint256 _startTime) external onlyRole(ADMIN_ROLE) {
         require(
-            startTime > block.timestamp,
+            block.timestamp < startTime,
             'WQLiquidityMining: Staking time has already come'
         );
         startTime = _startTime;
-        producedTime = _startTime;
     }
 
     /**
-     * @dev Set reward token and stake token addresses
+     * @dev Allows to update 'tokens per stake' parameter
+     * @param _tps Specifeies the new tokens per stake value
      */
-    function setTokens(address _rewardToken, address _stakeToken)
+    function updateTps(uint256 _tps) external onlyRole(ADMIN_ROLE) {
+        tokensPerStake = _tps;
+    }
+
+    /**
+     * @dev Allows to update the value of produced reward
+     * @param _rewardProduced Specifeies the new value of rewards produced
+     */
+    function updateRewardProduced(uint256 _rewardProduced)
         external
         onlyRole(ADMIN_ROLE)
     {
-        rewardToken = IERC20Upgradeable(_rewardToken);
-        stakeToken = IERC20Upgradeable(_stakeToken);
+        rewardProduced = _rewardProduced;
     }
 
     /**
-     * @dev Synchronize the smart contracts
+     * @dev Allows to update the daily reward parameter
+     * @param _rewardTotal Specifeies the new daily reward value
      */
-    function updateStakingInfo(
-        uint256 _tps,
-        uint256 _totalStaked,
-        uint256 _totalDistributed
-    ) external onlyRole(ADMIN_ROLE) {
-        tokensPerStake = _tps;
+    function updateRewardTotal(uint256 _rewardTotal)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        rewardTotal = _rewardTotal;
+    }
+
+    /**
+     * @dev Allows to update the value of staked tokens
+     * @param _totalStaked Specifeies the new value of totally staked tokens
+     */
+    function updateTotalStaked(uint256 _totalStaked)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         totalStaked = _totalStaked;
+    }
+
+    /**
+     * @dev Allows to update the value of distributed rewards
+     * @param _totalDistributed Specifeies the new value of totally distributed rewards
+     */
+    function updateTotalDistributed(uint256 _totalDistributed)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         totalDistributed = _totalDistributed;
     }
 
@@ -342,7 +360,6 @@ contract WQLiquidityMining is
     function unstakingPause(bool _paused) external onlyRole(ADMIN_ROLE) {
         unstakingPaused = _paused;
     }
-
 
     /**
      * @dev Unpause claiming
