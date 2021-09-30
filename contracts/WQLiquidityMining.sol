@@ -82,11 +82,11 @@ contract WQLiquidityMining is
         __UUPSUpgradeable_init();
 
         startTime = _startTime;
+        producedTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
         rewardToken = IERC20Upgradeable(_rewardToken);
         stakeToken = IERC20Upgradeable(_stakeToken);
-        producedTime = _startTime;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
@@ -114,9 +114,6 @@ contract WQLiquidityMining is
         Staker storage staker = stakes[msg.sender];
         if (totalStaked > 0) {
             update();
-        } else {
-            startTime = block.timestamp;
-            producedTime = block.timestamp;
         }
         staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
         totalStaked += _amount;
@@ -268,18 +265,6 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev Update distribution time and remember old values
-     */
-    function updateDistributionTime(uint256 _distributionTime)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        allProduced = produced();
-        producedTime = block.timestamp;
-        distributionTime = _distributionTime;
-    }
-
-    /**
      * @dev Update distribution rewards and remember old values
      */
     function updateReward(uint256 _rewardTotal) external onlyRole(ADMIN_ROLE) {
@@ -312,7 +297,7 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev updateStakingInfo - synchronize the smart contracts
+     * @dev Synchronize the smart contracts
      */
     function updateStakingInfo(
         uint256 _tps,
@@ -325,7 +310,7 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev updateStakerInfo - update user information
+     * @dev Update user information
      */
     function updateStakerInfo(
         address _user,
@@ -343,49 +328,49 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev
+     * @dev Pause staking
      */
     function stakingPause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = true;
     }
 
     /**
-     * @dev
+     * @dev Unpause staking
      */
     function stakingUnpause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = false;
     }
 
     /**
-     * @dev
+     * @dev Pause unstaking
      */
     function unstakingPause() external onlyRole(ADMIN_ROLE) {
         unstakingPaused = true;
     }
 
     /**
-     * @dev
+     * @dev Unpause unstaking
      */
     function unstakingUnpause() external onlyRole(ADMIN_ROLE) {
         unstakingPaused = false;
     }
 
     /**
-     * @dev
+     * @dev Pause claiming
      */
     function claimingPause() external onlyRole(ADMIN_ROLE) {
         claimingPaused = true;
     }
 
     /**
-     * @dev
+     * @dev Unpause claiming
      */
     function claimingUnpause() external onlyRole(ADMIN_ROLE) {
         claimingPaused = false;
     }
 
     /**
-     * @dev
+     * @dev Pause all
      */
     function pause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = true;
@@ -394,7 +379,7 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev
+     * @dev Unpause all
      */
     function unpause() external onlyRole(ADMIN_ROLE) {
         stakingPaused = false;
@@ -404,7 +389,7 @@ contract WQLiquidityMining is
 
     /**
      * @dev Removes any token from the contract by its address
-     * @param _token Token's address
+     * @param _token Token address
      * @param _to Recipient address
      * @param _amount An amount to be removed from the contract
      */
@@ -413,7 +398,6 @@ contract WQLiquidityMining is
         address _to,
         uint256 _amount
     ) external onlyRole(ADMIN_ROLE) {
-        require(_token != address(0), 'Invalid token address');
         require(_to != address(0), 'Invalid recipient address');
         IERC20Upgradeable(_token).safeTransfer(_to, _amount);
     }
