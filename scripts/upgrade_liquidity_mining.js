@@ -7,12 +7,9 @@ async function main() {
   const accounts = await ethers.getSigners();
   const sender = accounts[0].address;
   console.log("Sender address: ", sender);
-
   const network = hre.network.name;
   const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-  for (const k in envConfig) {
-    process.env[k] = envConfig[k]
-  }
+  for (const k in envConfig) { process.env[k] = envConfig[k]; }
   if (!process.env.LIQUIDITY_MINING) {
     throw new Error(`Please set your LIQUIDITY_MINING in a .env-${network} file`);
   }
