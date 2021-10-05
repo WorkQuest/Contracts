@@ -46,6 +46,8 @@ contract WQReferal is AccessControl {
         _initialized = true;
     }
 
+    /** @dev 
+     */
     function addReferrer(address referrer) internal returns (bool) {
         require(
             referrer != address(0),
