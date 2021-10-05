@@ -1,24 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-<<<<<<< HEAD
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./WQTInterface.sol";
-import "./WQPriceOracle.sol";
-=======
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
->>>>>>> develop
 
-import './WQTInterface.sol';
+import "./WQTInterface.sol";
+import "./WQPriceOracle.sol";
 
-contract WQReferal is
+contract WQReferral is
     Initializable,
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -28,18 +21,25 @@ contract WQReferal is
 
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
+    /// @notice referral - someone who done job and paid to affiliat 
+    /// @notice affiliat - person who get reward from referrals  
     /**
      * @dev The struct of account information
-     * @param referrer The referrer addresss
+     * @param affiliat The affiliat addresss
      * @param reward The total referral reward of an address
      * @param referredCount The total referral amount of an address
      * @param lastActiveTimestamp The last active timestamp of an address
      */
     struct Account {
-        address referrer;
+        address affiliat;
         uint256 reward;
         uint256 referredCount;
         bool paid;
+    }
+
+    struct AffiliatInfo{ 
+        uint256 reward;
+        uint256 numOfReferrals;
     }
 
     IERC20Upgradeable token;
@@ -47,15 +47,16 @@ contract WQReferal is
     /// @notice address of price oracle 
     address public oracle; 
 
-    mapping(address => Account) public accounts;
+    mapping(address => Account) public referrals;
 
-    event RegisteredReferer(address referee, address referrer);
-    event PaidReferral(address from, address to, uint256 amount);
+    event RegisteredReferer(address referral, address affiliat);
+    event PaidReferral(address referral, address affiliat, uint256 amount);
 
-    function initialize(address _token, uint256 _referralBonus)
-        public
-        initializer
-    {
+    function initialize(
+        address _token,
+        address _oracle,
+        uint256 _referralBonus 
+    ) public initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -64,70 +65,62 @@ contract WQReferal is
         _setupRole(UPGRADER_ROLE, msg.sender);
 
         token = IERC20Upgradeable(_token);
+        oracle = _oracle;
         referralBonus = _referralBonus;
     }
 
-<<<<<<< HEAD
-    /** @dev 
-     */
-    function addReferrer(address referrer) internal returns (bool) {
-=======
     function _authorizeUpgrade(address newImplementation)
         internal
         override
         onlyRole(UPGRADER_ROLE)
     {}
 
-    function addReferrer(address referrer) external {
->>>>>>> develop
+    /** @dev 
+     */
+    function addAffiliat(address _affiliat) external {
         require(
-            referrer != address(0),
-            'WQReferal: Referrer cannot be zero address'
+            affiliat != address(0),
+            'WQReferral: affiliat cannot be zero address'
         );
         require(
-            referrer != msg.sender,
-            'WQReferal: Referrer cannot be sender address'
+            affiliat != msg.sender,
+            'WQReferral: affiliat cannot be sender address'
         );
         require(
-            accounts[msg.sender].referrer == address(0),
-            'WQReferal: Address is already registered'
+            referrals[msg.sender].affiliat == address(0),
+            'WQReferral: Address is already registered'
         );
-        accounts[msg.sender].referrer = referrer;
-        accounts[referrer].referredCount++;
+        referrals[msg.sender].affiliat = _affiliat;
+        referrals[affiliat].referredCount++;
 
-        emit RegisteredReferer(msg.sender, referrer);
+        emit RegisteredAffiliat(msg.sender, affiliat);
     }
 
     /**
-     * @dev Utils function for check whether an address has the referrer
+     * @dev Utils function for check whether an address has the affiliat
      */
-    function hasReferrer(address addr) external view returns (bool) {
-        return accounts[addr].referrer != address(0);
+    function hasAffiliat(address _referral) external view returns (bool) {
+        return referrals[_referral].affiliat != address(0);
     }
 
-
     /**
-     * @dev Pay referal to registered referrer
+     * @dev Pay referral to registered affiliat
      */
-<<<<<<< HEAD
-=======
-
->>>>>>> develop
-    function payReferral(address referee) external nonReentrant {
+    function payReferral(address referral) external nonReentrant {
         require(
             token.balanceOf(address(this)) > referralBonus,
-            'WQReferal: Balance on contract too low'
+            'WQReferral: Balance on contract too low'
         );
-        Account storage userAccount = accounts[referee];
-        require(!userAccount.paid, 'WQReferal: Bonus already paid');
+        Account storage userAccount = referrals[referral];
+        require(!userAccount.paid, 'WQReferral: Bonus already paid');
         require(
-            userAccount.referrer != address(0),
-            'WQReferal: Address is not registered'
+            userAccount.affiliat != address(0),
+            'WQReferral: Address is not registered'
         );
         userAccount.paid = true;
-        accounts[userAccount.referrer].reward += referralBonus;
-        token.safeTransfer(userAccount.referrer, referralBonus);
-        emit PaidReferral(referee, userAccount.referrer, referralBonus);
+        referrals[userAccount.affiliat].reward += referralBonus;
+        token.safeTransfer(userAccount.affiliat, referralBonus);
+        emit PaidReferral(referral, userAccount.affiliat, referralBonus);
     }
 
 

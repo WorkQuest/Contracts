@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-<<<<<<< HEAD
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WQPensionFund.sol";
 import "./WQReferal.sol";
-=======
-import '@openzeppelin/contracts/access/AccessControl.sol';
-import './WQPensionFund.sol';
->>>>>>> develop
 
 contract WorkQuest is AccessControl {
     string constant errMsg = 'WorkQuest: Access denied or invalid status';
@@ -37,13 +32,9 @@ contract WorkQuest is AccessControl {
     /// @notice Address of employer
     address payable public employer;
     /// @notice Address of arbiter
-<<<<<<< HEAD
     address payable public immutable arbiter;
     /// @notice Address of referal contract
     address payable public immutable referal; 
-=======
-    address payable public arbiter;
->>>>>>> develop
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
