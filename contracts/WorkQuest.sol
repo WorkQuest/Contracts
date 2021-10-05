@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WQPensionFund.sol";
+import "./WQReferal.sol";
 
 contract WorkQuest is AccessControl{
 
@@ -33,6 +34,8 @@ contract WorkQuest is AccessControl{
     address payable public immutable employer;
     /// @notice Address of arbiter
     address payable public immutable arbiter;
+    /// @notice Address of referal contract
+    address payable public immutable referal; 
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
@@ -109,7 +112,8 @@ contract WorkQuest is AccessControl{
         address payable _feeReceiver,
         address payable _pensionFund,
         address payable _employer,
-        address payable _arbiter
+        address payable _arbiter,
+        address payable _referal
     ) {
         jobHash = _jobHash;
         fee = _fee;
@@ -119,6 +123,7 @@ contract WorkQuest is AccessControl{
         pensionFund = _pensionFund;
         employer = _employer;
         arbiter = _arbiter;
+        referal = _referal;
         // TODO: grant admin role to admin  // CHECK
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -341,6 +346,7 @@ contract WorkQuest is AccessControl{
         if (forfeit > 0) {
             employer.transfer(forfeit);
         }
+        WQReferal(referal).payReferral();
         feeReceiver.transfer(comission);
     }
 }
