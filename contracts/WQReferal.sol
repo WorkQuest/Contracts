@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WQTInterface.sol";
+import "./WQPriceOracle.sol";
 
 contract WQReferal is AccessControl {
     using SafeERC20 for IERC20;
@@ -27,6 +28,8 @@ contract WQReferal is AccessControl {
 
     WQTInterface token;
     uint256 referralBonus;
+    /// @notice address of price oracle 
+    address public oracle; 
 
     mapping(address => Account) public accounts;
 
@@ -72,23 +75,26 @@ contract WQReferal is AccessControl {
         return accounts[addr].referrer != address(0);
     }
 
+
     /**
      * @dev Pay referal to registered referrer
      */
-
-    function payReferral() external {
+    function payReferral(address referee) external nonReentrant {
         require(
             token.balanceOf(address(this)) > referralBonus,
-            "WQReferal: Balance on contract too low"
+            'WQReferal: Balance on contract too low'
         );
-        Account storage userAccount = accounts[msg.sender];
-        require(!userAccount.paid, "WQReferal: Bonus already paid");
+        Account storage userAccount = accounts[referee];
+        require(!userAccount.paid, 'WQReferal: Bonus already paid');
         require(
             userAccount.referrer != address(0),
-            "WQReferal: Address is not registered"
+            'WQReferal: Address is not registered'
         );
+        userAccount.paid = true;
         accounts[userAccount.referrer].reward += referralBonus;
-        token.transfer(userAccount.referrer, referralBonus);
-        emit PaidReferral(msg.sender, userAccount.referrer, referralBonus);
+        token.safeTransfer(userAccount.referrer, referralBonus);
+        emit PaidReferral(referee, userAccount.referrer, referralBonus);
     }
+
+
 }
