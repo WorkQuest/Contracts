@@ -63,7 +63,7 @@ contract WQReferal is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    function addReferrer(address referrer) internal returns (bool) {
+    function addReferrer(address referrer) external {
         require(
             referrer != address(0),
             'WQReferal: Referrer cannot be zero address'
@@ -72,17 +72,14 @@ contract WQReferal is
             referrer != msg.sender,
             'WQReferal: Referrer cannot be sender address'
         );
-        Account storage userAccount = accounts[msg.sender];
         require(
-            userAccount.referrer == address(0),
+            accounts[msg.sender].referrer == address(0),
             'WQReferal: Address is already registered'
         );
-        Account storage parentAccount = accounts[referrer];
-        userAccount.referrer = referrer;
-        parentAccount.referredCount++;
+        accounts[msg.sender].referrer = referrer;
+        accounts[referrer].referredCount++;
 
         emit RegisteredReferer(msg.sender, referrer);
-        return true;
     }
 
     /**
@@ -96,12 +93,12 @@ contract WQReferal is
      * @dev Pay referal to registered referrer
      */
 
-    function payReferral() external nonReentrant {
+    function payReferral(address referee) external nonReentrant {
         require(
             token.balanceOf(address(this)) > referralBonus,
             'WQReferal: Balance on contract too low'
         );
-        Account storage userAccount = accounts[msg.sender];
+        Account storage userAccount = accounts[referee];
         require(!userAccount.paid, 'WQReferal: Bonus already paid');
         require(
             userAccount.referrer != address(0),
@@ -110,6 +107,6 @@ contract WQReferal is
         userAccount.paid = true;
         accounts[userAccount.referrer].reward += referralBonus;
         token.safeTransfer(userAccount.referrer, referralBonus);
-        emit PaidReferral(msg.sender, userAccount.referrer, referralBonus);
+        emit PaidReferral(referee, userAccount.referrer, referralBonus);
     }
 }
