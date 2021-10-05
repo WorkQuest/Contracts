@@ -31,6 +31,9 @@ contract WorkQuestFactory is
     /// @notice Address of pension fund contract
     address payable public pensionFund;
 
+    /// @notice address of referral
+    address payable public referral;
+
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
 
@@ -59,7 +62,8 @@ contract WorkQuestFactory is
     function initialize(
         uint256 _fee,
         address payable _feeReceiver,
-        address payable _pensionFund
+        address payable _pensionFund, 
+        address payable _referral
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -67,6 +71,7 @@ contract WorkQuestFactory is
         fee = _fee;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
+        referral = _referral;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
@@ -121,7 +126,8 @@ contract WorkQuestFactory is
                 feeReceiver,
                 pensionFund,
                 payable(msg.sender),
-                getArbiter()
+                getArbiter(),
+                referral
             )
         );
         workquests[msg.sender].push(workquest);

@@ -37,11 +37,6 @@ contract WQReferral is
         bool paid;
     }
 
-    struct AffiliatInfo{ 
-        uint256 reward;
-        uint256 numOfReferrals;
-    }
-
     IERC20Upgradeable token;
     uint256 referralBonus;
     /// @notice address of price oracle 
@@ -49,7 +44,7 @@ contract WQReferral is
 
     mapping(address => Account) public referrals;
 
-    event RegisteredReferer(address referral, address affiliat);
+    event RegisteredAffiliat(address referral, address affiliat);
     event PaidReferral(address referral, address affiliat, uint256 amount);
 
     function initialize(
@@ -79,11 +74,11 @@ contract WQReferral is
      */
     function addAffiliat(address _affiliat) external {
         require(
-            affiliat != address(0),
+            _affiliat != address(0),
             'WQReferral: affiliat cannot be zero address'
         );
         require(
-            affiliat != msg.sender,
+            _affiliat != msg.sender,
             'WQReferral: affiliat cannot be sender address'
         );
         require(
@@ -91,9 +86,9 @@ contract WQReferral is
             'WQReferral: Address is already registered'
         );
         referrals[msg.sender].affiliat = _affiliat;
-        referrals[affiliat].referredCount++;
+        referrals[_affiliat].referredCount++;
 
-        emit RegisteredAffiliat(msg.sender, affiliat);
+        emit RegisteredAffiliat(msg.sender, _affiliat);
     }
 
     /**
@@ -107,8 +102,10 @@ contract WQReferral is
      * @dev Pay referral to registered affiliat
      */
     function payReferral(address referral) external nonReentrant {
+        uint256 tokenPrice = WQPriceOracle(oracle).getTokenPriceUSD();
+        uint256 bonusAmount = referralBonus / tokenPrice; 
         require(
-            token.balanceOf(address(this)) > referralBonus,
+            token.balanceOf(address(this)) > bonusAmount,
             'WQReferral: Balance on contract too low'
         );
         Account storage userAccount = referrals[referral];
@@ -118,9 +115,9 @@ contract WQReferral is
             'WQReferral: Address is not registered'
         );
         userAccount.paid = true;
-        referrals[userAccount.affiliat].reward += referralBonus;
-        token.safeTransfer(userAccount.affiliat, referralBonus);
-        emit PaidReferral(referral, userAccount.affiliat, referralBonus);
+        referrals[userAccount.affiliat].reward += bonusAmount;
+        token.safeTransfer(userAccount.affiliat, bonusAmount);
+        emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
     }
 
 

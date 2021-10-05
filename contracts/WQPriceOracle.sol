@@ -3,6 +3,11 @@ pragma solidity =0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract PriceOracle is AccessControl {
+contract WQPriceOracle is AccessControl {
     
+    function getTokenPriceUSD() external returns (uint256 price_) {         // ATTENTION it's just for testing 
+        price_ = 228;
+        return price_;
+    }
+
 }
