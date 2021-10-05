@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-// import "@openzeppelin/contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-
-contract WQBridgeToken is ERC20Pausable, AccessControl {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+contract WQBridgeToken is
+    Initializable,
+    ERC20PausableUpgradeable,
+    AccessControlUpgradeable
+{
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
+    bytes32 public constant BURNER_ROLE = keccak256('BURNER_ROLE');
+    bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     address private owner;
 
@@ -19,12 +22,19 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     event AddedBlockList(address user);
     event RemovedBlockList(address user);
 
-    constructor (string memory name, string memory symbol) ERC20(name, symbol){      // TO_ASK is it right ???  
+    function initialize(string memory name, string memory symbol)
+        external
+        initializer
+    {
+        __ERC20_init(name, symbol);
+        __ERC20Pausable_init();
+        __AccessControl_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(PAUSER_ROLE, ADMIN_ROLE);
+        owner = msg.sender;
     }
 
     /**
@@ -46,7 +56,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function mint(address to, uint256 amount) external {
         require(
             hasRole(MINTER_ROLE, msg.sender),
-            "You should have a bridge role"
+            'BridgeToken: You should have a minter role'
         );
         _mint(to, amount);
     }
@@ -62,7 +72,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function burn(address from, uint256 amount) external {
         require(
             hasRole(BURNER_ROLE, msg.sender),
-            "You should have a bridge role"
+            'BridgeToken: You should have a burner role'
         );
         _burn(from, amount);
     }
@@ -73,7 +83,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function pause() external {
         require(
             hasRole(PAUSER_ROLE, msg.sender),
-            "BridgeToken: You should have a pauser role"
+            'BridgeToken: You should have a pauser role'
         );
         super._pause();
     }
@@ -84,7 +94,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function unpause() external {
         require(
             hasRole(PAUSER_ROLE, msg.sender),
-            "BridgeToken: You should have a pauser role"
+            'BridgeToken: You should have a pauser role'
         );
         super._unpause();
     }
@@ -99,7 +109,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function addBlockList(address user) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "BridgeToken: You should have an admin role"
+            'BridgeToken: You should have an admin role'
         );
         isBlockListed[user] = true;
         emit AddedBlockList(user);
@@ -112,7 +122,7 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
     function removeBlockList(address user) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "BridgeToken: You should have an admin role"
+            'BridgeToken: You should have an admin role'
         );
         isBlockListed[user] = false;
         emit RemovedBlockList(user);
@@ -129,8 +139,8 @@ contract WQBridgeToken is ERC20Pausable, AccessControl {
         address to,
         uint256 amount
     ) internal virtual override {
-        ERC20Pausable._beforeTokenTransfer(from, to, amount);
-        require(isBlockListed[from] == false, "Address from is blocklisted");
-        require(isBlockListed[to] == false, "Address to is blocklisted");
+        ERC20PausableUpgradeable._beforeTokenTransfer(from, to, amount);
+        require(isBlockListed[from] == false, 'Address from is blocklisted');
+        require(isBlockListed[to] == false, 'Address to is blocklisted');
     }
 }

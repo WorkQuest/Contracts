@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./WorkQuest.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract WorkQuestFactory is AccessControl {
-    bytes32 public ADMIN_ROLE = keccak256("ADMIN_ROLE");
+import './WorkQuest.sol';
+
+contract WorkQuestFactory is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     struct ArbiterInfo {
         uint256 idx;
@@ -41,7 +49,6 @@ contract WorkQuestFactory is AccessControl {
         address workquest,
         uint256 createdAt
     );
-    bool private initialized;
 
     /**
      * @notice Create new WorkQuestFactory contract
@@ -49,19 +56,27 @@ contract WorkQuestFactory is AccessControl {
      * @param _feeReceiver Address of reciever of fee
      * @param _pensionFund Address of pension fund contract
      */
-    function initialize (
+    function initialize(
         uint256 _fee,
         address payable _feeReceiver,
         address payable _pensionFund
-    ) public {
-        require(!initialized, "Contract WorkQuestFactory has already been initialized");
-        initialized = true;
+    ) public initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
         fee = _fee;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @notice Check msg.sender is admin role
@@ -69,7 +84,7 @@ contract WorkQuestFactory is AccessControl {
     modifier onlyAdmin() {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WorkQuestFactory: You should have an admin role"
+            'WorkQuestFactory: You should have an admin role'
         );
         _;
     }

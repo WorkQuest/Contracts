@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+<<<<<<< HEAD
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WQPensionFund.sol";
 import "./WQReferal.sol";
+=======
+import '@openzeppelin/contracts/access/AccessControl.sol';
+import './WQPensionFund.sol';
+>>>>>>> develop
 
-contract WorkQuest is AccessControl{
-
-    string constant errMsg = "WorkQuest: Access denied or invalid status";
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+contract WorkQuest is AccessControl {
+    string constant errMsg = 'WorkQuest: Access denied or invalid status';
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     /**
      * @notice Job offer statuses
@@ -25,17 +29,21 @@ contract WorkQuest is AccessControl{
     }
 
     /// @notice Fee coefficient of workquest
-    uint256 public immutable fee;
+    uint256 public fee;
     /// @notice Fee receiver address
     address payable public feeReceiver;
     /// @notice Pension wallet factory contract address
-    address payable public immutable pensionFund;
+    address payable public pensionFund;
     /// @notice Address of employer
-    address payable public immutable employer;
+    address payable public employer;
     /// @notice Address of arbiter
+<<<<<<< HEAD
     address payable public immutable arbiter;
     /// @notice Address of referal contract
     address payable public immutable referal; 
+=======
+    address payable public arbiter;
+>>>>>>> develop
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
@@ -93,6 +101,8 @@ contract WorkQuest is AccessControl{
 
     /// @notice Event emitted when
     event ArbitrationRejectWork();
+
+    bool private initialized;
 
     /**
      * @notice Create new WorkQuest contract
@@ -174,7 +184,7 @@ contract WorkQuest is AccessControl{
     receive() external payable {
         require(status == JobStatus.New, errMsg);
         uint256 comission = (cost * fee) / 1e18;
-        require(msg.value >= cost + comission, "WorkQuest: Insuffience amount");
+        require(msg.value >= cost + comission, 'WorkQuest: Insuffience amount');
         status = JobStatus.Published;
         if (msg.value > cost + comission) {
             payable(msg.sender).transfer(msg.value - cost - comission);
@@ -192,7 +202,7 @@ contract WorkQuest is AccessControl{
             msg.sender == employer && status == JobStatus.Published,
             errMsg
         );
-        require(_worker != address(0), "WorkQuest: Invalid address");
+        require(_worker != address(0), 'WorkQuest: Invalid address');
         status = JobStatus.WaitWorker;
         worker = _worker;
         emit Assigned(worker);
@@ -291,7 +301,7 @@ contract WorkQuest is AccessControl{
         );
         require(
             _forfeit <= cost,
-            "WorkQuest: forfeit must be least or equal job cost"
+            'WorkQuest: forfeit must be least or equal job cost'
         );
         status = JobStatus.Finished;
         forfeit = _forfeit;
@@ -328,7 +338,10 @@ contract WorkQuest is AccessControl{
     }
 
     function setFeeReceiver(address payable _feeReceiver) external {
-        require(hasRole(ADMIN_ROLE, msg.sender), "WorkQuest: You don't have an admin role");
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            "WorkQuest: You don't have an admin role"
+        );
         feeReceiver = _feeReceiver;
     }
 

@@ -27,8 +27,8 @@ contract WQInsurance is AccessControl{
     /// @dev Seconds in year
     uint256 constant YEAR = 31536000;
 
-    uint256 public immutable contributionPeriod;
-    uint256 public immutable contributionAmount;
+    uint256 public contributionPeriod;
+    uint256 public contributionAmount;
 
     address[] public members;
     mapping(address => MemberInfo) public memberInfo;

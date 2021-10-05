@@ -21,8 +21,8 @@ task("set_dao_as_admin", "set DAOVoting contract as admin for all contracts")
         if (!process.env.STAKING) {
             throw new Error(`Please set your STAKING in a .env-${network} file`);
         }
-        if (!process.env.WORK_QUEST_TOKEN) {
-            throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
+        if (!process.env.WQT_TOKEN) {
+            throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
         }
         if (!process.env.DAO_BALLOT) {
             throw new Error(`Please set your DAO_BALLOT in a .env-${network} file`);
@@ -33,7 +33,7 @@ task("set_dao_as_admin", "set DAOVoting contract as admin for all contracts")
         const WQBridge = await hre.ethers.getContractAt("WQBridge", process.env.BRIDGE);
         const WQPensionFund = await hre.ethers.getContractAt("WQPensionFund", process.env.PENSION_FUND);
         const WQStaking = await hre.ethers.getContractAt("WQStaking", process.env.STAKING);
-        const WQToken = await hre.ethers.getContractAt("WQToken", process.env.WORK_QUEST_TOKEN);
+        const WQToken = await hre.ethers.getContractAt("WQToken", process.env.WQT_TOKEN);
         const WQDAOVoting = await hre.ethers.getContractAt("WQDAOVoting", process.env.DAO_BALLOT);
 
         const ADMIN_ROLE = await WQFactory.ADMIN_ROLE();

@@ -11,9 +11,8 @@ async function main() {
 
     const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-    for (const k in envConfig) {
-        process.env[k] = envConfig[k]
-    }
+    for (const k in envConfig) {process.env[k] = envConfig[k]}
+
     if (!process.env.REWARD_TOTAL) {
         throw new Error(`Please set your REWARD_TOTAL in a .env-${network} file`);
     }

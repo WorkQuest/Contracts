@@ -1,14 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
+<<<<<<< HEAD
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./WQTInterface.sol";
 import "./WQPriceOracle.sol";
+=======
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+>>>>>>> develop
 
-contract WQReferal is AccessControl {
-    using SafeERC20 for IERC20;
+import './WQTInterface.sol';
+
+contract WQReferal is
+    Initializable,
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
+{
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     /**
      * @dev The struct of account information
@@ -24,9 +42,7 @@ contract WQReferal is AccessControl {
         bool paid;
     }
 
-    bool private _initialized;
-
-    WQTInterface token;
+    IERC20Upgradeable token;
     uint256 referralBonus;
     /// @notice address of price oracle 
     address public oracle; 
@@ -36,44 +52,56 @@ contract WQReferal is AccessControl {
     event RegisteredReferer(address referee, address referrer);
     event PaidReferral(address from, address to, uint256 amount);
 
-    function initialize(address _token, uint256 _referralBonus) external {
-        require(
-            !_initialized,
-            "WQReferal: Contract instance has already been initialized"
-        );
-        token = WQTInterface(_token);
+    function initialize(address _token, uint256 _referralBonus)
+        public
+        initializer
+    {
+        __AccessControl_init();
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
+
+        token = IERC20Upgradeable(_token);
         referralBonus = _referralBonus;
-        _initialized = true;
     }
 
+<<<<<<< HEAD
     /** @dev 
      */
     function addReferrer(address referrer) internal returns (bool) {
+=======
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
+
+    function addReferrer(address referrer) external {
+>>>>>>> develop
         require(
             referrer != address(0),
-            "WQReferal: Referrer cannot be zero address"
+            'WQReferal: Referrer cannot be zero address'
         );
         require(
             referrer != msg.sender,
-            "WQReferal: Referrer cannot be sender address"
+            'WQReferal: Referrer cannot be sender address'
         );
-        Account storage userAccount = accounts[msg.sender];
         require(
-            userAccount.referrer == address(0),
-            "WQReferal: Address is already registered"
+            accounts[msg.sender].referrer == address(0),
+            'WQReferal: Address is already registered'
         );
-        Account storage parentAccount = accounts[referrer];
-        userAccount.referrer = referrer;
-        parentAccount.referredCount++;
+        accounts[msg.sender].referrer = referrer;
+        accounts[referrer].referredCount++;
 
         emit RegisteredReferer(msg.sender, referrer);
-        return true;
     }
 
     /**
      * @dev Utils function for check whether an address has the referrer
      */
-    function hasReferrer(address addr) public view returns (bool) {
+    function hasReferrer(address addr) external view returns (bool) {
         return accounts[addr].referrer != address(0);
     }
 
@@ -81,6 +109,10 @@ contract WQReferal is AccessControl {
     /**
      * @dev Pay referal to registered referrer
      */
+<<<<<<< HEAD
+=======
+
+>>>>>>> develop
     function payReferral(address referee) external nonReentrant {
         require(
             token.balanceOf(address(this)) > referralBonus,

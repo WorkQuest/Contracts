@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./WQTInterface.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract WQDAOVoting is AccessControl {
-    string public constant name = "WorkQuest DAO Voting";
+import './WQTInterface.sol';
 
-    /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256(
-            "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
-        );
+contract WQDAOVoting is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
+    string public constant name = 'WorkQuest DAO Voting';
 
-    /// @notice The EIP-712 typehash for the ballot struct used by the contract
-    bytes32 public constant BALLOT_TYPEHASH =
-        keccak256("Ballot(uint256 proposalId,uint8 support)");
-
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant CHAIRPERSON_ROLE = keccak256("CHAIRPERSON_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant CHAIRPERSON_ROLE = keccak256('CHAIRPERSON_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     struct Proposal {
         //Unique id for looking up a proposal
@@ -69,10 +67,10 @@ contract WQDAOVoting is AccessControl {
     uint256 public proposalCount;
 
     // Minimum quantity of tokens for proposals
-    uint256 public proposalThreshold = 10000e18; //10,000
+    uint256 public proposalThreshold;
 
     // Minimum quantity of tokens for voting
-    uint256 public voteThreshold = 100e18; //100
+    uint256 public voteThreshold;
 
     //The address of the governance token
     WQTInterface public token;
@@ -102,22 +100,35 @@ contract WQDAOVoting is AccessControl {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint256 id);
 
-    bool private initialized;
-    
     /**
      * @notice Initializes the contract
      * @param chairPerson Chairperson address
      * @param _voteToken The address of the DAO token
      */
-    function initialize(address chairPerson, address _voteToken) public {
-        require(!initialized, "Contract WQDAOVoting has already been initialized");
-        initialized = true;
+    function initialize(address chairPerson, address _voteToken)
+        public
+        initializer
+    {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
+        proposalThreshold = 10000e18; //10,000
+        voteThreshold = 100e18; //100
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
         _setupRole(CHAIRPERSON_ROLE, chairPerson);
         _setRoleAdmin(CHAIRPERSON_ROLE, ADMIN_ROLE);
         token = WQTInterface(_voteToken);
-    } 
+    }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
+
     /**
      * @notice Function used to propose a new proposal. Sender must have delegates above the proposal threshold
      * @param _description String description of the proposal
@@ -131,7 +142,7 @@ contract WQDAOVoting is AccessControl {
     ) public returns (uint256) {
         require(
             token.balanceOf(msg.sender) > proposalThreshold,
-            "Proposer votes below proposal threshold"
+            'Proposer votes below proposal threshold'
         );
 
         Proposal storage proposal = proposals[proposalCount++];
@@ -181,7 +192,7 @@ contract WQDAOVoting is AccessControl {
         view
         returns (uint8 proposalState)
     {
-        require(proposalCount >= _proposalId, "Invalid proposal id");
+        require(proposalCount >= _proposalId, 'Invalid proposal id');
         if (proposals[_proposalId].active) return 2;
         else return voteResults[_proposalId].succeded ? 1 : 0;
     }
@@ -224,42 +235,6 @@ contract WQDAOVoting is AccessControl {
     }
 
     /**
-     * @notice Cast a vote for a proposal by signature
-     * @dev External function that accepts EIP-712 signatures for voting on proposals.
-     */
-    function castVoteBySig(
-        uint256 _proposalId,
-        bool _support,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public {
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                DOMAIN_TYPEHASH,
-                keccak256(bytes(name)),
-                block.chainid,
-                address(this)
-            )
-        );
-        bytes32 structHash = keccak256(
-            abi.encode(BALLOT_TYPEHASH, _proposalId, _support)
-        );
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, structHash)
-        );
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "Invalid signature");
-        emit VoteCast(
-            signatory,
-            _proposalId,
-            _support,
-            castVoteInternal(signatory, _proposalId, _support),
-            ""
-        );
-    }
-
-    /**
      * @notice Internal function that caries out voting logic
      * @param _voter The voter that is casting their vote
      * @param _proposalId The id of the proposal to vote on
@@ -273,16 +248,16 @@ contract WQDAOVoting is AccessControl {
     ) internal returns (uint256) {
         require(
             token.votePowerOf(msg.sender) > voteThreshold,
-            "Voter votes below vote threshold"
+            'Voter votes below vote threshold'
         );
-        require(proposalCount > _proposalId, "Invalid proposal id");
+        require(proposalCount > _proposalId, 'Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
         Receipt storage receipt = proposal.receipts[_voter];
-        require(proposal.active == true, "Voting is closed");
-        require(receipt.hasVoted == false, "Voter has already voted");
+        require(proposal.active == true, 'Voting is closed');
+        require(receipt.hasVoted == false, 'Voter has already voted');
         require(
             block.timestamp < proposal.proposalExpireTime,
-            "Proposal expired"
+            'Proposal expired'
         );
         uint256 votes = token.getVotes(_voter);
 
@@ -304,11 +279,11 @@ contract WQDAOVoting is AccessControl {
     function executeVoting(uint256 _proposalId) public {
         require(
             hasRole(CHAIRPERSON_ROLE, msg.sender),
-            "Caller is not a chairperson"
+            'Caller is not a chairperson'
         );
-        require(proposalCount > _proposalId, "Invalid proposal id");
+        require(proposalCount > _proposalId, 'Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
-        require(proposal.active == true, "Voting is closed");
+        require(proposal.active == true, 'Voting is closed');
         proposal.active = false;
         calcState(_proposalId);
         emit ProposalExecuted(_proposalId);
@@ -316,12 +291,12 @@ contract WQDAOVoting is AccessControl {
 
     function add256(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        require(c >= a, "addition overflow");
+        require(c >= a, 'addition overflow');
         return c;
     }
 
     function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "subtraction underflow");
+        require(b <= a, 'subtraction underflow');
         return a - b;
     }
 
@@ -332,7 +307,7 @@ contract WQDAOVoting is AccessControl {
     function changeVotingRules(uint256 _minimumQuorum, uint256 _votingPeriod)
         external
     {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Caller is not an admin");
+        require(hasRole(ADMIN_ROLE, msg.sender), 'Caller is not an admin');
         minimumQuorum = _minimumQuorum;
         votingPeriod = _votingPeriod;
     }

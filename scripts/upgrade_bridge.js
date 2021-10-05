@@ -1,7 +1,6 @@
 const { ethers, upgrades } = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
-const stringify = require('dotenv-stringify');
 
 async function main() {
   dotenv.config();
@@ -14,20 +13,14 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.DAO_CHAIR_PERSON) {
-    throw new Error(`Please set your DAO_CHAIR_PERSON in a .env-${network} file`);
-  }
   if (!process.env.WQT_TOKEN) {
     throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
   }
 
-  console.log("Deploying...");
-  const DAOBallot = await hre.ethers.getContractFactory("WQDAOVoting");
-  const dao_ballot = await upgrades.deployProxy(DAOBallot, [process.env.DAO_CHAIR_PERSON, process.env.WQT_TOKEN], { initializer: 'initialize'})
-  console.log("DAO Ballot has been deployed to:", dao_ballot.address);
-
-  envConfig["DAO_BALLOT"] = dao_ballot.address;
-  fs.writeFileSync(`.env-${network}`, stringify(envConfig));
+  console.log("Upgrade...");
+  const WQBridge = await ethers.getContractFactory("WQBridge");
+  const bridge = await upgrades.upgradeProxy(process.env.BRIDGE, WQBridge);
+  console.log("Bridge has been upgraded to:", bridge.address);
 }
 
 main()

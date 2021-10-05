@@ -7,20 +7,17 @@ async function main() {
   const accounts = await ethers.getSigners();
   const sender = accounts[0].address;
   console.log("Sender address: ", sender);
-
   const network = hre.network.name;
   const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-  for (const k in envConfig) {
-    process.env[k] = envConfig[k]
-  }
-  if (!process.env.WQT_TOKEN) {
-    throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
+  for (const k in envConfig) { process.env[k] = envConfig[k]; }
+  if (!process.env.LIQUIDITY_MINING) {
+    throw new Error(`Please set your LIQUIDITY_MINING in a .env-${network} file`);
   }
 
   console.log("Upgrade...");
-  const WQToken = await ethers.getContractFactory("WQToken");
-  const wqt_token = await upgrades.upgradeProxy(process.env.WQT_TOKEN, WQToken);
-  console.log("Token has been upgraded to:", wqt_token.address);
+  const WQLiquidityMining = await ethers.getContractFactory("WQLiquidityMining");
+  const mining = await upgrades.upgradeProxy(process.env.LIQUIDITY_MINING, WQLiquidityMining);
+  console.log("Token has been upgraded to:", mining.address);
 }
 
 main()
