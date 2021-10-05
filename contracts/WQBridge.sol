@@ -1,12 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/access/AccessControl.sol';
-import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import './WQBridgeTokenInterface.sol';
+import './WQBridgePool.sol';
 
-contract WQBridge is AccessControl {
-    using ECDSA for bytes32;
+contract WQBridge is
+    Initializable,
+    AccessControlUpgradeable,
+    PausableUpgradeable
+{
+    using ECDSAUpgradeable for bytes32;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Statuses of a swap
     enum State {
@@ -31,6 +41,7 @@ contract WQBridge is AccessControl {
         address token;
         bool enabled;
         bool native;
+        bool lockable;
     }
 
     /// @notice Admin role constant
@@ -40,9 +51,9 @@ contract WQBridge is AccessControl {
     bytes32 public constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
 
     /// @notice 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
-    uint256 public immutable chainId;
+    uint256 public chainId;
 
-    bool private _initialized;
+    address payable public pool;
 
     /// @notice List of enabled chain ID's
     mapping(uint256 => bool) public chains;
@@ -70,7 +81,8 @@ contract WQBridge is AccessControl {
         uint256 amount,
         uint256 chainFrom,
         uint256 chainTo,
-        uint256 nonce
+        uint256 nonce,
+        string symbol
     );
 
     /**
@@ -89,21 +101,23 @@ contract WQBridge is AccessControl {
         uint256 amount,
         uint256 chainFrom,
         uint256 chainTo,
-        uint256 nonce
+        uint256 nonce,
+        string symbol
     );
+
+    event Transferred(address token, address recipient, uint256 amount);
 
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    constructor(uint256 _chainId) {
-        // Grant the contract deployer the default admin role: it will be able
-        // to grant and revoke any roles
+    function initialize(uint256 _chainId, address payable _pool) external initializer {
+        __AccessControl_init();
+        __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-        // Sets `ADMIN_ROLE` as `VALIDATOR_ROLE`'s admin role.
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
-
-        chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC
+        chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?
+        pool = _pool;
     }
 
     /**
@@ -120,7 +134,7 @@ contract WQBridge is AccessControl {
         uint256 amount,
         address recipient,
         string memory symbol
-    ) external payable {
+    ) external payable whenNotPaused {
         require(chainTo != chainId, 'WorkQuest Bridge: Invalid chainTo id');
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
@@ -138,11 +152,18 @@ contract WQBridge is AccessControl {
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
-        if (token.native) {
+        if (token.lockable) {
+            IERC20Upgradeable(token.token).safeTransferFrom(
+                msg.sender,
+                pool,
+                amount
+            );
+        } else if (token.native) {
             require(
                 msg.value == amount,
                 'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
+            pool.transfer(amount);
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
@@ -153,7 +174,8 @@ contract WQBridge is AccessControl {
             amount,
             chainId,
             chainTo,
-            nonce
+            nonce,
+            symbol
         );
     }
 
@@ -177,11 +199,11 @@ contract WQBridge is AccessControl {
         bytes32 r,
         bytes32 s,
         string memory symbol
-    ) external {
+    ) external whenNotPaused {
         require(chainFrom != chainId, 'WorkQuest Bridge: Invalid chainFrom ID');
         require(
             chains[chainFrom],
-            'WorkQuest Bridge: ChainFrom ID is not allowed'
+            'WorkQuest Bridge: chainFrom ID is not allowed'
         );
         require(
             tokens[symbol].enabled,
@@ -212,8 +234,14 @@ contract WQBridge is AccessControl {
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
-        if (tokens[symbol].native) {
-            recipient.transfer(amount);
+        if (tokens[symbol].lockable) {
+            WQBridgePool(pool).transfer(
+                payable(msg.sender),
+                amount,
+                tokens[symbol].token
+            );
+        } else if (tokens[symbol].native) {
+            WQBridgePool(pool).transfer(payable(msg.sender), amount, address(0));
         } else {
             WQBridgeTokenInterface(tokens[symbol].token).mint(
                 recipient,
@@ -228,7 +256,8 @@ contract WQBridge is AccessControl {
             amount,
             chainFrom,
             chainId,
-            nonce
+            nonce,
+            symbol
         );
     }
 
@@ -245,12 +274,19 @@ contract WQBridge is AccessControl {
      * @param _chainId Id of chain
      * @param enabled True - enabled, false - disabled direction
      */
-    function updateChain(uint256 _chainId, bool enabled) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WorkQuest Bridge: Caller is not an admin'
-        );
+    function updateChain(uint256 _chainId, bool enabled)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         chains[_chainId] = enabled;
+    }
+
+    /**
+     * @notice Set address of pool
+     * @param _pool Address of pool
+     */
+    function updatePool(address payable _pool) external onlyRole(ADMIN_ROLE) {
+        pool = _pool;
     }
 
     /**
@@ -264,12 +300,9 @@ contract WQBridge is AccessControl {
         address token,
         bool enabled,
         bool native,
+        bool lockable,
         string memory symbol
-    ) public {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WorkQuest Bridge: Caller is not an admin'
-        );
+    ) public onlyRole(ADMIN_ROLE) {
         require(
             bytes(symbol).length > 0,
             'WorkQuest Bridge: Symbol length must be greater than 0'
@@ -277,7 +310,29 @@ contract WQBridge is AccessControl {
         tokens[symbol] = TokenSettings({
             token: token,
             enabled: enabled,
-            native: native
+            native: native,
+            lockable: lockable
         });
+    }
+
+    function pause() external onlyRole(ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(ADMIN_ROLE) {
+        _unpause();
+    }
+
+    function removeLiquidity(
+        address recipient,
+        uint256 amount,
+        address token
+    ) external onlyRole(ADMIN_ROLE) {
+        if (token != address(0)) {
+            IERC20Upgradeable(token).safeTransfer(recipient, amount);
+        } else {
+            payable(recipient).transfer(amount);
+        }
+        emit Transferred(token, recipient, amount);
     }
 }

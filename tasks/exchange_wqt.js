@@ -12,8 +12,8 @@ task("exchange_wqt", "Change old WQT tokens with new")
         if (!process.env.OLD_WQT_TOKEN) {
             throw new Error(`Please set your OLD_WQT_TOKEN in a .env-${network} file`);
         }
-        if (!process.env.WORK_QUEST_TOKEN) {
-            throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
+        if (!process.env.WQT_TOKEN) {
+            throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
         }
 
         console.log("Sender address: ", sender);
@@ -21,8 +21,10 @@ task("exchange_wqt", "Change old WQT tokens with new")
         const WQToken = await hre.ethers.getContractAt("WQToken", process.env.OLD_WQT_TOKEN);
         const WQTExchange = await hre.ethers.getContractAt("WQTExchange", process.env.WQT_EXCHANGE);
 
-        console.log("Try to exchange old token with new\n", "Old token address:", WQToken.address);
-        // await WQToken.approve(process.env.WQT_EXCHANGE, args.amount);
+        console.log(`Try to exchange old token with new on ${args.amount/1e18} amount`);
+        console.log("Old token address:", await WQTExchange.oldToken());
+        console.log("New token address:", await WQTExchange.newToken());
+        await WQToken.approve(process.env.WQT_EXCHANGE, args.amount);
         await WQTExchange.swap(args.amount, {gasLimit: 500000});
         console.log("Success!");
     });

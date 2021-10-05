@@ -14,16 +14,19 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.TOKEN_TOTAL_SUPPLY) {
-    throw new Error(`Please set your TOKEN_TOTAL_SUPPLY in a .env-${network} file`);
+  if (!process.env.DAO_CHAIR_PERSON) {
+    throw new Error(`Please set your DAO_CHAIR_PERSON in a .env-${network} file`);
+  }
+  if (!process.env.WQT_TOKEN) {
+    throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
   }
 
   console.log("Deploying...");
-  const WQToken = await ethers.getContractFactory("WQToken");
-  const wqt_token = await upgrades.deployProxy(WQToken, [process.env.TOKEN_TOTAL_SUPPLY], { initializer: 'initialize' });
-  console.log("Proxy of WQT has been deployed to:", wqt_token.address);
+  const DAOBallot = await hre.ethers.getContractFactory("WQDAOVoting");
+  const dao_ballot = await upgrades.deployProxy(DAOBallot, [process.env.DAO_CHAIR_PERSON, process.env.WQT_TOKEN], { initializer: 'initialize'})
+  console.log("DAO Ballot has been deployed to:", dao_ballot.address);
 
-  envConfig["WORK_QUEST_TOKEN"] = wqt_token.address;
+  envConfig["DAO_BALLOT"] = dao_ballot.address;
   fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 

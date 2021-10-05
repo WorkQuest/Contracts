@@ -1,4 +1,4 @@
-const hre = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
@@ -14,20 +14,16 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.DAO_CHAIR_PERSON) {
-    throw new Error(`Please set your DAO_CHAIR_PERSON in a .env-${network} file`);
-  }
-  if (!process.env.WORK_QUEST_TOKEN) {
-    throw new Error(`Please set your WORK_QUEST_TOKEN in a .env-${network} file`);
+  if (!process.env.TOKEN_TOTAL_SUPPLY) {
+    throw new Error(`Please set your TOKEN_TOTAL_SUPPLY in a .env-${network} file`);
   }
 
   console.log("Deploying...");
-  const DAOBallot = await hre.ethers.getContractFactory("WQDAOVote");
-  const dao_ballot = await DAOBallot.deploy(process.env.DAO_CHAIR_PERSON, process.env.WORK_QUEST_TOKEN);
-  await dao_ballot.deployed();
-  console.log("DAO Ballot has been deployed to:", dao_ballot.address);
+  const WQToken = await ethers.getContractFactory("WQToken");
+  const wqt_token = await upgrades.deployProxy(WQToken, [process.env.TOKEN_TOTAL_SUPPLY], { initializer: 'initialize' });
+  console.log("Proxy of WQT has been deployed to:", wqt_token.address);
 
-  envConfig["DAO_BALLOT"] = dao_ballot.address;
+  envConfig["WQT_TOKEN"] = wqt_token.address;
   fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 

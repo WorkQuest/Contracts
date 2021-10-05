@@ -1,4 +1,4 @@
-const hre = require("hardhat");
+const {hre, ethers, upgrades} = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
@@ -24,8 +24,7 @@ async function main() {
 
   console.log("Deploying...");
   const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
-  const pension_fund = await PensionFund.deploy(process.env.PENSION_LOCK_TIME, process.env.PENSION_DEFAULT_FEE);
-  await pension_fund.deployed();
+  const pension_fund = await upgrades.deployProxy(PensionFund, [process.env.PENSION_LOCK_TIME, process.env.PENSION_DEFAULT_FEE], { initializer: 'initialize'}) 
   console.log("PensionFund has been deployed to:", pension_fund.address);
 
   envConfig["PENSION_FUND"] = pension_fund.address;

@@ -27,8 +27,8 @@ contract WQInsurance is AccessControl{
     /// @dev Seconds in year
     uint256 constant YEAR = 31536000;
 
-    uint256 public immutable contributionPeriod;
-    uint256 public immutable contributionAmount;
+    uint256 public contributionPeriod;
+    uint256 public contributionAmount;
 
     address[] public members;
     mapping(address => MemberInfo) public memberInfo;
@@ -53,10 +53,16 @@ contract WQInsurance is AccessControl{
 
     event PaymentExecuted(uint256 timestamp, uint256 amount, address user);
 
-    /**
+    
+    /** @notice Initialize the contract
      *
+     *  @param _contributionPeriod how often users pay for insurance
+     *  @param _contributionAmount amount of insurance 
      */
-    constructor(uint256 _contributionPeriod, uint256 _contributionAmount) {
+    constructor(
+        uint256 _contributionPeriod,
+        uint256 _contributionAmount
+     ) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);

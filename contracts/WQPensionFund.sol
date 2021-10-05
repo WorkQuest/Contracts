@@ -2,14 +2,25 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./WQFundInterface.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract WQPensionFund is WQFundInterface, AccessControl {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant BORROWER_ROLE = keccak256("BORROWER_ROLE");
+import './WQFundInterface.sol';
 
-    uint256 public immutable lockTime;
+contract WQPensionFund is
+    WQFundInterface,
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+
+    // uint256 public immutable lockTime;    // ATTENTION change to just public because it's not possible to write
+    //           in initialize() if upgradeable contract is wanted
+    uint256 public lockTime;
     uint256 public defaultFee;
     uint256 public contributed;
     uint256 public borrowed;
@@ -34,10 +45,30 @@ contract WQPensionFund is WQFundInterface, AccessControl {
     /// @notice Pension wallet info of worker
     mapping(address => PensionWallet) public wallets;
 
-    constructor(uint256 _lockTime, uint256 _defaultFee) {
+    /**
+     * @notice initialize the contract
+     */
+    function initialize(uint256 _lockTime, uint256 _defaultFee)
+        public
+        initializer
+    {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+
         lockTime = _lockTime;
         defaultFee = _defaultFee;
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @notice Contribute native moneys to contract on 3 years
@@ -63,7 +94,7 @@ contract WQPensionFund is WQFundInterface, AccessControl {
      * @param amount Amount of withdrawing funds
      */
     function withdraw(uint256 amount) external {
-        require(!_entered, "WQPension: Reentrancy guard");
+        require(!_entered, 'WQPension: Reentrancy guard');
         _entered = true;
         PensionWallet storage wallet = wallets[msg.sender];
         require(block.timestamp >= wallet.unlockDate);
@@ -93,7 +124,7 @@ contract WQPensionFund is WQFundInterface, AccessControl {
     function updateDefaultFee(uint256 _defaultFee) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WQPension: You are not have an admin role"
+            'WQPension: You are not have an admin role'
         );
         defaultFee = _defaultFee;
     }
@@ -103,7 +134,7 @@ contract WQPensionFund is WQFundInterface, AccessControl {
     }
 
     function borrow(uint256 amount) external override {
-        require(!_entered, "WQPension: Reentrancy guard");
+        require(!_entered, 'WQPension: Reentrancy guard');
         _entered = true;
         require(
             hasRole(BORROWER_ROLE, msg.sender),
@@ -111,7 +142,7 @@ contract WQPensionFund is WQFundInterface, AccessControl {
         );
         require(
             amount <= contributed - borrowed,
-            "WQPension: Insuffience amount"
+            'WQPension: Insuffience amount'
         );
         borrowed += amount;
         payable(msg.sender).transfer(amount);

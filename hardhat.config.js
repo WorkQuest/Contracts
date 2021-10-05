@@ -1,7 +1,12 @@
-require('@openzeppelin/hardhat-upgrades');
 require("@nomiclabs/hardhat-waffle");
+require('@nomiclabs/hardhat-ethers')
+require('@nomiclabs/hardhat-web3')
+require('solidity-coverage')
+require('hardhat-docgen')
+require("@nomiclabs/hardhat-etherscan")
+require('@openzeppelin/hardhat-upgrades')
 require('./tasks');
-require('hardhat-docgen');
+
 require('dotenv').config();
 
 const chainIds = {
@@ -34,7 +39,7 @@ function createNetworkConfig(network) {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 50000000000,
+    gasPrice: 80000000000,
     url: url
   };
 }
@@ -52,15 +57,17 @@ module.exports = {
       chainId: 20210811
     },
     bsctestnet: {
-      url: "https://data-seed-prebsc-2-s1.binance.org:8545",
+      url: "https://data-seed-prebsc-2-s2.binance.org:8545",
       chainId: 97,
-      gasPrice: 20000000000,
+      gas: "auto",
+      gasPrice: 10000000000,
       accounts: { mnemonic: mnemonic }
     },
     bscmainnet: {
       url: "https://bsc-dataseed.binance.org/",
       chainId: 56,
-      gasPrice: 20000000000,
+      gas: "auto",
+      gasPrice: 10000000000,
       accounts: { mnemonic: mnemonic }
     },
     mainnet: createNetworkConfig('mainnet'),
@@ -81,6 +88,9 @@ module.exports = {
         runs: 200
       }
     }
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
   mocha: {
     timeout: 20000

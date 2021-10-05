@@ -14,19 +14,19 @@ async function main() {
   for (const k in envConfig) { process.env[k] = envConfig[k] }
 
   if (!process.env.LIQUIDITY_MINING_REWARD_TOTAL) {
-    throw new Error(`Please set your REWARD_TOTAL in a .env-${network} file`);
+    throw new Error(`Please set your LIQUIDITY_MINING_REWARD_TOTAL in a .env-${network} file`);
   }
   if (!process.env.LIQUIDITY_MINING_START_TIME) {
-    throw new Error(`Please set your START_TIME in a .env-${network} file`);
+    throw new Error(`Please set your LIQUIDITY_MINING_START_TIME in a .env-${network} file`);
   }
   if (!process.env.LIQUIDITY_MINING_DISTRIBUTION_TIME) {
-    throw new Error(`Please set your DISTRIBUTION_TIME in a .env-${network} file`);
+    throw new Error(`Please set your LIQUIDITY_MINING_DISTRIBUTION_TIME in a .env-${network} file`);
   }
   if (!process.env.LIQUIDITY_MINING_REWARD_TOKEN) {
-    throw new Error(`Please set your REWARD_TOKEN in a .env-${network} file`);
+    throw new Error(`Please set your LIQUIDITY_MINING_REWARD_TOKEN in a .env-${network} file`);
   }
   if (!process.env.LIQUIDITY_MINING_STAKE_TOKEN) {
-    throw new Error(`Please set your STAKE_TOKEN in a .env-${network} file`);
+    throw new Error(`Please set your LIQUIDITY_MINING_STAKE_TOKEN in a .env-${network} file`);
   }
 
   console.log("Deploying...");
@@ -40,7 +40,7 @@ async function main() {
       process.env.LIQUIDITY_MINING_REWARD_TOKEN,
       process.env.LIQUIDITY_MINING_STAKE_TOKEN
     ],
-    { initializer: 'initialize' }
+    { initializer: 'initialize', kind: 'uups' }
   );
   console.log("Proxy of liquidity mining has been deployed to:", mining.address);
 

@@ -1,4 +1,4 @@
-const hre = require("hardhat");
+const {hre, ethers, upgrades} = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
@@ -26,7 +26,10 @@ async function main() {
 
   console.log("Deploying...");
   const WorkQuestFactory = await hre.ethers.getContractFactory("WorkQuestFactory");
-  const work_quest_factory = await WorkQuestFactory.deploy(process.env.WORKQUEST_FEE, process.env.WORKQUEST_FEE_RECEIVER, process.env.PENSION_FUND);
+  const work_quest_factory = await WorkQuestFactory.deploy(
+    process.env.WORKQUEST_FEE,
+    process.env.WORKQUEST_FEE_RECEIVER,
+    process.env.PENSION_FUND);
   await work_quest_factory.deployed();
   console.log("WorkQuestFactory has been deployed to:", work_quest_factory.address);
 

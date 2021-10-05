@@ -18,9 +18,9 @@ async function main() {
   }
 
   console.log("Upgrade...");
-  const WQToken = await ethers.getContractFactory("WQToken");
-  const wqt_token = await upgrades.upgradeProxy(process.env.WQT_TOKEN, WQToken);
-  console.log("Token has been upgraded to:", wqt_token.address);
+  const WQBridge = await ethers.getContractFactory("WQBridge");
+  const bridge = await upgrades.upgradeProxy(process.env.BRIDGE, WQBridge);
+  console.log("Bridge has been upgraded to:", bridge.address);
 }
 
 main()
