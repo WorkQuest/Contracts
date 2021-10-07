@@ -50,27 +50,50 @@ let arbiter;
 let feeReceiver;
 let work_quest_factory;
 let work_quest;
+let token;
+let affiliat;
 
 describe("Work Quest test", () => {
   let call_flow;
+  const twentyWQT = parseEther("20");
+  const totalSupplyOfWQToken = parseEther("1000000000");
+  const zero = parseEther("0");
+  const dateNow = Math.floor(Date.now / 1000); 
+  let deadline = ethers.BigNumber.from("9999999999");
 
   beforeEach(async () => {
     require('dotenv').config();
-    [work_quest_owner, employer, worker, arbiter, feeReceiver] = await ethers.getSigners();
+    [work_quest_owner, employer, worker, arbiter, feeReceiver, affiliat] = await ethers.getSigners();
 
     const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
     const pension_fund = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE]);
     await pension_fund.deployed();
 
+    
+    const WQPriceOracleContract = await hre.ethers.getContractFactory("WQPriceOracle");
+    let WQPriceOracle = await WQPriceOracleContract.deploy();
+    await WQPriceOracle.deployed();
+    
+    const WQToken = await ethers.getContractFactory('WQToken')
+    token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], {
+      initializer: 'initialize',
+    })
+    
+    const WQReferralContract = await hre.ethers.getContractFactory("WQReferral");
+    let WQReferral = await upgrades.deployProxy(WQReferralContract, [token.address, WQPriceOracle.address, twentyWQT], { initializer: 'initialize' });
+    
+    
     const WorkQuestFactory = await hre.ethers.getContractFactory("WorkQuestFactory");
-    work_quest_factory = await upgrades.deployProxy(WorkQuestFactory, [WORKQUEST_FEE, feeReceiver.address, pension_fund.address]);
+    work_quest_factory = await upgrades.deployProxy(WorkQuestFactory, [WORKQUEST_FEE, feeReceiver.address, pension_fund.address, WQReferral.address]);
     await work_quest_factory.deployed();
-
+    
     await work_quest_factory.updateArbiter(arbiter.address, true);
-
-    await work_quest_factory.connect(employer).newWorkQuest(job_hash, cost, 0);
+    
+    await work_quest_factory.connect(employer).newWorkQuest(job_hash, cost, deadline);
+    
     let work_quest_address = (await work_quest_factory.getWorkQuests(employer.address))[0];
     work_quest = await hre.ethers.getContractAt("WorkQuest", work_quest_address);
+    await work_quest.deployed();
 
     call_flow = [
       { func: web3.eth.sendTransaction, args: [{ from: employer.address, to: work_quest.address, value: cost_comission }] },
@@ -106,35 +129,39 @@ describe("Work Quest test", () => {
 
   describe("New job", () => {
     it("Create new job: success", async () => {
-      //New job
-      let info = await work_quest.connect(employer).getInfo();
-      expect(info[0]).to.be.equal(job_hash);
-      expect(info[1]).to.be.equal(cost);
-      expect(info[2]).to.be.equal(0);
-      expect(info[3]).to.be.equal(employer.address);
-      expect(info[4]).to.be.equal(nullstr);
-      expect(info[5]).to.be.equal(arbiter.address);
-      expect(info[6]).to.be.equal(JobStatus.New);
+      // New job
+       let info = await work_quest.connect(employer).getInfo();
+       expect(info[0]).to.be.equal(job_hash);
+       expect(info[1]).to.be.equal(cost);
+       expect(info[2]).to.be.equal(zero);
+       expect(info[3]).to.be.equal(employer.address);
+       expect(info[4]).to.be.equal(nullstr);
+       expect(info[5]).to.be.equal(arbiter.address);
+       expect(info[6]).to.be.equal(JobStatus.New);
+       expect(info[7]).to.be.equal(deadline);
     });
   });
 
   describe("Publish job", () => {
     it("Publish job: success", async () => {
-      await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
+      await employer.sendTransaction({
+        to: work_quest.address,
+        value: cost_comission
+      });
+
       let info = await work_quest.connect(employer).getInfo();
       expect(info[6]).to.be.equal(JobStatus.Published);
     });
 
     it("Publish job from other statuses: fail", async () => {
-      for (let val of call_flow) {
-        await val.func(...val.args);
-        try {
-          await call_flow[setStatus.Published].func(...call_flow[setStatus.Published].args);
-          throw new Error('Not reverted');
-        } catch (e) {
-          await expect(e.message).to.include(acces_denied_err);
-        }
-      }
+      expect( 
+        work_quest.connect(employer).assignJob(worker.address)
+      ).to.be.revertedWith(acces_denied_err);
+      
+      // await employer.sendTransaction({
+      //   to: work_quest.address,
+      //   value: cost_comission
+      // });
     });
   });
 
@@ -148,7 +175,7 @@ describe("Work Quest test", () => {
       let info = await work_quest.connect(employer).getInfo();
       expect(info[0]).to.be.equal(job_hash);
       expect(info[1]).to.be.equal(cost);
-      expect(info[2]).to.be.equal(0);
+      expect(info[2]).to.be.equal(zero);
       expect(info[3]).to.be.equal(employer.address);
       expect(info[4]).to.be.equal(worker.address);
       expect(info[6]).to.be.equal(JobStatus.WaitWorker);
@@ -645,5 +672,69 @@ describe("Work Quest test", () => {
         await expect(e.message).to.include(acces_denied_err);
       }
     });
+  });
+
+  describe('Testing referal contract', () => {
+
+    it("Add affiliat for worker, revert 1: if affiliat is zero", () => {
+      expect(
+        WQReferral.addAffiliat(nullstr)
+      ).to.be.revertedWith(
+        'WQReferral: affiliat cannot be zero address'
+      );
+    });
+
+    it("Add affiliat for worker, revert 2: if affiliat is msg.sender", () => {
+      expect(
+        WQReferral.connect(worker).addAffiliat(worker)
+      ).to.be.revertedWith(
+        'WQReferral: affiliat cannot be sender address'
+      );
+    });
+    
+    it("Add affiliat for worker, revert 3: if referal has got affiliat yet", () => {
+      WQReferral.connect(worker).addAffiliat(affiliat);
+      expect(
+        WQReferral.connect(worker).addAffiliat(affiliat)
+      ).to.be.revertedWith(
+        'WQReferral: Address is already registered'
+      );
+    });
+    
+    it("Add affiliat for worker, normal operation", () => {
+      WQReferral.connect(worker).addAffiliat(affiliat);
+      expect(WQReferral.hasreferal(worker)).to.equal(true);
+    });
+
+    it("PayRefferal, revert 1: if Balance on contract is too low", () => {
+      expect(
+        WQReferral.connect(employer).payReferral(worker)
+      ).to.be.revertedWith(
+        'WQReferral: Balance on contract too low'
+      )
+    });
+
+    it("PayRefferal, revert 2: if Bonus is alresdy paid", () => {
+      expect(
+        WQReferral.connect(employer).payReferral(worker)
+      ).to.be.revertedWith(
+        "WQReferral: Bonus already paid"
+      )
+    });
+
+    it("PayRefferal, revert 3: if refferal hasn't got affiliat", () => {
+      expect(
+        WQReferral.connect(employer).payReferral(worker)
+      ).to.be.revertedWith(
+        'WQReferral: Address is not registered'
+      )
+
+    });
+
+    it("PayRefferal, normal operation", () => {
+      WQReferral.connect(employer).payReferral(worker);
+
+    });
+
   });
 });

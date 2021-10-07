@@ -350,7 +350,9 @@ contract WorkQuest is AccessControl {
         if (forfeit > 0) {
             employer.transfer(forfeit);
         }
-        WQReferral(referal).payReferral(msg.sender);
+        if (WQReferral(referal).hasAffiliat(msg.sender)) {
+            WQReferral(referal).payReferral(msg.sender);
+        }
         feeReceiver.transfer(comission);
     }
 }
