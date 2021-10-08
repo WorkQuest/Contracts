@@ -7,10 +7,7 @@ interface WQTInterface {
         view
         returns (uint256);
 
-    function getVotes(address account)
-        external
-        view
-        returns (uint256);
+    function getVotes(address account) external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);
 

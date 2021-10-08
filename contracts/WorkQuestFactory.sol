@@ -62,7 +62,7 @@ contract WorkQuestFactory is
     function initialize(
         uint256 _fee,
         address payable _feeReceiver,
-        address payable _pensionFund, 
+        address payable _pensionFund,
         address payable _referral
     ) public initializer {
         __AccessControl_init();
@@ -176,10 +176,7 @@ contract WorkQuestFactory is
      * @notice Update address of refferal contract
      * @param _referral  Address of refferal contract
      */
-    function updateRefferal(address payable _referral) 
-        external
-        onlyAdmin
-    {
+    function updateRefferal(address payable _referral) external onlyAdmin {
         referral = _referral;
     }
 

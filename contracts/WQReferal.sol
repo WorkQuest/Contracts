@@ -8,8 +8,8 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-import "./WQTInterface.sol";
-import "./WQPriceOracle.sol";
+import './WQTInterface.sol';
+import './WQPriceOracle.sol';
 
 contract WQReferral is
     Initializable,
@@ -22,8 +22,8 @@ contract WQReferral is
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
-    /// @notice referral - someone who done job and paid to affiliat 
-    /// @notice affiliat - person who get reward from referrals  
+    /// @notice referral - someone who done job and paid to affiliat
+    /// @notice affiliat - person who get reward from referrals
     /**
      * @dev The struct of account information
      * @param affiliat The affiliat addresss
@@ -40,8 +40,8 @@ contract WQReferral is
 
     IERC20Upgradeable token;
     uint256 referralBonus;
-    /// @notice address of price oracle 
-    address public oracle; 
+    /// @notice address of price oracle
+    address public oracle;
 
     mapping(address => Account) public referrals;
 
@@ -51,7 +51,7 @@ contract WQReferral is
     function initialize(
         address _token,
         address _oracle,
-        uint256 _referralBonus 
+        uint256 _referralBonus
     ) public initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -72,7 +72,7 @@ contract WQReferral is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    /** @dev 
+    /** @dev
      */
     function addAffiliat(address _affiliat) external {
         require(
@@ -96,7 +96,11 @@ contract WQReferral is
     /**
      * @dev Utils function for check whether an address has the affiliat
      */
-    function hasAffiliat(address _referral) external view returns (bool hasAffiliat_){
+    function hasAffiliat(address _referral)
+        external
+        view
+        returns (bool hasAffiliat_)
+    {
         hasAffiliat_ = referrals[_referral].affiliat != address(0);
         return hasAffiliat_;
     }
@@ -106,8 +110,11 @@ contract WQReferral is
      */
     function payReferral(address referral) external nonReentrant {
         uint256 tokenPrice = WQPriceOracle(oracle).getTokenPriceUSD();
-        require(tokenPrice != 0, 'WQReferal: tokenPrice received from oracle is zero');
-        uint256 bonusAmount = referralBonus / tokenPrice; 
+        require(
+            tokenPrice != 0,
+            'WQReferal: tokenPrice received from oracle is zero'
+        );
+        uint256 bonusAmount = referralBonus / tokenPrice;
         require(
             token.balanceOf(address(this)) > bonusAmount,
             'WQReferral: Balance on contract too low'
@@ -123,6 +130,4 @@ contract WQReferral is
         token.safeTransfer(userAccount.affiliat, bonusAmount);
         emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
     }
-
-
 }

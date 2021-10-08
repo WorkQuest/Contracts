@@ -4,6 +4,7 @@ const BigNumber = require('bignumber.js');
 BigNumber.config({ EXPONENTIAL_AT: 60 });
 const Web3 = require('web3');
 const { parseEther } = require("ethers/lib/utils");
+const { wordlists } = require("@ethersproject/wordlists");
 const web3 = new Web3(hre.network.provider);
 
 const nonce = 1;
@@ -296,7 +297,7 @@ describe("Bridge test", () => {
         });
 
         it('STEP6: Redeem native coin: success', async () => {
-            await bridge.updateToken(null_addr, true, true, false, native_coin);
+            await bridge.connect(bridge_owner).updateToken(null_addr, true, true, false, native_coin);
             await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, native_coin, { value: amount });
             expect(
                 await web3.eth.getBalance(bridge_pool.address)
@@ -328,7 +329,7 @@ describe("Bridge test", () => {
             expect(data.nonce).to.equal(nonce);
             expect(data.state).to.equal(swapStatus.Redeemed);
             expect(
-                await web3.eth.getBalance(bridge.address)
+                await web3.eth.getBalance(bridge_pool.address)
             ).to.be.equal('0');
         });
     });

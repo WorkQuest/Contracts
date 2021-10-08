@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/access/AccessControl.sol';
 
 contract WQStakingNative is AccessControl {
     using SafeERC20 for IERC20;
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     // Staker contains info related to each staker.
     struct Staker {
@@ -84,7 +84,7 @@ contract WQStakingNative is AccessControl {
     ) external {
         require(
             !_initialized,
-            "WQStaking: Contract instance has already been initialized"
+            'WQStaking: Contract instance has already been initialized'
         );
         startTime = _startTime;
         rewardTotal = _rewardTotal;
@@ -112,24 +112,24 @@ contract WQStakingNative is AccessControl {
     function stake() external payable {
         require(
             block.timestamp > startTime,
-            "WQStaking: Staking time has not come yet"
+            'WQStaking: Staking time has not come yet'
         );
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            "WQStaking: Daily lock"
+            'WQStaking: Daily lock'
         );
         require(
             msg.value >= minStake,
-            "WQStaking: Amount should be greater than minimum stake"
+            'WQStaking: Amount should be greater than minimum stake'
         );
         Staker storage staker = stakes[msg.sender];
         require(
             msg.value + staker.amount <= maxStake,
-            "WQStaking: Amount should be less than maximum stake"
+            'WQStaking: Amount should be less than maximum stake'
         );
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
-            "WQStaking: You cannot stake tokens yet"
+            'WQStaking: You cannot stake tokens yet'
         );
         if (totalStaked > 0) {
             update();
@@ -152,14 +152,14 @@ contract WQStakingNative is AccessControl {
     function unstake(uint256 _amount) external {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            "WQStaking: Daily lock"
+            'WQStaking: Daily lock'
         );
-        require(!_entered, "WQStaking: Reentrancy guard");
+        require(!_entered, 'WQStaking: Reentrancy guard');
         _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
             staker.amount >= _amount,
-            "WQStaking: Not enough tokens to unstake"
+            'WQStaking: Not enough tokens to unstake'
         );
 
         update();
@@ -180,14 +180,14 @@ contract WQStakingNative is AccessControl {
     function claim() external returns (bool) {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            "WQStaking: Daily lock"
+            'WQStaking: Daily lock'
         );
-        require(!_entered, "WQStaking: Reentrancy guard");
+        require(!_entered, 'WQStaking: Reentrancy guard');
         _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
             block.timestamp - staker.claimedAt > claimPeriod,
-            "WQStaking: You cannot stake tokens yet"
+            'WQStaking: You cannot stake tokens yet'
         );
 
         if (totalStaked > 0) {
@@ -195,7 +195,7 @@ contract WQStakingNative is AccessControl {
         }
 
         uint256 reward = calcReward(msg.sender, tokensPerStake);
-        require(reward > 0, "WQStaking: Nothing to claim");
+        require(reward > 0, 'WQStaking: Nothing to claim');
         staker.distributed += reward;
         staker.claimedAt = block.timestamp;
         totalDistributed += reward;
@@ -217,8 +217,7 @@ contract WQStakingNative is AccessControl {
         Staker storage staker = stakes[_staker];
 
         reward =
-            ((staker.amount * _tps) /
-            1e18) +
+            ((staker.amount * _tps) / 1e18) +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -249,7 +248,9 @@ contract WQStakingNative is AccessControl {
      */
     function produced() private view returns (uint256) {
         return
-        allProduced + (rewardTotal * (block.timestamp - producedTime)) / distributionTime;
+            allProduced +
+            (rewardTotal * (block.timestamp - producedTime)) /
+            distributionTime;
     }
 
     function update() public {
