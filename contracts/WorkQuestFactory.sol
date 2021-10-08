@@ -173,6 +173,17 @@ contract WorkQuestFactory is
     }
 
     /**
+     * @notice Update address of refferal contract
+     * @param _referral  Address of refferal contract
+     */
+    function updateRefferal(address payable _referral) 
+        external
+        onlyAdmin
+    {
+        referral = _referral;
+    }
+
+    /**
      * @notice Get next enabled arbiter
      */
     function getArbiter() internal returns (address payable) {

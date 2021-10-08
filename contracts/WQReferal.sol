@@ -94,8 +94,9 @@ contract WQReferral is
     /**
      * @dev Utils function for check whether an address has the affiliat
      */
-    function hasAffiliat(address _referral) external view returns (bool) {
-        return referrals[_referral].affiliat != address(0);
+    function hasAffiliat(address _referral) external view returns (bool hasAffiliat_){
+        hasAffiliat_ = referrals[_referral].affiliat != address(0);
+        return hasAffiliat_;
     }
 
     /**
