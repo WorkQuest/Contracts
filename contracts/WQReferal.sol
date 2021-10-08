@@ -20,6 +20,7 @@ contract WQReferral is
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     /// @notice referral - someone who done job and paid to affiliat 
     /// @notice affiliat - person who get reward from referrals  
@@ -58,6 +59,7 @@ contract WQReferral is
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
 
         token = IERC20Upgradeable(_token);
         oracle = _oracle;
@@ -104,6 +106,7 @@ contract WQReferral is
      */
     function payReferral(address referral) external nonReentrant {
         uint256 tokenPrice = WQPriceOracle(oracle).getTokenPriceUSD();
+        require(tokenPrice != 0, 'WQReferal: tokenPrice received from oracle is zero');
         uint256 bonusAmount = referralBonus / tokenPrice; 
         require(
             token.balanceOf(address(this)) > bonusAmount,

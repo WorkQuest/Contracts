@@ -1,4 +1,5 @@
-const { hre, ethers, upgrades } = require('hardhat')
+const { ethers, upgrades } = require('hardhat')
+const hre = require('hardhat')
 const dotenv = require('dotenv')
 const fs = require('fs')
 const stringify = require('dotenv-stringify')
@@ -9,7 +10,7 @@ async function main() {
     const sender = accounts[0].address
     console.log('Sender address: ', sender)
 
-    const network = hre.network.name
+    const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
     for (const k in envConfig) {
         process.env[k] = envConfig[k]
@@ -22,9 +23,14 @@ async function main() {
     if (!process.env.WQT_TOKEN) {
         throw new Error(`Plese set your WQT_TOKEN in a .env-${network} file`)
     }
-    if (!process.env.WQ_ORACLE) {
-        throw new Error(`Plese set your WQ_ORACLE in a .env-${network} file`)
-    }
+    // TODO when WQOracle is finished add throw smth
+    // if (!process.env.WQ_ORACLE) {
+    //     throw new Error(`Plese set your WQ_ORACLE in a .env-${network} file`)
+    // }
+
+    const WQoracle = await hre.ethers.getContractFactory("WQPriceOracle");
+    const oracle = await WQoracle.deploy();
+    await oracle.deployed();
 
     console.log('Deploying...')
     const WQReferral = await hre.ethers.getContractFactory('WQReferral')
@@ -32,14 +38,17 @@ async function main() {
         WQReferral,
         [
             process.env.WQT_TOKEN,
-            process.env.WQ_ORACLE,
+            //process.env.WQ_ORACLE,
+            oracle.address,
             process.env.WQ_REFERRAL_REWARD,
         ],
         { initializer: 'initialize' }
     )
     console.log('WQReferral has been deployed to:', wqReferral.address)
 
-    envConfig['WQ_REFERRAL'] = wqReferral.address
+    envConfig['WQ_REFERRAL'] = wqReferral.address;
+    envConfig['WQ_ORACLE'] = oracle.address;                     // ATTENTION remove when oracle became more adequate 
+
     fs.writeFileSync(`.env-${network}`, stringify(envConfig))
 }
 
