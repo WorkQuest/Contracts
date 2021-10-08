@@ -823,13 +823,13 @@ describe('Work Quest test', () => {
 
     describe('Testing referal contract', () => {
         it('TEST 1: Add affiliat for worker, revert 1: if affiliat is zero', async () => {
-            expect(WQReferral.addAffiliat(nullstr)).to.be.revertedWith(
+            await expect(WQReferral.addAffiliat(nullstr)).to.be.revertedWith(
                 'WQReferral: affiliat cannot be zero address'
             )
         })
 
         it('TEST 2: Add affiliat for worker, revert 2: if affiliat is msg.sender', async () => {
-            expect(
+            await expect(
                 WQReferral.connect(worker).addAffiliat(worker.address)
             ).to.be.revertedWith(
                 'WQReferral: affiliat cannot be sender address'
@@ -838,7 +838,7 @@ describe('Work Quest test', () => {
 
         it('TEST 3: Add affiliat for worker, revert 3: if referal has got affiliat yet', async () => {
             WQReferral.connect(worker).addAffiliat(affiliat.address)
-            expect(
+            await expect(
                 WQReferral.connect(worker).addAffiliat(affiliat.address)
             ).to.be.revertedWith('WQReferral: Address is already registered')
         })
@@ -851,7 +851,7 @@ describe('Work Quest test', () => {
         })
 
         it('TEST 5: PayRefferal, revert 1: if Balance on contract is too low', async () => {
-            expect(
+            await expect(
                 WQReferral.connect(employer).payReferral(worker.address)
             ).to.be.revertedWith('WQReferral: Balance on contract too low')
         })
@@ -869,7 +869,7 @@ describe('Work Quest test', () => {
 
         it("TEST 7: PayRefferal, revert 3: if refferal hasn't got affiliat", async () => {
             await token.connect(work_quest_owner).transfer(WQReferral.address, oneK)
-            expect(
+            await expect(
                 WQReferral.connect(employer).payReferral(worker.address)
             ).to.be.revertedWith('WQReferral: Address is not registered')
         })
