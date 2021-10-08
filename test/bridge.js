@@ -30,24 +30,29 @@ let recipient;
 describe("Bridge test", () => {
     let bridge;
     let token;
+    let bridge_pool;
     beforeEach(async () => {
         [bridge_owner, sender, recipient, validator, not_validator] = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory("WQToken");
         token = await upgrades.deployProxy(WQToken, [amount], { initializer: 'initialize' });
         await token.transfer(sender.address, amount);
 
+        const BridgePool = await ethers.getContractFactory("WQBridgePool");
+        bridge_pool = await upgrades.deployProxy(BridgePool, [], { initializer: 'initialize' });
+        await bridge_pool.deployed();
+
         const Bridge = await ethers.getContractFactory("WQBridge");
-        bridge = await Bridge.deploy(chainWQ);
+        bridge = await upgrades.deployProxy(Bridge, [chainWQ, bridge_pool.address], { initializer: 'initialize' });
         await bridge.deployed();
         await bridge.grantRole(await bridge.VALIDATOR_ROLE(), validator.address);
         await bridge.updateChain(chainETH, true);
-        await bridge.updateToken(token.address, true, false, symbol);
+        await bridge.updateToken(token.address, true, false, false, symbol);
 
         let minter_role = await token.MINTER_ROLE();
         let burner_role = await token.BURNER_ROLE();
         await token.grantRole(minter_role, bridge.address);
         await token.grantRole(burner_role, bridge.address);
-        
+
     });
 
     describe('Bridge: deploy', () => {
@@ -131,7 +136,7 @@ describe("Bridge test", () => {
         });
 
         it('STEP6: Swap native coin with wrong amount: fail', async () => {
-            await bridge.updateToken(null_addr, true, true, native_coin);
+            await bridge.updateToken(null_addr, true, true, false, native_coin);
             try {
                 await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, native_coin, { value: 1 });
                 throw new Error("Not reverted");
@@ -141,7 +146,7 @@ describe("Bridge test", () => {
         });
 
         it('STEP7: Swap native coin: success', async () => {
-            await bridge.updateToken(null_addr, true, true, native_coin);
+            await bridge.updateToken(null_addr, true, true, false, native_coin);
             let recipient_addr = recipient.address;
             await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, native_coin, { value: amount });
             message = await web3.utils.soliditySha3(
@@ -156,7 +161,7 @@ describe("Bridge test", () => {
             expect(data.nonce).to.equal(nonce);
             expect(data.state).to.equal(swapStatus.Initialized);
             expect(
-                await web3.eth.getBalance(bridge.address)
+                await web3.eth.getBalance(bridge_pool.address)
             ).to.be.equal(amount);
         });
     });
@@ -212,7 +217,7 @@ describe("Bridge test", () => {
                 );
                 throw new Error("Not reverted");
             } catch (error) {
-                expect(error.message).to.include("WorkQuest Bridge: ChainFrom ID is not allowed");
+                expect(error.message).to.include("WorkQuest Bridge: chainFrom ID is not allowed");
             }
         });
 
@@ -291,10 +296,10 @@ describe("Bridge test", () => {
         });
 
         it('STEP6: Redeem native coin: success', async () => {
-            await bridge.updateToken(null_addr, true, true, native_coin);
+            await bridge.updateToken(null_addr, true, true, false, native_coin);
             await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, native_coin, { value: amount });
             expect(
-                await web3.eth.getBalance(bridge.address)
+                await web3.eth.getBalance(bridge_pool.address)
             ).to.be.equal(amount);
 
             message = web3.utils.soliditySha3(
@@ -333,7 +338,7 @@ describe("Bridge test", () => {
                 await bridge.connect(sender).updateChain(chainBSC, true);
                 throw new Error("Not reverted");
             } catch (error) {
-                expect(error.message).to.include("WorkQuest Bridge: Caller is not an admin");
+                expect(error.message).to.include("AccessControl: account");
             }
         });
         it('STEP2: Add chain id', async () => {
@@ -356,10 +361,10 @@ describe("Bridge test", () => {
         });
         it('STEP4: updateToken: Should revert if caller is no admin', async () => {
             try {
-                await bridge.connect(sender).updateToken(newToken, false, true, symbol);
+                await bridge.connect(sender).updateToken(newToken, false, true, false, symbol);
                 throw new Error("Not reverted");
             } catch (error) {
-                expect(error.message).to.include("WorkQuest Bridge: Caller is not an admin");
+                expect(error.message).to.include("AccessControl: account");
             }
         });
         it('STEP5: Update token settings', async () => {
@@ -373,7 +378,7 @@ describe("Bridge test", () => {
             expect(
                 token_info.native
             ).to.be.equal(false);
-            await bridge.updateToken(newToken, false, true, symbol);
+            await bridge.updateToken(newToken, false, true, false, symbol);
             token_info = await bridge.tokens(symbol);
             expect(
                 token_info.token

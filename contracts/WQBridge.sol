@@ -110,7 +110,10 @@ contract WQBridge is
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialize(uint256 _chainId, address payable _pool) external initializer {
+    function initialize(uint256 _chainId, address payable _pool)
+        external
+        initializer
+    {
         __AccessControl_init();
         __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -163,7 +166,7 @@ contract WQBridge is
                 msg.value == amount,
                 'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
-            pool.transfer(amount);
+            pool.call{value: amount}('');
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
@@ -241,7 +244,11 @@ contract WQBridge is
                 tokens[symbol].token
             );
         } else if (tokens[symbol].native) {
-            WQBridgePool(pool).transfer(payable(msg.sender), amount, address(0));
+            WQBridgePool(pool).transfer(
+                payable(msg.sender),
+                amount,
+                address(0)
+            );
         } else {
             WQBridgeTokenInterface(tokens[symbol].token).mint(
                 recipient,
