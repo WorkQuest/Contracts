@@ -38,15 +38,22 @@ contract WQReferral is
         bool paid;
     }
 
+    struct AffiliatInfo {
+        uint256 rewardTotal;
+        uint256 rewardPaid;
+    }
+
     IERC20Upgradeable token;
     uint256 referralBonus;
     /// @notice address of price oracle
     address public oracle;
 
     mapping(address => Account) public referrals;
+    mapping(address => AffiliatInfo) public affiliats;
 
     event RegisteredAffiliat(address referral, address affiliat);
     event PaidReferral(address referral, address affiliat, uint256 amount);
+    event RewardClaimed(address affiliat, uint256 amount);
 
     function initialize(
         address _token,
@@ -127,7 +134,32 @@ contract WQReferral is
         );
         userAccount.paid = true;
         referrals[userAccount.affiliat].reward += bonusAmount;
-        token.safeTransfer(userAccount.affiliat, bonusAmount);
+        affiliats[userAccount.affiliat].rewardTotal += bonusAmount;
+        // token.safeTransfer(userAccount.affiliat, bonusAmount);
         emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
     }
+
+    /** @dev function for affiliat reward claiming 
+     */
+    function claim() external nonReentrant {
+        uint256 rewardAmount = affiliats[msg.sender].rewardTotal - affiliats[msg.sender].rewardPaid;
+        require(
+            rewardAmount > 0,
+            "WQReferral: there is nothing to claim"
+        );
+        require(
+            token.balanceOf(address(this)) > bonusAmount,
+            'WQReferral: Balance on contract too low'
+        );
+        affiliats[msg.sender].rewardPaid = rewardTotal;
+        token.safeTransfer(msg.sender, rewardAmount);
+        emit RewardClaimed(msg.sender, rewardAmount);
+    }
+
+    /** @dev returns availible reward for claim 
+     */
+    function affiliatReward(address _affiliat) external view returns (uint256) {
+        return affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
+    } 
+
 }
