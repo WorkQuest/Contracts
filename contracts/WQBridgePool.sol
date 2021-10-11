@@ -41,12 +41,13 @@ contract WQBridgePool is
     ) external onlyRole(BRIDGE_ROLE) whenNotPaused {
         require(
             isBlockListed[recipient] == false,
-            'Recipient address is blocklisted'
+            'WQBridgePool: Recipient address is blocklisted'
         );
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            recipient.call{value: amount}('');
+            (bool success, ) = recipient.call{value: amount}('');
+            require(success, 'WQBridgePool: transfer native coins fail');
         }
         emit Transferred(token, recipient, amount);
     }
@@ -63,7 +64,8 @@ contract WQBridgePool is
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            recipient.transfer(amount);
+            (bool success, ) = recipient.call{value: amount}('');
+            require(success, 'WQBridgePool: transfer native coins fail');
         }
         emit Transferred(token, recipient, amount);
     }

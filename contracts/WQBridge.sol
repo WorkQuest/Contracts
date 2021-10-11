@@ -166,7 +166,8 @@ contract WQBridge is
                 msg.value == amount,
                 'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
-            pool.call{value: amount}('');
+            (bool success, ) = pool.call{value: amount}('');
+            require(success, 'WQBridgePool: transfer native coins fail');
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
@@ -239,16 +240,12 @@ contract WQBridge is
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
         if (tokens[symbol].lockable) {
             WQBridgePool(pool).transfer(
-                payable(msg.sender),
+                recipient,
                 amount,
                 tokens[symbol].token
             );
         } else if (tokens[symbol].native) {
-            WQBridgePool(pool).transfer(
-                payable(msg.sender),
-                amount,
-                address(0)
-            );
+            WQBridgePool(pool).transfer(recipient, amount, address(0));
         } else {
             WQBridgeTokenInterface(tokens[symbol].token).mint(
                 recipient,
