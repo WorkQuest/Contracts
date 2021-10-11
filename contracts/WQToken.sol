@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts/utils/math/Math.sol';
+import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 contract WQToken is AccessControl {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
+    bytes32 public constant BURNER_ROLE = keccak256('BURNER_ROLE');
 
     /// @notice Checkpoint structure
     struct Checkpoint {
@@ -17,10 +17,10 @@ contract WQToken is AccessControl {
     }
 
     /// @notice EIP-20 token name for this token
-    string public constant name = "WorkQuest Token";
+    string public constant name = 'WorkQuest Token';
 
     /// @notice EIP-20 token symbol for this token
-    string public constant symbol = "WQT";
+    string public constant symbol = 'WQT';
 
     /// @notice EIP-20 token decimals for this token
     uint8 public constant decimals = 18;
@@ -90,7 +90,7 @@ contract WQToken is AccessControl {
     function initialize(uint256 initialSupply) external {
         require(
             !_initialized,
-            "WQT: Contract instance has already been initialized"
+            'WQT: Contract instance has already been initialized'
         );
         _initialized = true;
         owner = msg.sender;
@@ -172,7 +172,7 @@ contract WQToken is AccessControl {
         uint256 currentAllowance = _allowances[sender][msg.sender];
         require(
             currentAllowance >= amount,
-            "WQT: transfer amount exceeds allowance"
+            'WQT: transfer amount exceeds allowance'
         );
         unchecked {
             _approve(sender, msg.sender, currentAllowance - amount);
@@ -211,7 +211,7 @@ contract WQToken is AccessControl {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(
             currentAllowance >= subtractedValue,
-            "WQT: decreased allowance below zero"
+            'WQT: decreased allowance below zero'
         );
         unchecked {
             _approve(msg.sender, spender, currentAllowance - subtractedValue);
@@ -228,7 +228,10 @@ contract WQToken is AccessControl {
      * Requirements: msg.sender should be a bridge address
      */
     function mint(address account, uint256 amount) external {
-        require(hasRole(MINTER_ROLE, msg.sender), "WQT: Sender should be a bridge");
+        require(
+            hasRole(MINTER_ROLE, msg.sender),
+            'WQT: Sender should be a bridge'
+        );
         _mint(account, amount);
     }
 
@@ -238,7 +241,10 @@ contract WQToken is AccessControl {
      * @param amount Amount of tokens
      */
     function burn(address account, uint256 amount) external {
-        require(hasRole(BURNER_ROLE, msg.sender), "WQT: Sender should be a bridge");
+        require(
+            hasRole(BURNER_ROLE, msg.sender),
+            'WQT: Sender should be a bridge'
+        );
         _burn(account, amount);
     }
 
@@ -285,7 +291,7 @@ contract WQToken is AccessControl {
         view
         returns (uint256)
     {
-        require(blockNumber < block.number, "WQT: block not yet mined");
+        require(blockNumber < block.number, 'WQT: block not yet mined');
         return _checkpointsLookup(_checkpoints[account], blockNumber);
     }
 
@@ -324,7 +330,7 @@ contract WQToken is AccessControl {
     function setSaleContract(address saleContract) public {
         require(
             hasRole(ADMIN_ROLE, msg.sender) && _saleContract == address(0),
-            "WQT: Caller must be owner and _saleContract yet unset"
+            'WQT: Caller must be owner and _saleContract yet unset'
         );
         _saleContract = saleContract;
     }
@@ -338,7 +344,7 @@ contract WQToken is AccessControl {
     function lockTransfers() public {
         require(
             hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
-            "WQT: Caller must be owner and _unlockFixed false"
+            'WQT: Caller must be owner and _unlockFixed false'
         );
         _locked = true;
     }
@@ -352,7 +358,7 @@ contract WQToken is AccessControl {
     function unlockTransfers() public {
         require(
             hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
-            "WQT: Caller must be owner and _unlockFixed false"
+            'WQT: Caller must be owner and _unlockFixed false'
         );
         _locked = false;
     }
@@ -367,7 +373,7 @@ contract WQToken is AccessControl {
     function unlockTransfersPermanent() public {
         require(
             hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
-            "WQT: Caller must be owner and _unlockFixed false"
+            'WQT: Caller must be owner and _unlockFixed false'
         );
         _locked = false;
         _unlockFixed = true;
@@ -378,15 +384,15 @@ contract WQToken is AccessControl {
         address recipient,
         uint256 amount
     ) internal {
-        require(sender != address(0), "WQT: transfer from the zero address");
-        require(recipient != address(0), "WQT: transfer to the zero address");
+        require(sender != address(0), 'WQT: transfer from the zero address');
+        require(recipient != address(0), 'WQT: transfer to the zero address');
 
         _beforeTokenTransfer();
 
         uint256 senderBalance = _balances[sender];
         require(
             senderBalance >= amount,
-            "WQT: transfer amount exceeds balance"
+            'WQT: transfer amount exceeds balance'
         );
         unchecked {
             _balances[sender] = senderBalance - amount;
@@ -401,8 +407,8 @@ contract WQToken is AccessControl {
         address spender,
         uint256 amount
     ) internal {
-        require(account != address(0), "WQT: approve from the zero address");
-        require(spender != address(0), "WQT: approve to the zero address");
+        require(account != address(0), 'WQT: approve from the zero address');
+        require(spender != address(0), 'WQT: approve to the zero address');
 
         _allowances[account][spender] = amount;
         emit Approval(account, spender, amount);
@@ -426,7 +432,7 @@ contract WQToken is AccessControl {
         );
         require(
             amount <= _balances[delegator],
-            "WQT: Not enough balance to delegate"
+            'WQT: Not enough balance to delegate'
         );
         address currentDelegate = delegates(delegator);
         _voteLockedTokenBalance[delegatee] += amount;
@@ -544,10 +550,10 @@ contract WQToken is AccessControl {
      * - `account` cannot be the zero address.
      */
     function _mint(address account, uint256 amount) internal {
-        require(account != address(0), "WQT: mint to the zero address");
+        require(account != address(0), 'WQT: mint to the zero address');
         require(
             totalSupply <= _maxSupply(),
-            "WQT: total supply risks overflowing votes"
+            'WQT: total supply risks overflowing votes'
         );
 
         _beforeTokenTransfer();
@@ -569,12 +575,12 @@ contract WQToken is AccessControl {
      * - `account` must have at least `amount` tokens.
      */
     function _burn(address account, uint256 amount) internal {
-        require(account != address(0), "WQT: burn from the zero address");
+        require(account != address(0), 'WQT: burn from the zero address');
 
         _beforeTokenTransfer();
 
         uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "WQT: burn amount exceeds balance");
+        require(accountBalance >= amount, 'WQT: burn amount exceeds balance');
         unchecked {
             _balances[account] = accountBalance - amount;
         }
@@ -604,7 +610,7 @@ contract WQToken is AccessControl {
     function _beforeTokenTransfer() internal view {
         require(
             !_locked || msg.sender == _saleContract,
-            "WQT: Transfers locked"
+            'WQT: Transfers locked'
         );
     }
 }

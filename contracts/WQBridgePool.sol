@@ -46,7 +46,7 @@ contract WQBridgePool is
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            recipient.transfer(amount);
+            recipient.call{value: amount}('');
         }
         emit Transferred(token, recipient, amount);
     }
