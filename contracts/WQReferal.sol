@@ -139,14 +139,12 @@ contract WQReferral is
         emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
     }
 
-    /** @dev function for affiliat reward claiming 
+    /** @dev function for affiliat reward claiming
      */
     function claim() external nonReentrant {
-        uint256 rewardAmount = affiliats[msg.sender].rewardTotal - affiliats[msg.sender].rewardPaid;
-        require(
-            rewardAmount > 0,
-            "WQReferral: there is nothing to claim"
-        );
+        uint256 rewardAmount = affiliats[msg.sender].rewardTotal -
+            affiliats[msg.sender].rewardPaid;
+        require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
         require(
             token.balanceOf(address(this)) > bonusAmount,
             'WQReferral: Balance on contract too low'
@@ -156,10 +154,10 @@ contract WQReferral is
         emit RewardClaimed(msg.sender, rewardAmount);
     }
 
-    /** @dev returns availible reward for claim 
+    /** @dev returns availible reward for claim
      */
     function affiliatReward(address _affiliat) external view returns (uint256) {
-        return affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
-    } 
-
+        return
+            affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
+    }
 }
