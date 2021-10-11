@@ -146,10 +146,10 @@ contract WQReferral is
             affiliats[msg.sender].rewardPaid;
         require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
         require(
-            token.balanceOf(address(this)) > bonusAmount,
+            token.balanceOf(address(this)) > rewardAmount,
             'WQReferral: Balance on contract too low'
         );
-        affiliats[msg.sender].rewardPaid = rewardTotal;
+        affiliats[msg.sender].rewardPaid = rewardAmount;
         token.safeTransfer(msg.sender, rewardAmount);
         emit RewardClaimed(msg.sender, rewardAmount);
     }
