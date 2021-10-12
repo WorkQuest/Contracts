@@ -60,6 +60,9 @@ contract WQReferral is
     event PaidReferral(address referral, address affiliat, uint256 amount);
     event RewardClaimed(address affiliat, uint256 amount);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     function initialize(
         address _token,
         address _oracle,
