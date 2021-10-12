@@ -184,9 +184,6 @@ contract WQReferral is
             'WQReferral: Balance on contract too low'
         );
         affiliats[msg.sender].rewardPaid = affiliats[msg.sender].rewardTotal;
-            token.balanceOf(address(this)) > rewardAmount,
-            'WQReferral: Balance on contract too low'
-        );
         affiliats[msg.sender].rewardPaid = rewardAmount;
         token.safeTransfer(msg.sender, rewardAmount);
         emit RewardClaimed(msg.sender, rewardAmount);
@@ -200,7 +197,5 @@ contract WQReferral is
 
     function updateFactory(address payable _factory) external onlyAdmin {
         factory = _factory;
-        return
-            affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
     }
 }
