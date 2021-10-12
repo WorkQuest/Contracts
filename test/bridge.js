@@ -223,7 +223,7 @@ describe("Bridge test", () => {
             let signature = await web3.eth.sign(message, validator.address);
             let sig = ethers.utils.splitSignature(signature)
             try {
-                await bridge.connect(sender).redeem(
+                await bridge.redeem(
                     nonce,
                     chainWQ,
                     amount,
@@ -243,7 +243,7 @@ describe("Bridge test", () => {
             let signature = await web3.eth.sign(message, validator.address);
             let sig = ethers.utils.splitSignature(signature)
             try {
-                await bridge.connect(sender).redeem(
+                await bridge.redeem(
                     nonce,
                     chainBSC,
                     amount,
@@ -262,7 +262,7 @@ describe("Bridge test", () => {
         it('STEP 3: Should revert if swap already redeemed', async () => {
             let signature = await web3.eth.sign(message, validator.address);
             let sig = ethers.utils.splitSignature(signature)
-            await bridge.connect(sender).redeem(
+            await bridge.redeem(
                 nonce,
                 chainETH,
                 amount,
@@ -273,7 +273,7 @@ describe("Bridge test", () => {
                 symbol
             );
             try {
-                await bridge.connect(sender).redeem(
+                await bridge.redeem(
                     nonce,
                     chainETH,
                     amount,
@@ -293,7 +293,7 @@ describe("Bridge test", () => {
             let signature = await web3.eth.sign(message, not_validator.address);
             let sig = ethers.utils.splitSignature(signature);
             try {
-                await bridge.connect(sender).redeem(
+                await bridge.redeem(
                     nonce,
                     chainETH,
                     amount,
@@ -315,7 +315,7 @@ describe("Bridge test", () => {
             let signature = await web3.eth.sign(message, validator.address);
             let sig = ethers.utils.splitSignature(signature)
 
-            await bridge.connect(sender).redeem(
+            await bridge.redeem(
                 nonce,
                 chainETH,
                 amount,
@@ -335,7 +335,13 @@ describe("Bridge test", () => {
 
         it('STEP6: Redeem native coin: success', async () => {
             await bridge.updateToken(null_addr, true, true, false, native_coin);
+            let senderBeforeAmount = await web3.eth.getBalance(sender.address);
             await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, native_coin, { value: amount });
+            let senderAfterAmount = await web3.eth.getBalance(sender.address);
+            expect(
+                ((senderBeforeAmount - senderAfterAmount) / 1e18).toFixed(2)
+            ).to.be.equal((amount / 1e18).toFixed(2));
+
             expect(
                 await web3.eth.getBalance(bridge_pool.address)
             ).to.be.equal(amount);
@@ -351,7 +357,8 @@ describe("Bridge test", () => {
             let signature = await web3.eth.sign(message, validator.address);
             let sig = ethers.utils.splitSignature(signature)
 
-            await bridge.connect(sender).redeem(
+            let recipientBeforeAmount = await web3.eth.getBalance(recipient_addr);
+            await bridge.redeem(
                 nonce,
                 chainETH,
                 amount,
@@ -361,6 +368,10 @@ describe("Bridge test", () => {
                 sig.s,
                 native_coin
             );
+            let recipientAfterAmount = await web3.eth.getBalance(recipient_addr);
+            expect(
+                ((recipientAfterAmount - recipientBeforeAmount) / 1e18).toFixed(2)
+            ).to.be.equal((amount / 1e18).toFixed(2));
 
             let data = await bridge.swaps(message);
             expect(data.nonce).to.equal(nonce);
@@ -391,7 +402,7 @@ describe("Bridge test", () => {
             let signature = await web3.eth.sign(message, validator.address);
             let sig = ethers.utils.splitSignature(signature)
 
-            await bridge.connect(sender).redeem(
+            await bridge.redeem(
                 nonce,
                 chainETH,
                 amount,
