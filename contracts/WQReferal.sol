@@ -63,6 +63,7 @@ contract WQReferral is
     function initialize(
         address _token,
         address _oracle,
+        address _service,
         uint256 _referralBonus
     ) public initializer {
         __AccessControl_init();
@@ -71,6 +72,7 @@ contract WQReferral is
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
+        _setupRole(SERVICE_ROLE, _service);
         _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
 
         token = IERC20Upgradeable(_token);
