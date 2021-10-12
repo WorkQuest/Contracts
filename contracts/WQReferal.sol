@@ -65,8 +65,9 @@ contract WQReferral is
         __UUPSUpgradeable_init();
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
 
         token = IERC20Upgradeable(_token);
         oracle = _oracle;
