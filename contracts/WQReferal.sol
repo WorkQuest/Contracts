@@ -169,10 +169,12 @@ contract WQReferral is
         emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
     }
 
-    /** @dev function for affiliat reward claiming 
+    /** @dev function for affiliat reward claiming
      */
     function claim() external nonReentrant {
-        uint256 rewardAmount = affiliats[msg.sender].rewardTotal - affiliats[msg.sender].rewardPaid;
+        uint256 rewardAmount = affiliats[msg.sender].rewardTotal -
+            affiliats[msg.sender].rewardPaid;
+        require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
         require(
             rewardAmount > 0,
             "WQReferral: there is nothing to claim"
@@ -182,11 +184,15 @@ contract WQReferral is
             'WQReferral: Balance on contract too low'
         );
         affiliats[msg.sender].rewardPaid = affiliats[msg.sender].rewardTotal;
+            token.balanceOf(address(this)) > rewardAmount,
+            'WQReferral: Balance on contract too low'
+        );
+        affiliats[msg.sender].rewardPaid = rewardAmount;
         token.safeTransfer(msg.sender, rewardAmount);
         emit RewardClaimed(msg.sender, rewardAmount);
     }
 
-    /** @dev returns availible reward for claim 
+    /** @dev returns availible reward for claim
      */
     function affiliatReward(address _affiliat) external view returns (uint256) {
         return affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
@@ -194,5 +200,7 @@ contract WQReferral is
 
     function updateFactory(address payable _factory) external onlyAdmin {
         factory = _factory;
+        return
+            affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
     }
 }
