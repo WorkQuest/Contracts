@@ -39,6 +39,9 @@ contract WorkQuestFactory is
 
     /// @notice Mapping of arbiters adresses to boolean enabled
     mapping(address => ArbiterInfo) public arbiters;
+    
+    /// @notice Mapping for checking contract existing 
+    mapping(address => bool) public workquestValid;
 
     /// @notice List of arbiters adresses
     address payable[] public arbiterList;
@@ -131,6 +134,7 @@ contract WorkQuestFactory is
             )
         );
         workquests[msg.sender].push(workquest);
+        workquestValid[workquest] = true;
         emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp);
         return workquest;
     }

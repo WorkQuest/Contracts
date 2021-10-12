@@ -7,9 +7,11 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import './WQTInterface.sol';
 import './WQPriceOracle.sol';
+import './WorkQuestFactory.sol';
 
 contract WQReferral is
     Initializable,
@@ -21,6 +23,7 @@ contract WQReferral is
 
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant SERVICE_ROLE = keccak256('SERVICE_ROLE');
 
     /// @notice referral - someone who done job and paid to affiliat
     /// @notice affiliat - person who get reward from referrals
@@ -47,6 +50,8 @@ contract WQReferral is
     uint256 referralBonus;
     /// @notice address of price oracle
     address public oracle;
+    /// @notice address of workquest valid factory
+    address payable public factory;
 
     mapping(address => Account) public referrals;
     mapping(address => AffiliatInfo) public affiliats;
@@ -79,9 +84,24 @@ contract WQReferral is
         onlyRole(UPGRADER_ROLE)
     {}
 
+    /** @notice Check msg.sender is admin role
+     */
+    modifier onlyAdmin() {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'WQReferal: You should have an admin role'
+        );
+        _;
+    }
+
     /** @dev
      */
-    function addAffiliat(address _affiliat) external {
+    function addAffiliat(
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        address _affiliat
+    ) external {
         require(
             _affiliat != address(0),
             'WQReferral: affiliat cannot be zero address'
@@ -93,6 +113,13 @@ contract WQReferral is
         require(
             referrals[msg.sender].affiliat == address(0),
             'WQReferral: Address is already registered'
+        );
+        bytes32 message = keccak256(abi.encodePacked(_affiliat));
+        bytes32 hashedMsg = ECDSA.toEthSignedMessageHash(message);  
+        address signer = ECDSA.recover(hashedMsg, v, r, s);
+        require(
+            hasRole(SERVICE_ROLE, signer),
+            "WQReferal: sender is not an service"
         );
         referrals[msg.sender].affiliat = _affiliat;
         referrals[_affiliat].referredCount++;
@@ -113,10 +140,14 @@ contract WQReferral is
     }
 
     /**
-     * @dev Pay referral to registered affiliat
+     * @dev calculate referal reward for affiliat at end of quest
      */
-    function payReferral(address referral) external nonReentrant {
+    function calcReferral(address referral) external nonReentrant {
         uint256 tokenPrice = WQPriceOracle(oracle).getTokenPriceUSD();
+        require(
+            WorkQuestFactory(factory).workquestValid(msg.sender) == true,
+            "WQReferal: sender is not valid WorkQuest contract"
+        );
         require(
             tokenPrice != 0,
             'WQReferal: tokenPrice received from oracle is zero'
@@ -135,7 +166,6 @@ contract WQReferral is
         userAccount.paid = true;
         referrals[userAccount.affiliat].reward += bonusAmount;
         affiliats[userAccount.affiliat].rewardTotal += bonusAmount;
-        // token.safeTransfer(userAccount.affiliat, bonusAmount);
         emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
     }
 
@@ -148,10 +178,10 @@ contract WQReferral is
             "WQReferral: there is nothing to claim"
         );
         require(
-            token.balanceOf(address(this)) > bonusAmount,
+            token.balanceOf(address(this)) > rewardAmount,
             'WQReferral: Balance on contract too low'
         );
-        affiliats[msg.sender].rewardPaid = rewardTotal;
+        affiliats[msg.sender].rewardPaid = affiliats[msg.sender].rewardTotal;
         token.safeTransfer(msg.sender, rewardAmount);
         emit RewardClaimed(msg.sender, rewardAmount);
     }
@@ -162,4 +192,7 @@ contract WQReferral is
         return affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
     } 
 
+    function updateFactory(address payable _factory) external onlyAdmin {
+        factory = _factory;
+    }
 }
