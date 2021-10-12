@@ -14,8 +14,9 @@ const chainBSC = 3;
 const amount = "500000000000000000";
 const newToken = "0x1234567890AbcdEF1234567890aBcdef12345678";
 const null_addr = "0x0000000000000000000000000000000000000000";
-const symbol = "WQT"
-const native_coin = "WUSD"
+const symbol = "WQT";
+const lockable_symbol = "LT";
+const native_coin = "WUSD";
 const swapStatus = Object.freeze({
     Empty: 0,
     Initialized: 1,
@@ -31,12 +32,20 @@ let recipient;
 describe("Bridge test", () => {
     let bridge;
     let token;
+    let lockable_token;
     let bridge_pool;
     beforeEach(async () => {
         [bridge_owner, sender, recipient, validator, not_validator] = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory("WQToken");
         token = await upgrades.deployProxy(WQToken, [amount], { initializer: 'initialize' });
+        await token.deployed();
         await token.transfer(sender.address, amount);
+
+        const WQBridgeToken = await ethers.getContractFactory("WQBridgeToken");
+        lockable_token = await upgrades.deployProxy(WQBridgeToken, ["LockToken", lockable_symbol], { initializer: 'initialize' });
+        await lockable_token.deployed();
+        await lockable_token.grantRole(await lockable_token.MINTER_ROLE(), bridge_owner.address);
+        await lockable_token.mint(sender.address, amount);
 
         const BridgePool = await ethers.getContractFactory("WQBridgePool");
         bridge_pool = await upgrades.deployProxy(BridgePool, [], { initializer: 'initialize' });
@@ -48,6 +57,9 @@ describe("Bridge test", () => {
         await bridge.grantRole(await bridge.VALIDATOR_ROLE(), validator.address);
         await bridge.updateChain(chainETH, true);
         await bridge.updateToken(token.address, true, false, false, symbol);
+        await bridge.updateToken(lockable_token.address, true, false, true, lockable_symbol);
+
+        await bridge_pool.grantRole(await bridge_pool.BRIDGE_ROLE(), bridge.address);
 
         let minter_role = await token.MINTER_ROLE();
         let burner_role = await token.BURNER_ROLE();
@@ -164,6 +176,31 @@ describe("Bridge test", () => {
             expect(
                 await web3.eth.getBalance(bridge_pool.address)
             ).to.be.equal(amount);
+        });
+        it('STEP8: Swap lockable token: success', async () => {
+            expect(
+                await lockable_token.balanceOf(sender.address)
+            ).to.be.equal(amount);
+            let recipient_addr = recipient.address;
+            await lockable_token.connect(sender).approve(bridge.address, amount);
+            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, lockable_symbol);
+            message = await web3.utils.soliditySha3(
+                { t: 'uint', v: nonce },
+                { t: 'uint', v: amount },
+                { t: 'address', v: recipient_addr },
+                { t: 'uint256', v: chainWQ },
+                { t: 'uint256', v: chainETH },
+                { t: 'string', v: lockable_symbol }
+            );
+            let data = await bridge.swaps(message);
+            expect(data.nonce).to.equal(nonce);
+            expect(data.state).to.equal(swapStatus.Initialized);
+            expect(
+                await lockable_token.balanceOf(bridge_pool.address)
+            ).to.be.equal(amount);
+            expect(
+                await lockable_token.balanceOf(sender.address)
+            ).to.be.equal(0);
         });
     });
 
@@ -297,7 +334,7 @@ describe("Bridge test", () => {
         });
 
         it('STEP6: Redeem native coin: success', async () => {
-            await bridge.connect(bridge_owner).updateToken(null_addr, true, true, false, native_coin);
+            await bridge.updateToken(null_addr, true, true, false, native_coin);
             await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, native_coin, { value: amount });
             expect(
                 await web3.eth.getBalance(bridge_pool.address)
@@ -331,6 +368,49 @@ describe("Bridge test", () => {
             expect(
                 await web3.eth.getBalance(bridge_pool.address)
             ).to.be.equal('0');
+        });
+
+        it('STEP7: Redeem lockable token: success', async () => {
+            expect(
+                await lockable_token.balanceOf(recipient_addr)
+            ).to.be.equal(0);
+            await lockable_token.connect(sender).approve(bridge.address, amount);
+            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, lockable_symbol);
+            expect(
+                await lockable_token.balanceOf(bridge_pool.address)
+            ).to.be.equal(amount);
+
+            message = web3.utils.soliditySha3(
+                { t: 'uint256', v: nonce },
+                { t: 'uint256', v: amount },
+                { t: 'address', v: recipient_addr },
+                { t: 'uint256', v: chainETH },
+                { t: 'uint256', v: chainWQ },
+                { t: 'string', v: lockable_symbol }
+            );
+            let signature = await web3.eth.sign(message, validator.address);
+            let sig = ethers.utils.splitSignature(signature)
+
+            await bridge.connect(sender).redeem(
+                nonce,
+                chainETH,
+                amount,
+                recipient_addr,
+                sig.v,
+                sig.r,
+                sig.s,
+                lockable_symbol
+            );
+
+            let data = await bridge.swaps(message);
+            expect(data.nonce).to.equal(nonce);
+            expect(data.state).to.equal(swapStatus.Redeemed);
+            expect(
+                await lockable_token.balanceOf(bridge_pool.address)
+            ).to.be.equal('0');
+            expect(
+                await lockable_token.balanceOf(recipient_addr)
+            ).to.be.equal(amount);
         });
     });
     describe('Bridge: admin functions', () => {
