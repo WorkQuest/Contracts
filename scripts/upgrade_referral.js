@@ -1,4 +1,5 @@
-const { hre, ethers, upgrades } = require('hardhat')
+const { ethers, upgrades } = require('hardhat')
+const hre = require('hardhat') 
 const dotenv = require('dotenv')
 const fs = require('fs')
 const stringify = require('dotenv-stringify')
