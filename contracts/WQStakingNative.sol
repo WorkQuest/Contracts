@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/access/AccessControl.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
-contract WQStakingNative is AccessControl {
-    using SafeERC20 for IERC20;
+contract WQStakingNative is
+    Initializable,
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable
+{
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     // Staker contains info related to each staker.
     struct Staker {
@@ -38,7 +45,7 @@ contract WQStakingNative is AccessControl {
     mapping(address => Staker) public stakes;
 
     // ERC20 token earned by stakers as reward.
-    IERC20 public rewardToken;
+    IERC20Upgradeable public rewardToken;
 
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
@@ -64,13 +71,9 @@ contract WQStakingNative is AccessControl {
     uint256 public totalStaked;
     uint256 public totalDistributed;
 
-    bool private _initialized;
-
-    bool private _entered;
-
-    event tokensStaked(uint256 amount, uint256 time, address indexed sender);
-    event tokensClaimed(uint256 amount, uint256 time, address indexed sender);
-    event tokensUnstaked(uint256 amount, uint256 time, address indexed sender);
+    event Staked(uint256 amount, uint256 time, address indexed sender);
+    event Claimed(uint256 amount, uint256 time, address indexed sender);
+    event Unstaked(uint256 amount, uint256 time, address indexed sender);
 
     function initialize(
         uint256 _startTime,
@@ -81,11 +84,9 @@ contract WQStakingNative is AccessControl {
         uint256 _minStake,
         uint256 _maxStake,
         address _rewardToken
-    ) external {
-        require(
-            !_initialized,
-            'WQStaking: Contract instance has already been initialized'
-        );
+    ) external initializer {
+        __AccessControl_init();
+        __ReentrancyGuard_init();
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
@@ -93,13 +94,13 @@ contract WQStakingNative is AccessControl {
         claimPeriod = _claimPeriod;
         minStake = _minStake;
         maxStake = _maxStake;
-        rewardToken = IERC20(_rewardToken);
+        rewardToken = IERC20Upgradeable(_rewardToken);
         producedTime = _startTime;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
-
-        _initialized = true;
+        _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
     }
 
     /**
@@ -109,7 +110,7 @@ contract WQStakingNative is AccessControl {
      *
      * - `_amount` - stake amount
      */
-    function stake() external payable {
+    function stake() external payable nonReentrant {
         require(
             block.timestamp > startTime,
             'WQStaking: Staking time has not come yet'
@@ -138,7 +139,7 @@ contract WQStakingNative is AccessControl {
         totalStaked += msg.value;
         staker.amount += msg.value;
         staker.stakedAt = block.timestamp;
-        emit tokensStaked(msg.value, block.timestamp, msg.sender);
+        emit Staked(msg.value, block.timestamp, msg.sender);
     }
 
     /**
@@ -149,13 +150,11 @@ contract WQStakingNative is AccessControl {
      * - `_amount` - stake amount
      */
 
-    function unstake(uint256 _amount) external {
+    function unstake(uint256 _amount) external nonReentrant {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
             'WQStaking: Daily lock'
         );
-        require(!_entered, 'WQStaking: Reentrancy guard');
-        _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
             staker.amount >= _amount,
@@ -170,20 +169,17 @@ contract WQStakingNative is AccessControl {
 
         payable(msg.sender).transfer(_amount);
 
-        emit tokensUnstaked(_amount, block.timestamp, msg.sender);
-        _entered = false;
+        emit Unstaked(_amount, block.timestamp, msg.sender);
     }
 
     /**
      * @dev claim available rewards
      */
-    function claim() external returns (bool) {
+    function claim() external nonReentrant {
         require(
             block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
             'WQStaking: Daily lock'
         );
-        require(!_entered, 'WQStaking: Reentrancy guard');
-        _entered = true;
         Staker storage staker = stakes[msg.sender];
         require(
             block.timestamp - staker.claimedAt > claimPeriod,
@@ -200,10 +196,8 @@ contract WQStakingNative is AccessControl {
         staker.claimedAt = block.timestamp;
         totalDistributed += reward;
 
-        IERC20(rewardToken).safeTransfer(msg.sender, reward);
-        emit tokensClaimed(reward, block.timestamp, msg.sender);
-        _entered = false;
-        return true;
+        rewardToken.safeTransfer(msg.sender, reward);
+        emit Claimed(reward, block.timestamp, msg.sender);
     }
 
     /**
