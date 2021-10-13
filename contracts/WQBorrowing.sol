@@ -3,6 +3,7 @@ pragma solidity =0.8.4;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
@@ -16,8 +17,9 @@ contract WQBorrowing is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     struct TokenInfo {
         uint256 amount;
@@ -28,21 +30,22 @@ contract WQBorrowing is
         uint256 amount;
         uint256 collateral;
         bool borrowed;
-        IERC20 token;
+        IERC20Upgradeable token;
         WQFundInterface fund;
     }
 
     uint256 public fee;
+    WQPriceOracle oracle;
 
     WQFundInterface[] funds;
 
-    mapping(IERC20 => TokenInfo) collateralTokens;
+    mapping(IERC20Upgradeable => TokenInfo) collateralTokens;
 
     mapping(address => BorrowInfo) borrowers;
 
     event Borrowed(
         uint256 collateral,
-        IERC20 token,
+        IERC20Upgradeable token,
         uint256 loan,
         address borrower
     );
@@ -51,10 +54,15 @@ contract WQBorrowing is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize() external initializer {
+    function initialize(address _oracle) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
+        oracle = WQPriceOracle(_oracle);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -68,7 +76,7 @@ contract WQBorrowing is
      * @param collateral Amount of collateral token
      * @param token Collateral token address
      */
-    function borrow(uint256 collateral, IERC20 token) external {
+    function borrow(uint256 collateral, IERC20Upgradeable token) external {
         require(
             collateralTokens[token].enabled,
             'WQBorrowing: Token is disabled'
@@ -78,9 +86,9 @@ contract WQBorrowing is
         loan.borrowed = true;
         loan.collateral = collateral;
         loan.token = token;
-        // TODO: get price from oracle
-        uint256 price = 0; // oracle.getTokenPriceUSD(token.symbol());
-        loan.amount = ((collateral * price) * 1000) / 1500e18;
+        loan.amount =
+            ((collateral * oracle.getTokenPriceUSD(IERC20MetadataUpgradeable(address(token)).symbol())) * 1000) /
+            1500e18;
 
         //TODO: check funds on contracts and request it
         bool success = false;

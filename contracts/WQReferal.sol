@@ -52,7 +52,7 @@ contract WQReferral is
     /// @notice referral bonus amount in USD
     uint256 public referralBonus;
     /// @notice address of price oracle
-    address public oracle;
+    WQPriceOracle oracle;
     /// @notice address of workquest valid factory
     address payable public factory;
 
@@ -84,7 +84,7 @@ contract WQReferral is
         _setRoleAdmin(SERVICE_ROLE, ADMIN_ROLE);
 
         token = IERC20Upgradeable(_token);
-        oracle = _oracle;
+        oracle = WQPriceOracle(_oracle);
         referralBonus = _referralBonus;
     }
 
@@ -155,7 +155,7 @@ contract WQReferral is
      * @dev calculate referal reward for affiliat at end of quest
      */
     function calcReferral(address referral) external nonReentrant {
-        uint256 tokenPrice = WQPriceOracle(oracle).getTokenPriceUSD();
+        uint256 tokenPrice = oracle.getTokenPriceUSD();
         require(
             WorkQuestFactory(factory).workquestValid(msg.sender) == true,
             'WQReferal: sender is not valid WorkQuest contract'
