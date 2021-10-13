@@ -108,7 +108,7 @@ describe("1. Staking tests", () => {
             let durationLong = stakePeriod * durationShort;
             let balanceBeforeStake = await token.balanceOf(accounts[1].address);
             expect(balanceBeforeStake).to.equal(parseEther("500000"));
-            await staking.connect(accounts[1]).stake(minStake, 30);
+            await staking.connect(accounts[1]).stake(minStake, durationShort);
             let balanceAfterStake = await token.balanceOf(accounts[1].address);
             expect(balanceAfterStake).to.equal(parseEther("499900"));
             let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);

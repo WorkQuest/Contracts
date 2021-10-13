@@ -69,14 +69,15 @@ describe('Work Quest test', () => {
 
     beforeEach(async () => {
         require('dotenv').config()
-        ;[
-            work_quest_owner,
-            employer,
-            worker,
-            arbiter,
-            feeReceiver,
-            affiliat,
-        ] = await ethers.getSigners()
+            ;[
+                work_quest_owner,
+                employer,
+                worker,
+                arbiter,
+                feeReceiver,
+                affiliat,
+                validator
+            ] = await ethers.getSigners()
 
         const PensionFund = await hre.ethers.getContractFactory('WQPensionFund')
         const pension_fund = await upgrades.deployProxy(PensionFund, [
@@ -95,15 +96,18 @@ describe('Work Quest test', () => {
         token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], {
             initializer: 'initialize',
         })
+        await token.deployed();
 
         const WQReferralContract = await hre.ethers.getContractFactory(
             'WQReferral'
         )
         WQReferral = await upgrades.deployProxy(
             WQReferralContract,
-            [token.address, WQPriceOracle.address, twentyWQT],
+            [token.address, WQPriceOracle.address, validator.address, twentyWQT],
             { initializer: 'initialize' }
         )
+        await WQReferral.deployed();
+        await WQReferral.grantRole(await WQReferral.SERVICE_ROLE(), validator.address);
 
         await token.connect(work_quest_owner).transfer(affiliat.address, oneK)
 
@@ -822,69 +826,77 @@ describe('Work Quest test', () => {
     })
 
     describe('Testing referal contract', () => {
+        let sig;
+        beforeEach(async () => {
+            message = await web3.utils.soliditySha3(
+                { t: 'address', v: affiliat.address },
+                { t: 'address', v: worker.address });
+            let signature = await web3.eth.sign(message, validator.address);
+            sig = ethers.utils.splitSignature(signature)
+        });
         it('TEST 1: Add affiliat for worker, revert 1: if affiliat is zero', async () => {
-            await expect(WQReferral.addAffiliat(nullstr)).to.be.revertedWith(
+            await expect(WQReferral.addAffiliat(sig.v, sig.r, sig.s, nullstr)).to.be.revertedWith(
                 'WQReferral: affiliat cannot be zero address'
             )
-        })
+        });
 
         it('TEST 2: Add affiliat for worker, revert 2: if affiliat is msg.sender', async () => {
             await expect(
-                WQReferral.connect(worker).addAffiliat(worker.address)
+                WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, worker.address)
             ).to.be.revertedWith(
                 'WQReferral: affiliat cannot be sender address'
             )
-        })
+        });
 
         it('TEST 3: Add affiliat for worker, revert 3: if referal has got affiliat yet', async () => {
-            WQReferral.connect(worker).addAffiliat(affiliat.address)
+            WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
             await expect(
-                WQReferral.connect(worker).addAffiliat(affiliat.address)
+                WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
             ).to.be.revertedWith('WQReferral: Address is already registered')
-        })
+        });
 
         it('TEST 4: Add affiliat for worker, normal operation', async () => {
             // TODO
-            await WQReferral.connect(worker).addAffiliat(affiliat.address)
-            expect( await WQReferral.connect(worker).hasAffiliat(worker.address)).to.be.equals(true);
+            await WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+            expect(await WQReferral.connect(worker).hasAffiliat(worker.address)).to.be.equals(true);
             // expect( referal[0]).to.be.equal(affiliat.address);
-        })
+        });
 
-        it('TEST 5: PayRefferal, revert 1: if Balance on contract is too low', async () => {
-            await expect(
-                WQReferral.connect(employer).payReferral(worker.address)
-            ).to.be.revertedWith('WQReferral: Balance on contract too low')
-        })
+        // it('TEST 5: PayRefferal, revert 1: if Balance on contract is too low', async () => {
+        //     await expect(
+        //         WQReferral.connect(employer).payReferral(worker.address)
+        //     ).to.be.revertedWith('WQReferral: Balance on contract too low')
+        // });
 
-        it('TEST 6: PayRefferal, revert 2: if Bonus is alresdy paid', async () => {
-            await token
-                .connect(work_quest_owner)
-                .transfer(WQReferral.address, oneK)
-            await WQReferral.connect(worker).addAffiliat(affiliat.address)
-            await WQReferral.connect(employer).payReferral(worker.address)
-            await expect(
-                WQReferral.connect(employer).payReferral(worker.address)
-            ).to.be.revertedWith('WQReferral: Bonus already paid')
-        })
+        // it('TEST 6: PayRefferal, revert 2: if Bonus is alresdy paid', async () => {
+        //     await token
+        //         .connect(work_quest_owner)
+        //         .transfer(WQReferral.address, oneK)
+        //     await WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+        //     await WQReferral.connect(employer).payReferral(worker.address)
+        //     await expect(
+        //         WQReferral.connect(employer).payReferral(worker.address)
+        //     ).to.be.revertedWith('WQReferral: Bonus already paid')
+        // });
 
-        it("TEST 7: PayRefferal, revert 3: if refferal hasn't got affiliat", async () => {
-            await token.connect(work_quest_owner).transfer(WQReferral.address, oneK)
-            await expect(
-                WQReferral.connect(employer).payReferral(worker.address)
-            ).to.be.revertedWith('WQReferral: Address is not registered')
-        })
+        // it("TEST 7: PayRefferal, revert 3: if refferal hasn't got affiliat", async () => {
+        //     await token.connect(work_quest_owner).transfer(WQReferral.address, oneK)
+        //     await expect(
+        //         WQReferral.connect(employer).payReferral(worker.address)
+        //     ).to.be.revertedWith('WQReferral: Address is not registered')
+        // });
 
-        it('TEST 8: PayRefferal, normal operation', async () => {
-            // TODO
-            let balanceOfRefferal = await token.balanceOf(WQReferral.address)
-            let balanceOfAffiliat = await token.balanceOf(affiliat.address)
-            // console.log(`balance of refferal is ${balanceOfRefferal}`)
-            // console.log(`balance of affiliat is ${balanceOfAffiliat}`)
+        // it('TEST 8: PayRefferal, normal operation', async () => {
+        //     // TODO
+        //     let balanceOfRefferal = await token.balanceOf(WQReferral.address)
+        //     let balanceOfAffiliat = await token.balanceOf(affiliat.address)
+        //     // console.log(`balance of refferal is ${balanceOfRefferal}`)
+        //     // console.log(`balance of affiliat is ${balanceOfAffiliat}`)
 
-            WQReferral.connect(worker).addAffiliat(affiliat.address)
-            expect(WQReferral.connect(employer).payReferral(worker.address))
-                .to.emit(WQReferral, 'PaidReferral')
-                .withArgs(worker.address, affiliat.address, referalBonus)
-        })
+        //     WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+        //     expect(WQReferral.connect(employer).payReferral(worker.address))
+        //         .to.emit(WQReferral, 'PaidReferral')
+        //         .withArgs(worker.address, affiliat.address, referalBonus)
+        // });
     })
 })

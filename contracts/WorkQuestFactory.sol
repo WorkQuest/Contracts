@@ -39,8 +39,8 @@ contract WorkQuestFactory is
 
     /// @notice Mapping of arbiters adresses to boolean enabled
     mapping(address => ArbiterInfo) public arbiters;
-    
-    /// @notice Mapping for checking contract existing 
+
+    /// @notice Mapping for checking contract existing
     mapping(address => bool) public workquestValid;
 
     /// @notice List of arbiters adresses
