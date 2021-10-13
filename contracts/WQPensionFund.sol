@@ -46,6 +46,9 @@ contract WQPensionFund is
     /// @notice Pension wallet info of worker
     mapping(address => PensionWallet) public wallets;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     /**
      * @notice initialize the contract
      */

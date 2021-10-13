@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./WQPriceOracle.sol";
-import "./WQFundInterface.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import './WQPriceOracle.sol';
+import './WQFundInterface.sol';
 
-contract WQBorrowing is AccessControl {
+contract WQBorrowing is
+    Initializable,
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
+{
     using SafeERC20 for IERC20;
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     struct TokenInfo {
         uint256 amount;
@@ -24,7 +32,6 @@ contract WQBorrowing is AccessControl {
         WQFundInterface fund;
     }
 
-    bool private _initialized;
     uint256 public fee;
 
     WQFundInterface[] funds;
@@ -41,13 +48,20 @@ contract WQBorrowing is AccessControl {
     );
     event Refunded(address to, uint256 amount);
 
-    function initialize() external {
-        require(
-            !_initialized,
-            "WQBorrowing: Contract instance has already been initialized"
-        );
-        _initialized = true;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    function initialize() external initializer {
+        __AccessControl_init();
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
@@ -57,15 +71,15 @@ contract WQBorrowing is AccessControl {
     function borrow(uint256 collateral, IERC20 token) external {
         require(
             collateralTokens[token].enabled,
-            "WQBorrowing: Token is disabled"
+            'WQBorrowing: Token is disabled'
         );
         BorrowInfo storage loan = borrowers[msg.sender];
-        require(!loan.borrowed, "WQBorrowing: You are not refunded loan");
+        require(!loan.borrowed, 'WQBorrowing: You are not refunded loan');
         loan.borrowed = true;
         loan.collateral = collateral;
         loan.token = token;
         // TODO: get price from oracle
-        uint256 price = 0; // oracle.getPrice(token.symbol());
+        uint256 price = 0; // oracle.getTokenPriceUSD(token.symbol());
         loan.amount = ((collateral * price) * 1000) / 1500e18;
 
         //TODO: check funds on contracts and request it
@@ -78,7 +92,7 @@ contract WQBorrowing is AccessControl {
                 break;
             }
         }
-        require(success, "WQBorrowing: Error when loaned from funds");
+        require(success, 'WQBorrowing: Error when loaned from funds');
 
         // Take tokens
         loan.token.safeTransferFrom(msg.sender, address(this), collateral);
@@ -94,11 +108,11 @@ contract WQBorrowing is AccessControl {
         BorrowInfo storage loan = borrowers[msg.sender];
         require(
             collateralTokens[loan.token].enabled,
-            "WQBorrowing: Token is disabled"
+            'WQBorrowing: Token is disabled'
         );
         uint256 returned = loan.amount + (fee * loan.amount) / 1e18;
         // Take native coins
-        require(returned == msg.value, "WQBorrowing: Invalid refund amount");
+        require(returned == msg.value, 'WQBorrowing: Invalid refund amount');
         // and send back to fund
         loan.fund.refund{value: msg.value}();
         //Send tokens
@@ -113,7 +127,7 @@ contract WQBorrowing is AccessControl {
     function addFund(address fund) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WQBorrowing: You are not have an admin role"
+            'WQBorrowing: You are not have an admin role'
         );
         funds.push(WQFundInterface(fund));
     }
@@ -125,7 +139,7 @@ contract WQBorrowing is AccessControl {
     function setFee(uint256 _fee) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
-            "WQBorrowing: You are not have an admin role"
+            'WQBorrowing: You are not have an admin role'
         );
         fee = _fee;
     }
