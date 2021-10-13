@@ -161,7 +161,14 @@ describe("Bridge test", () => {
         it('STEP7: Swap native coin: success', async () => {
             await bridge.updateToken(null_addr, true, true, false, native_coin);
             let recipient_addr = recipient.address;
-            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient.address, native_coin, { value: amount });
+
+            let senderBeforeAmount = await web3.eth.getBalance(sender.address);
+            await bridge.connect(sender).swap(nonce, chainETH, amount, recipient_addr, native_coin, { value: amount });
+            let senderAfterAmount = await web3.eth.getBalance(sender.address);
+            expect(
+                ((senderBeforeAmount - senderAfterAmount) / 1e18).toFixed(2)
+            ).to.be.equal((amount / 1e18).toFixed(2));
+
             message = await web3.utils.soliditySha3(
                 { t: 'uint', v: nonce },
                 { t: 'uint', v: amount },
