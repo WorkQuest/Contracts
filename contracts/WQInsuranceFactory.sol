@@ -21,7 +21,7 @@ contract WQInsuranceFactory is
     uint256 constant mediumContribution = 2000e18;
     uint256 constant maximalContribution = 3000e18;
 
-    address[] insurances; // TO_ASK Is it needed?
+    WQInsurance[] insurances; // TO_ASK Is it needed?
 
     enum PolicyType {
         Minimal,
@@ -34,14 +34,10 @@ contract WQInsuranceFactory is
         Yearly
     }
 
-    struct insuranceInfo {
-        ContributionPeriod period;
-        PolicyType policy;
-        uint256 usersNum;
-    }
+    mapping(ContributionPeriod => mapping(PolicyType => WQInsurance)) getLastProperInsurance;
 
-    mapping(ContributionPeriod => mapping(PolicyType => address)) getLastProperInsuarance;
-    mapping(address => insuranceInfo) insurancesData;
+    event InsuranceCreated(uint256 timestamp, address indexed isurance);
+    event MemberAdded(uint256 timestamp, address indexed member);
 
     /**
      * @notice initialize the contract
@@ -61,54 +57,46 @@ contract WQInsuranceFactory is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    function addUserToInsuarance(
-        ContributionPeriod _period,
-        PolicyType _policy,
-        address _user
+    function addUserToInsurance(
+        ContributionPeriod period,
+        PolicyType policy,
+        address member
     ) external {
-        address payable insuarance = payable(
-            getLastProperInsuarance[_period][_policy]
-        );
-        insuranceInfo storage data = insurancesData[insuarance];
-        if (data.usersNum == 10 || insuarance == address(0)) {
-            address newInsurance = _newInsurance(_period, _policy);
-            WQInsurance(payable(newInsurance)).addMember(_user);
-            insuranceInfo storage newData = insurancesData[newInsurance];
-            newData.period = _period;
-            newData.policy = _policy;
-            newData.usersNum = 1;
-            getLastProperInsuarance[_period][_policy] = newInsurance;
+        WQInsurance insurance = getLastProperInsurance[period][policy];
+        if (insurance.memberCount() >= 10 || insurance == WQInsurance(payable(0))) {
+            WQInsurance newInsurance = _newInsurance(period, policy);
+            newInsurance.addMember(member);
+            getLastProperInsurance[period][policy] = newInsurance;
         } else {
-            WQInsurance(insuarance).addMember(_user);
-            data.usersNum++;
+            insurance.addMember(member);
         }
+        emit MemberAdded(block.timestamp, member);
     }
 
-    function _newInsurance(ContributionPeriod _period, PolicyType policyType)
+    function _newInsurance(ContributionPeriod period, PolicyType policy)
         internal
-        returns (address insurance_)
+        returns (WQInsurance insurance)
     {
         uint256 _contributionPeriod;
-        if (_period == ContributionPeriod.Monthly) {
+        if (period == ContributionPeriod.Monthly) {
             _contributionPeriod = MONTH;
-        } else if (_period == ContributionPeriod.Yearly) {
+        } else if (period == ContributionPeriod.Yearly) {
             _contributionPeriod = YEAR;
         }
         uint256 _contributionAmount;
-        if (policyType == PolicyType.Minimal) {
+        if (policy == PolicyType.Minimal) {
             _contributionAmount = minimalContribution;
-        } else if (policyType == PolicyType.Medium) {
+        } else if (policy == PolicyType.Medium) {
             _contributionAmount = mediumContribution;
-        } else if (policyType == PolicyType.Maximal) {
+        } else if (policy == PolicyType.Maximal) {
             _contributionAmount = maximalContribution;
         }
-        insurances.push(
-            address(0) //new WQInsurance(_contributionPeriod, _contributionAmount))
-        );
-        insurance_ = insurances[insurances.length - 1];
+        insurance = new WQInsurance(_contributionPeriod, _contributionAmount);
+        insurances.push(insurance);
+        emit InsuranceCreated(block.timestamp, address(insurance));
     }
 
-    function getInsurances() external view returns (address[] memory) {
+    function getInsurances() external view returns (WQInsurance[] memory) {
         return insurances;
     }
 }
