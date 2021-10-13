@@ -7,7 +7,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 
 import './WQTInterface.sol';
 import './WQPriceOracle.sol';
@@ -20,6 +20,7 @@ contract WQReferral is
     UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using ECDSAUpgradeable for bytes32;
 
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
@@ -121,12 +122,14 @@ contract WQReferral is
             referrals[msg.sender].affiliat == address(0),
             'WQReferral: Address is already registered'
         );
-        bytes32 message = keccak256(abi.encodePacked(_affiliat, msg.sender));
-        bytes32 hashedMsg = ECDSA.toEthSignedMessageHash(message);  
-        address signer = ECDSA.recover(hashedMsg, v, r, s);
         require(
-            hasRole(SERVICE_ROLE, signer),
-            "WQReferal: sender is not an service"
+            hasRole(
+                SERVICE_ROLE,
+                keccak256(abi.encodePacked(_affiliat, msg.sender))
+                    .toEthSignedMessageHash()
+                    .recover(v, r, s)
+            ),
+            'WQReferal: validator is not a service'
         );
         referrals[msg.sender].affiliat = _affiliat;
         referrals[_affiliat].referredCount++;
@@ -153,7 +156,7 @@ contract WQReferral is
         uint256 tokenPrice = WQPriceOracle(oracle).getTokenPriceUSD();
         require(
             WorkQuestFactory(factory).workquestValid(msg.sender) == true,
-            "WQReferal: sender is not valid WorkQuest contract"
+            'WQReferal: sender is not valid WorkQuest contract'
         );
         require(
             tokenPrice != 0,
@@ -182,10 +185,7 @@ contract WQReferral is
         uint256 rewardAmount = affiliats[msg.sender].rewardTotal -
             affiliats[msg.sender].rewardPaid;
         require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
-        require(
-            rewardAmount > 0,
-            "WQReferral: there is nothing to claim"
-        );
+        require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
         require(
             token.balanceOf(address(this)) > rewardAmount,
             'WQReferral: Balance on contract too low'
@@ -199,8 +199,9 @@ contract WQReferral is
     /** @dev returns availible reward for claim
      */
     function affiliatReward(address _affiliat) external view returns (uint256) {
-        return affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
-    } 
+        return
+            affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
+    }
 
     function updateFactory(address payable _factory) external onlyAdmin {
         factory = _factory;
