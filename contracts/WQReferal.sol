@@ -47,8 +47,10 @@ contract WQReferral is
         uint256 rewardPaid;
     }
 
-    IERC20Upgradeable token;
-    uint256 referralBonus;
+    /// @notice reward token
+    IERC20Upgradeable public token;
+    /// @notice referral bonus amount in USD
+    uint256 public referralBonus;
     /// @notice address of price oracle
     address public oracle;
     /// @notice address of workquest valid factory
@@ -205,5 +207,9 @@ contract WQReferral is
 
     function updateFactory(address payable _factory) external onlyAdmin {
         factory = _factory;
+    }
+
+    function setReferralBonus(uint256 _referralBonus) external onlyAdmin {
+        referralBonus = _referralBonus;
     }
 }
