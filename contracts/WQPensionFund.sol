@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
@@ -12,6 +13,7 @@ contract WQPensionFund is
     WQFundInterface,
     Initializable,
     AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
@@ -24,7 +26,6 @@ contract WQPensionFund is
     uint256 public defaultFee;
     uint256 public contributed;
     uint256 public borrowed;
-    bool private _entered;
 
     /// @notice Event emitted when funds transferred to contract
     event Received(address from, uint256 amount);
@@ -77,7 +78,7 @@ contract WQPensionFund is
      * @dev and fee as DEFAULT_FEE value (1%)
      * @param worker Address of worker
      */
-    function contribute(address worker) external payable {
+    function contribute(address worker) external payable nonReentrant {
         PensionWallet storage wallet = wallets[worker];
         if (wallet.createdAt == 0) {
             wallet.createdAt = block.timestamp;
@@ -93,9 +94,7 @@ contract WQPensionFund is
      * @notice Withdraw funds from contract after 3 years
      * @param amount Amount of withdrawing funds
      */
-    function withdraw(uint256 amount) external {
-        require(!_entered, 'WQPension: Reentrancy guard');
-        _entered = true;
+    function withdraw(uint256 amount) external nonReentrant {
         PensionWallet storage wallet = wallets[msg.sender];
         require(block.timestamp >= wallet.unlockDate);
         require(amount <= wallet.amount);
@@ -103,7 +102,6 @@ contract WQPensionFund is
         contributed -= amount;
         payable(msg.sender).transfer(amount);
         emit Withdrew(msg.sender, amount);
-        _entered = false;
     }
 
     /**
@@ -133,9 +131,7 @@ contract WQPensionFund is
         return contributed - borrowed;
     }
 
-    function borrow(uint256 amount) external override {
-        require(!_entered, 'WQPension: Reentrancy guard');
-        _entered = true;
+    function borrow(uint256 amount) external override nonReentrant {
         require(
             hasRole(BORROWER_ROLE, msg.sender),
             "WQPension: You don't have a borrower role"
@@ -147,7 +143,6 @@ contract WQPensionFund is
         borrowed += amount;
         payable(msg.sender).transfer(amount);
         emit Borrowed(amount);
-        _entered = false;
     }
 
     // TODO: implement it
