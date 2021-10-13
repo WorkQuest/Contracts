@@ -24,13 +24,18 @@ async function main() {
         throw new Error(`Plese set your WQT_TOKEN in a .env-${network} file`)
     }
     // TODO when WQOracle is finished add throw smth
-    // if (!process.env.WQ_ORACLE) {
-    //     throw new Error(`Plese set your WQ_ORACLE in a .env-${network} file`)
-    // }
-
-    const WQoracle = await hre.ethers.getContractFactory("WQPriceOracle");
-    const oracle = await WQoracle.deploy();
-    await oracle.deployed();
+    if (!process.env.WQ_ORACLE) {
+        throw new Error(`Plese set your WQ_ORACLE in a .env-${network} file`)
+    }
+    if (!process.env.BACKEND_ADDR) {
+        throw new Error(`Plese set your BACKEND_ADDR in a .env-${network} file`)
+    }
+    if (!process.env.WORK_QUEST_FACTORY) {
+        throw new Error(`Plese set your WORK_QUEST_FACTORY in a .env-${network} file`)
+    }
+    // const WQoracle = await hre.ethers.getContractFactory("WQPriceOracle");
+    // const oracle = await WQoracle.deploy();
+    // await oracle.deployed();
 
     console.log('Deploying...')
     const WQReferral = await hre.ethers.getContractFactory('WQReferral')
@@ -38,16 +43,17 @@ async function main() {
         WQReferral,
         [
             process.env.WQT_TOKEN,
-            //process.env.WQ_ORACLE,
-            oracle.address,
+            process.env.WQ_ORACLE,
+            process.env.BACKEND_ADDR,
             process.env.WQ_REFERRAL_REWARD,
         ],
         { initializer: 'initialize' }
     )
     console.log('WQReferral has been deployed to:', wqReferral.address)
+    // await wqReferral.updateFactory(process.env.WORK_QUEST_FACTORY)
 
     envConfig['WQ_REFERRAL'] = wqReferral.address;
-    envConfig['WQ_ORACLE'] = oracle.address;                     // ATTENTION remove when oracle became more adequate 
+    // envConfig['WQ_ORACLE'] = oracle.address;                     // ATTENTION remove when oracle became more adequate 
 
     fs.writeFileSync(`.env-${network}`, stringify(envConfig))
 }
