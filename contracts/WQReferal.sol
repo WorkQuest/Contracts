@@ -120,7 +120,7 @@ contract WQReferral is
             referrals[msg.sender].affiliat == address(0),
             'WQReferral: Address is already registered'
         );
-        bytes32 message = keccak256(abi.encodePacked(_affiliat));
+        bytes32 message = keccak256(abi.encodePacked(_affiliat, msg.sender));
         bytes32 hashedMsg = ECDSA.toEthSignedMessageHash(message);  
         address signer = ECDSA.recover(hashedMsg, v, r, s);
         require(
