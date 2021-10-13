@@ -21,7 +21,7 @@ contract WQInsuranceFactory is
     uint256 constant mediumContribution = 2000e18;
     uint256 constant maximalContribution = 3000e18;
 
-    WQInsurance[] insurances; // TO_ASK Is it needed?
+    WQInsurance[] public insurances; // TO_ASK Is it needed?
 
     enum PolicyType {
         Minimal,
@@ -34,7 +34,8 @@ contract WQInsuranceFactory is
         Yearly
     }
 
-    mapping(ContributionPeriod => mapping(PolicyType => WQInsurance)) getLastProperInsurance;
+    mapping(ContributionPeriod => mapping(PolicyType => WQInsurance))
+        public getLastProperInsurance;
 
     event InsuranceCreated(uint256 timestamp, address indexed isurance);
     event MemberAdded(uint256 timestamp, address indexed member);
@@ -63,7 +64,10 @@ contract WQInsuranceFactory is
         address member
     ) external {
         WQInsurance insurance = getLastProperInsurance[period][policy];
-        if (insurance.memberCount() >= 10 || insurance == WQInsurance(payable(0))) {
+        if (
+            insurance == WQInsurance(payable(0)) ||
+            insurance.memberCount() >= 10
+        ) {
             WQInsurance newInsurance = _newInsurance(period, policy);
             newInsurance.addMember(member);
             getLastProperInsurance[period][policy] = newInsurance;

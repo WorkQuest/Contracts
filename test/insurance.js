@@ -58,18 +58,12 @@ describe('Insurance tests', () => {
         const InsuranceFactory = await ethers.getContractFactory('WQInsuranceFactory');
         insuranceFactory = await upgrades.deployProxy(InsuranceFactory, [], { initializer: 'initialize' });
         await insuranceFactory.deployed();
-        await insuranceFactory.addUserToInsurance(
-            ContributionPeriod.Monthly,
-            PolicyType.Minimal,
-            user0.address
+        await insuranceFactory.addUserToInsurance(ContributionPeriod.Monthly, PolicyType.Minimal, user0.address)
+        insurance = await ethers.getContractAt(
+            'WQInsurance',
+            (await insuranceFactory.getInsurances()).slice(-1).pop()
         )
-        console.log((await insuranceFactory.getInsurances()).slice(-1).pop());
-        // insurance = await ethers.getContractAt(
-        //     'WQInsurance',
-        //     (await insuranceFactory.getInsurances()).slice(-1).pop()
-        // )
-
-        // await ethers.provider.send("evm_mine", []);
+        await ethers.provider.send("evm_mine", []);
     })
 
     describe('Insurance deploy', () => {
@@ -256,7 +250,7 @@ describe('Insurance tests', () => {
                 await web3.eth.sendTransaction({
                     from: user1.address,
                     to: insurance.address,
-                    value: parseEther('1001'),
+                    value: parseEther('1001').toString(),
                 })
                 throw new Error('Not reverted')
             } catch (e) {
@@ -642,7 +636,7 @@ describe('Insurance tests', () => {
             await insurance.connect(user0).confirmPayment(user1.address)
             await insurance.connect(user0).revokeConfirmation(user1.address)
             await expect(
-                insurance.connect(user2).revokeConfirmation(user1.address)
+                insurance.connect(user0).revokeConfirmation(user1.address)
             ).to.be.revertedWith(
                 'WQInsurance: Payment is already revoked confirmation'
             )
