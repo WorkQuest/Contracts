@@ -28,7 +28,7 @@ contract WQDeposit is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address _oracle) external initializer {
+    function initialize() external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -36,7 +36,6 @@ contract WQDeposit is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        oracle = WQPriceOracle(_oracle);
     }
 
     function _authorizeUpgrade(address newImplementation)
