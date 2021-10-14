@@ -181,7 +181,7 @@ contract WQInsurance is AccessControl{
     }
 
     /**
-     * @notice Cancel ask funds
+     * @notice Cancel claim funds
      */
     function unclaim() external {
         require(
@@ -192,7 +192,7 @@ contract WQInsurance is AccessControl{
             !claims[msg.sender].executed,
             "WQInsurance: Payment is already executed"
         );
-        require(claims[msg.sender].active, "WQInsurance: Ask is already revoked");
+        require(claims[msg.sender].active, "WQInsurance: Claim is already revoked");
         claims[msg.sender].active = false;
         claims[msg.sender].numConfirm = 0;
 
@@ -214,6 +214,7 @@ contract WQInsurance is AccessControl{
             memberInfo[msg.sender].enabled,
             "WQInsurance: You are not a member"
         );
+        require(claims[member].active, "WQInsurance: Claim is not active");
         require(
             !confirmations[member][msg.sender],
             "WQInsurance: Payment is already confirmed"
@@ -260,17 +261,17 @@ contract WQInsurance is AccessControl{
                 block.timestamp,
             "WQInsurance: You haven't contributed funds for a long time"
         );
-        ClaimInfo storage ask = claims[msg.sender];
-        require(!ask.executed, "WQInsurance: Payment is already executed");
-        require(ask.active, "WQInsurance: Payment is not asked");
+        ClaimInfo storage claim = claims[msg.sender];
+        require(!claim.executed, "WQInsurance: Payment is already executed");
+        require(claim.active, "WQInsurance: Payment is not asked");
         require(
-            ask.numConfirm == memberCount,
+            claim.numConfirm == memberCount,
             "WQInsurance: Payment is not confirmed"
         );
-        ask.executed = true;
-        ask.active = false;
-        payable(msg.sender).transfer(ask.asked);
-        emit PaymentExecuted(block.timestamp, ask.asked, msg.sender);
+        claim.executed = true;
+        claim.active = false;
+        payable(msg.sender).transfer(claim.asked);
+        emit PaymentExecuted(block.timestamp, claim.asked, msg.sender);
     }
 
     /**
