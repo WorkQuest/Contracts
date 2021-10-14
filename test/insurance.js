@@ -319,7 +319,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user0).claim()
             ).to.be.revertedWith(
-                'WQInsurance: The contract must have more than one members'
+                'WQInsurance: The contract must contain more than one members'
             )
         })
 
@@ -704,7 +704,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user1).executePayment()
             ).to.be.revertedWith(
-                'WQInsurance: The contract must have more than one members'
+                'WQInsurance: The contract must contain more than one members'
             )
         })
 

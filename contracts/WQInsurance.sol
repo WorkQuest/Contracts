@@ -156,7 +156,7 @@ contract WQInsurance is AccessControl{
         );
         require(
             memberCount > 1,
-            "WQInsurance: The contract must have more than one members"
+            "WQInsurance: The contract must contain more than one members"
         );
         require(
             memberInfo[msg.sender].lastContribution +
@@ -251,7 +251,7 @@ contract WQInsurance is AccessControl{
         );
         require(
             memberCount > 1,
-            "WQInsurance: The contract must have more than one members"
+            "WQInsurance: The contract must contain more than one members"
         );
         require(
             memberInfo[msg.sender].lastContribution +
@@ -282,7 +282,7 @@ contract WQInsurance is AccessControl{
             "WQInsurance: You are not a member"
         );
         require(
-            memberInfo[msg.sender].firstContribution + YEAR <= block.timestamp,
+            memberInfo[msg.sender].firstContribution + YEAR >= block.timestamp,
             "WQInsurance: Your funds are still frozen "
         );
         payable(msg.sender).transfer(
