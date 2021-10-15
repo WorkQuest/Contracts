@@ -20,8 +20,6 @@ contract WQPensionFund is
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
-    // uint256 public immutable lockTime;    // ATTENTION change to just public because it's not possible to write
-    //           in initialize() if upgradeable contract is wanted
     uint256 public lockTime;
     uint256 public defaultFee;
     uint256 public contributed;

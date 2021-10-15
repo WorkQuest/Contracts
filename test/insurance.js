@@ -338,7 +338,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user1).claim()
             ).to.be.revertedWith(
-                "WQInsurance: You haven't contributed funds for a long time"
+                "WQInsurance: Your policy is suspended"
             )
         })
 
@@ -743,7 +743,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user1).executePayment()
             ).to.be.revertedWith(
-                "WQInsurance: You haven't contributed funds for a long time"
+                "WQInsurance: Your policy is suspended"
             )
 
         })

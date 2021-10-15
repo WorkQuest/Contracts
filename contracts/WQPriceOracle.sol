@@ -10,8 +10,8 @@ contract WQPriceOracle is
     AccessControlUpgradeable,
     UUPSUpgradeable
 {
-    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     bytes32 public constant SERVICE_ROLE = keccak256('SERVICE_ROLE');
 
     struct TokenInfo {

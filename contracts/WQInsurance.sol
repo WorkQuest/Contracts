@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import '@openzeppelin/contracts/access/AccessControl.sol';
 
-contract WQInsurance is AccessControl{
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
-    
+contract WQInsurance is AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant FACTORY_ROLE = keccak256('FACTORY_ROLE');
+
     struct MemberInfo {
         uint256 firstContribution;
         uint256 lastContribution;
@@ -53,16 +53,12 @@ contract WQInsurance is AccessControl{
 
     event PaymentExecuted(uint256 timestamp, uint256 amount, address user);
 
-    
     /** @notice Initialize the contract
      *
      *  @param _contributionPeriod how often users pay for insurance
-     *  @param _contributionAmount amount of insurance 
+     *  @param _contributionAmount amount of insurance
      */
-    constructor(
-        uint256 _contributionPeriod,
-        uint256 _contributionAmount
-     ) {
+    constructor(uint256 _contributionPeriod, uint256 _contributionAmount) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
@@ -85,15 +81,15 @@ contract WQInsurance is AccessControl{
     function addMember(address member) external {
         require(
             hasRole(FACTORY_ROLE, msg.sender),
-            "WQInsuarance: Only factory can add members to contract" 
+            'WQInsuarance: Only factory can add members to contract'
         );
         require(
             memberCount < MAX_MEMBERS,
-            "WQInsurance: Members quantity should be less than 10"
+            'WQInsurance: Members quantity should be less than 10'
         );
         require(
             !memberInfo[member].enabled,
-            "WQInsurance: Member already registered in contract"
+            'WQInsurance: Member already registered in contract'
         );
         members.push(member);
         memberInfo[member].enabled = true;
@@ -108,7 +104,7 @@ contract WQInsurance is AccessControl{
     function removeMember() external {
         require(
             memberInfo[msg.sender].enabled,
-            "WQInsurance: Member already removed from contract"
+            'WQInsurance: Member already removed from contract'
         );
         memberInfo[msg.sender].enabled = false;
         memberCount--;
@@ -126,16 +122,16 @@ contract WQInsurance is AccessControl{
      */
     receive() external payable {
         MemberInfo storage member = memberInfo[msg.sender];
-        require(member.enabled, "WQInsurance: Member not found");
+        require(member.enabled, 'WQInsurance: Member not found');
         if (contributionPeriod == YEAR) {
             require(
                 msg.value == contributionAmount,
-                "WQInsurance: Invalid contribution amount"
+                'WQInsurance: Invalid contribution amount'
             );
         } else {
             require(
                 msg.value == contributionAmount / 12,
-                "WQInsurance: Invalid contribution amount"
+                'WQInsurance: Invalid contribution amount'
             );
         }
         member.contributed += msg.value;
@@ -152,32 +148,36 @@ contract WQInsurance is AccessControl{
     function claim() external {
         require(
             memberInfo[msg.sender].enabled,
-            "WQInsurance: Member not found"
+            'WQInsurance: Member not found'
         );
         require(
             memberCount > 1,
-            "WQInsurance: The contract must contain more than one members"
+            'WQInsurance: The contract must contain more than one members'
         );
         require(
-            memberInfo[msg.sender].lastContribution +
-                contributionPeriod +
-                7 days >
-                block.timestamp,
-            "WQInsurance: You haven't contributed funds for a long time"
+            block.timestamp <
+                memberInfo[msg.sender].lastContribution +
+                    contributionPeriod +
+                    7 days,
+            'WQInsurance: Your policy is suspended'
         );
         require(
             !claims[msg.sender].executed,
-            "WQInsurance: Payment is already executed"
+            'WQInsurance: Payment is already executed'
         );
         require(
             !claims[msg.sender].active,
-            "WQInsurance: Payment is already asked"
+            'WQInsurance: Payment is already asked'
         );
         claims[msg.sender].active = true;
         claims[msg.sender].asked = (memberInfo[msg.sender].contributed * 5) / 6;
         confirmations[msg.sender][msg.sender] = true;
         claims[msg.sender].numConfirm = 1;
-        emit PaymentClaimed(block.timestamp, msg.sender, claims[msg.sender].asked);
+        emit PaymentClaimed(
+            block.timestamp,
+            msg.sender,
+            claims[msg.sender].asked
+        );
     }
 
     /**
@@ -186,13 +186,16 @@ contract WQInsurance is AccessControl{
     function unclaim() external {
         require(
             memberInfo[msg.sender].enabled,
-            "WQInsurance: Member not found"
+            'WQInsurance: Member not found'
         );
         require(
             !claims[msg.sender].executed,
-            "WQInsurance: Payment is already executed"
+            'WQInsurance: Payment is already executed'
         );
-        require(claims[msg.sender].active, "WQInsurance: Claim is already revoked");
+        require(
+            claims[msg.sender].active,
+            'WQInsurance: Claim is already revoked'
+        );
         claims[msg.sender].active = false;
         claims[msg.sender].numConfirm = 0;
 
@@ -209,15 +212,15 @@ contract WQInsurance is AccessControl{
      * @notice Confirm payment from other members
      */
     function confirmPayment(address member) external {
-        require(memberInfo[member].enabled, "WQInsurance: Member not found");
+        require(memberInfo[member].enabled, 'WQInsurance: Member not found');
         require(
             memberInfo[msg.sender].enabled,
-            "WQInsurance: You are not a member"
+            'WQInsurance: You are not a member'
         );
-        require(claims[member].active, "WQInsurance: Claim is not active");
+        require(claims[member].active, 'WQInsurance: Claim is not active');
         require(
             !confirmations[member][msg.sender],
-            "WQInsurance: Payment is already confirmed"
+            'WQInsurance: Payment is already confirmed'
         );
         claims[member].numConfirm++;
         confirmations[member][msg.sender] = true;
@@ -228,14 +231,14 @@ contract WQInsurance is AccessControl{
      * @notice Revoke confirmation payment
      */
     function revokeConfirmation(address member) external {
-        require(memberInfo[member].enabled, "WQInsurance: Member not found");
+        require(memberInfo[member].enabled, 'WQInsurance: Member not found');
         require(
             memberInfo[msg.sender].enabled,
-            "WQInsurance: You are not a member"
+            'WQInsurance: You are not a member'
         );
         require(
             confirmations[member][msg.sender],
-            "WQInsurance: Payment is already revoked confirmation"
+            'WQInsurance: Payment is already revoked confirmation'
         );
         claims[member].numConfirm--;
         confirmations[member][msg.sender] = false;
@@ -248,30 +251,33 @@ contract WQInsurance is AccessControl{
     function executePayment() external {
         require(
             memberInfo[msg.sender].enabled,
-            "WQInsurance: You are not a member"
+            'WQInsurance: You are not a member'
         );
         require(
             memberCount > 1,
-            "WQInsurance: The contract must contain more than one members"
+            'WQInsurance: The contract must contain more than one members'
         );
         require(
-            memberInfo[msg.sender].lastContribution +
-                contributionPeriod +
-                7 days >
-                block.timestamp,
-            "WQInsurance: You haven't contributed funds for a long time"
+            block.timestamp <
+                memberInfo[msg.sender].lastContribution +
+                    contributionPeriod +
+                    7 days,
+            'WQInsurance: Your policy is suspended'
         );
-        ClaimInfo storage claim = claims[msg.sender];
-        require(!claim.executed, "WQInsurance: Payment is already executed");
-        require(claim.active, "WQInsurance: Payment is not asked");
+        ClaimInfo storage claimInfo = claims[msg.sender];
         require(
-            claim.numConfirm == memberCount,
-            "WQInsurance: Payment is not confirmed"
+            !claimInfo.executed,
+            'WQInsurance: Payment is already executed'
         );
-        claim.executed = true;
-        claim.active = false;
-        payable(msg.sender).transfer(claim.asked);
-        emit PaymentExecuted(block.timestamp, claim.asked, msg.sender);
+        require(claimInfo.active, 'WQInsurance: Payment is not asked');
+        require(
+            claimInfo.numConfirm == memberCount,
+            'WQInsurance: Payment is not confirmed'
+        );
+        claimInfo.executed = true;
+        claimInfo.active = false;
+        payable(msg.sender).transfer(claimInfo.asked);
+        emit PaymentExecuted(block.timestamp, claimInfo.asked, msg.sender);
     }
 
     /**
@@ -280,11 +286,11 @@ contract WQInsurance is AccessControl{
     function withdraw() external {
         require(
             memberInfo[msg.sender].enabled,
-            "WQInsurance: You are not a member"
+            'WQInsurance: You are not a member'
         );
         require(
             memberInfo[msg.sender].firstContribution + YEAR >= block.timestamp,
-            "WQInsurance: Your funds are still frozen "
+            'WQInsurance: Your funds are still frozen '
         );
         payable(msg.sender).transfer(
             memberInfo[msg.sender].contributed - claims[msg.sender].asked

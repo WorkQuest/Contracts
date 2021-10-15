@@ -328,14 +328,14 @@ contract WQBridge is
     }
 
     function removeLiquidity(
-        address recipient,
+        address payable recipient,
         uint256 amount,
         address token
     ) external onlyRole(ADMIN_ROLE) {
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            payable(recipient).transfer(amount);
+            recipient.transfer(amount);
         }
         emit Transferred(token, recipient, amount);
     }
