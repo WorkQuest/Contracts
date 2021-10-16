@@ -8,14 +8,12 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import './WQBridgeTokenInterface.sol';
 import './WQBridgePool.sol';
 
 contract WQBridge is
     Initializable,
     AccessControlUpgradeable,
-    ReentrancyGuardUpgradeable,
     PausableUpgradeable
 {
     using ECDSAUpgradeable for bytes32;
@@ -119,7 +117,6 @@ contract WQBridge is
         initializer
     {
         __AccessControl_init();
-        __ReentrancyGuard_init();
         __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
@@ -143,7 +140,7 @@ contract WQBridge is
         uint256 amount,
         address recipient,
         string memory symbol
-    ) external payable whenNotPaused nonReentrant {
+    ) external payable whenNotPaused {
         require(chainTo != chainId, 'WorkQuest Bridge: Invalid chainTo id');
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
@@ -208,7 +205,7 @@ contract WQBridge is
         bytes32 r,
         bytes32 s,
         string memory symbol
-    ) external whenNotPaused nonReentrant {
+    ) external whenNotPaused {
         require(chainFrom != chainId, 'WorkQuest Bridge: Invalid chainFrom ID');
         require(
             chains[chainFrom],
@@ -337,7 +334,7 @@ contract WQBridge is
         address payable recipient,
         uint256 amount,
         address token
-    ) external nonReentrant onlyRole(ADMIN_ROLE) {
+    ) external onlyRole(ADMIN_ROLE) {
         require(recipient != payable(0), "WQBridge: invalid recipient address");
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
