@@ -29,17 +29,18 @@ async function main() {
         throw new Error(`Please set your CLAIM_PERIOD in a .env-${network} file`);
     }
     if (!process.env.MIN_STAKE) {
-        throw new Error(`Please set your MIN_STAKE in a .env-${network} file`);
+        throw new Error(`Please set your MIN_STAKE_NATIVE in a .env-${network} file`);
     }
     if (!process.env.MAX_STAKE) {
-        throw new Error(`Please set your MAX_STAKE in a .env-${network} file`);
+        throw new Error(`Please set your MAX_STAKE_NATIVE in a .env-${network} file`);
     }
     if (!process.env.WQT_TOKEN) {
         throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
     }
+    
 
     console.log("Deploying...");
-    const WQStaking = await ethers.getContractFactory("WQStaking");
+    const WQStaking = await ethers.getContractFactory("WQStakingNative");
     const staking = await upgrades.deployProxy(
         WQStaking,
         [process.env.START_TIME,
@@ -49,13 +50,12 @@ async function main() {
          process.env.CLAIM_PERIOD,
          process.env.MIN_STAKE,
          process.env.MAX_STAKE,
-         process.env.WQT_TOKEN,
          process.env.WQT_TOKEN],
         { initializer: 'initialize' }
     );
-    console.log("Proxy of Staking has been deployed to:", staking.address);
+    console.log("Proxy of StakingNative has been deployed to:", staking.address);
 
-    envConfig["STAKING"] = staking.address;
+    envConfig["STAKING_NATIVE"] = staking.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 

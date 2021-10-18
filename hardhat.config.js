@@ -34,8 +34,8 @@ if (!process.env.INFURA_API_KEY) {
 }
 
 function createNetworkConfig(network) {
-  // const url = `https://${network}.infura.io/v3/${infuraApiKey}`;
-  const url = `https://speedy-nodes-nyc.moralis.io/${infuraApiKey}/eth/${network}`;
+  const url = `https://${network}.infura.io/v3/${infuraApiKey}`;
+  //const url = `https://speedy-nodes-nyc.moralis.io/${infuraApiKey}/eth/${network}`;
   return {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],

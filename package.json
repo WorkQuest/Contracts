@@ -1,7 +1,6 @@
 {
   "name": "work_quest",
   "version": "1.0.0",
-  "description": "",
   "scripts": {
     "compile": "npx hardhat compile",
     "clean": "npx hardhat clean",
@@ -38,7 +37,7 @@
     "dotenv-stringify": "^2.0.6",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.4.7",
-    "hardhat": "^2.6.4",
+    "hardhat": "^2.6.6",
     "hardhat-deploy": "^0.7.0-beta.48",
     "hardhat-docgen": "^1.1.2",
     "hardhat-ethers": "^1.0.1",
@@ -52,5 +51,20 @@
   "dependencies": {
     "@openzeppelin/upgrades-core": "^1.9.0",
     "coverage": "^0.4.1"
-  }
+  },
+  "main": "hardhat.config.js",
+  "directories": {
+    "doc": "doc",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WorkQuest/Contracts.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/WorkQuest/Contracts/issues"
+  },
+  "homepage": "https://github.com/WorkQuest/Contracts#readme",
+  "description": ""
 }
