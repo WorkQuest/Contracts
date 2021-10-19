@@ -5,8 +5,9 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import './WQBridgeTokenInterface.sol';
 import './WQBridgePool.sol';
 
@@ -17,6 +18,7 @@ contract WQBridge is
 {
     using ECDSAUpgradeable for bytes32;
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using AddressUpgradeable for address payable;
 
     /// @notice Statuses of a swap
     enum State {
@@ -120,6 +122,7 @@ contract WQBridge is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
         chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?
+        require(_pool != payable(0), "WQBridge: invalid pool address");
         pool = _pool;
     }
 
@@ -166,8 +169,7 @@ contract WQBridge is
                 msg.value == amount,
                 'WorkQuest Bridge: Amount value is not equal to transfered funds'
             );
-            (bool success, ) = pool.call{value: amount}('');
-            require(success, 'WQBridgePool: transfer native coins fail');
+            pool.sendValue(amount);
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
@@ -290,6 +292,7 @@ contract WQBridge is
      * @param _pool Address of pool
      */
     function updatePool(address payable _pool) external onlyRole(ADMIN_ROLE) {
+        require(_pool != payable(0), "WQBridge: invalid pool address");
         pool = _pool;
     }
 
@@ -328,14 +331,15 @@ contract WQBridge is
     }
 
     function removeLiquidity(
-        address recipient,
+        address payable recipient,
         uint256 amount,
         address token
     ) external onlyRole(ADMIN_ROLE) {
+        require(recipient != payable(0), "WQBridge: invalid recipient address");
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            payable(recipient).transfer(amount);
+            recipient.transfer(amount);
         }
         emit Transferred(token, recipient, amount);
     }

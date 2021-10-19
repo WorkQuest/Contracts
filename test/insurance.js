@@ -319,7 +319,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user0).claim()
             ).to.be.revertedWith(
-                'WQInsurance: The contract must have more than one members'
+                'WQInsurance: The contract must contain more than one members'
             )
         })
 
@@ -338,7 +338,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user1).claim()
             ).to.be.revertedWith(
-                "WQInsurance: You haven't contributed funds for a long time"
+                "WQInsurance: Your policy is suspended"
             )
         })
 
@@ -413,7 +413,7 @@ describe('Insurance tests', () => {
             expect(
                 await insurance.confirmations(user1.address, user1.address)
             ).to.equal(false)
-        })
+        });
         it('STEP2: Unclaim from disabled member: fail', async () => {
             try {
                 await insurance.connect(user1).unclaim()
@@ -423,7 +423,7 @@ describe('Insurance tests', () => {
                     'WQInsurance: Member not found'
                 )
             }
-        })
+        });
         it('STEP3: Unclaim again: fail', async () => {
             await insuranceFactory.addUserToInsurance(
                 ContributionPeriod.Monthly,
@@ -440,9 +440,9 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user1).unclaim()
             ).to.be.revertedWith(
-                'WQInsurance: Ask is already revoked'
+                'WQInsurance: Claim is already revoked'
             )
-        })
+        });
         it('STEP4: Remove executed ask: fail', async () => {
             await insuranceFactory.addUserToInsurance(
                 ContributionPeriod.Monthly,
@@ -462,7 +462,7 @@ describe('Insurance tests', () => {
             ).to.be.revertedWith(
                 'WQInsurance: Payment is already executed'
             )
-        })
+        });
     })
 
     describe('Confirm payment', () => {
@@ -486,7 +486,7 @@ describe('Insurance tests', () => {
             expect(ask.active).to.equal(true)
             expect(ask.executed).to.equal(false)
             expect(ask.numConfirm).to.equal(2)
-        })
+        });
 
         it('STEP2: Confirm payment for disabled member: fail', async () => {
             await insuranceFactory.addUserToInsurance(
@@ -506,7 +506,7 @@ describe('Insurance tests', () => {
             ).to.be.revertedWith(
                 'WQInsurance: Member not found'
             )
-        })
+        });
 
         it('STEP3: Confirm payment from disabled member: fail', async () => {
             await insuranceFactory.addUserToInsurance(
@@ -526,7 +526,7 @@ describe('Insurance tests', () => {
             ).to.be.revertedWith(
                 'WQInsurance: You are not a member'
             )
-        })
+        });
 
         it('STEP4: Confirm payment again: fail', async () => {
             await insuranceFactory.addUserToInsurance(
@@ -546,7 +546,25 @@ describe('Insurance tests', () => {
             ).to.be.revertedWith(
                 'WQInsurance: Payment is already confirmed'
             )
-        })
+        });
+
+        it('STEP5: Confirm not active claim: fail', async () => {
+            await insuranceFactory.addUserToInsurance(
+                ContributionPeriod.Monthly,
+                PolicyType.Minimal,
+                user1.address
+            )
+            await web3.eth.sendTransaction({
+                from: user1.address,
+                to: insurance.address,
+                value: magicValueOne,
+            })
+            await expect(
+                insurance.connect(user0).confirmPayment(user1.address)
+            ).to.be.revertedWith(
+                'WQInsurance: Claim is not active'
+            )
+        });
     })
 
     describe('Revoke confirmation', () => {
@@ -704,7 +722,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user1).executePayment()
             ).to.be.revertedWith(
-                'WQInsurance: The contract must have more than one members'
+                'WQInsurance: The contract must contain more than one members'
             )
         })
 
@@ -725,7 +743,7 @@ describe('Insurance tests', () => {
             await expect(
                 insurance.connect(user1).executePayment()
             ).to.be.revertedWith(
-                "WQInsurance: You haven't contributed funds for a long time"
+                "WQInsurance: Your policy is suspended"
             )
 
         })

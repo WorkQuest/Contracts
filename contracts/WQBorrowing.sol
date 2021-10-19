@@ -20,28 +20,26 @@ contract WQBorrowing is
     using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
-
-    struct TokenInfo {
-        uint256 amount;
-        bool enabled;
-    }
+    uint256 public constant YEAR = 31536000;
 
     struct BorrowInfo {
-        uint256 amount;
+        uint256 credit;
         uint256 collateral;
+        uint256 borrowedAt;
+        uint256 apy;
         bool borrowed;
         IERC20Upgradeable token;
         WQFundInterface fund;
     }
 
-    uint256 public fee;
-    WQPriceOracle oracle;
+    uint256 public apy;
+    WQPriceOracle public oracle;
 
-    WQFundInterface[] funds;
+    WQFundInterface[] public funds;
 
-    mapping(IERC20Upgradeable => TokenInfo) collateralTokens;
+    mapping(IERC20Upgradeable => bool) public enabledTokens;
 
-    mapping(address => BorrowInfo) borrowers;
+    mapping(address => BorrowInfo) public borrowers;
 
     event Borrowed(
         uint256 collateral,
@@ -73,28 +71,33 @@ contract WQBorrowing is
 
     /**
      * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
-     * @param collateral Amount of collateral token
+     * @param collateralAmount Amount of collateral token
      * @param token Collateral token address
      */
-    function borrow(uint256 collateral, IERC20Upgradeable token) external {
+    function borrow(uint256 collateralAmount, IERC20Upgradeable token)
+        external
+    {
         require(
-            collateralTokens[token].enabled,
-            'WQBorrowing: Token is disabled'
+            enabledTokens[token],
+            'WQBorrowing: This token is disabled to collateral'
         );
         BorrowInfo storage loan = borrowers[msg.sender];
         require(!loan.borrowed, 'WQBorrowing: You are not refunded loan');
         loan.borrowed = true;
-        loan.collateral = collateral;
+        loan.collateral = collateralAmount;
         loan.token = token;
-        loan.amount =
-            ((collateral * oracle.getTokenPriceUSD(IERC20MetadataUpgradeable(address(token)).symbol())) * 1000) /
+        loan.credit =
+            ((collateralAmount *
+                oracle.getTokenPriceUSD(
+                    IERC20MetadataUpgradeable(address(token)).symbol()
+                )) * 1000) /
             1500e18;
+        loan.borrowedAt = block.timestamp;
 
-        //TODO: check funds on contracts and request it
         bool success = false;
         for (uint256 i = 0; i < funds.length; i++) {
-            if (loan.amount > funds[i].balanceOf()) {
-                funds[i].borrow(loan.amount);
+            if (loan.credit > funds[i].balanceOf()) {
+                funds[i].borrow(loan.credit);
                 success = true;
                 loan.fund = funds[i];
                 break;
@@ -103,10 +106,14 @@ contract WQBorrowing is
         require(success, 'WQBorrowing: Error when loaned from funds');
 
         // Take tokens
-        loan.token.safeTransferFrom(msg.sender, address(this), collateral);
+        loan.token.safeTransferFrom(
+            msg.sender,
+            address(this),
+            collateralAmount
+        );
         // Send native coins
-        payable(msg.sender).transfer(loan.amount);
-        emit Borrowed(collateral, token, loan.amount, msg.sender);
+        payable(msg.sender).transfer(loan.credit);
+        emit Borrowed(collateralAmount, token, loan.credit, msg.sender);
     }
 
     /**
@@ -114,11 +121,11 @@ contract WQBorrowing is
      */
     function refund() external payable {
         BorrowInfo storage loan = borrowers[msg.sender];
-        require(
-            collateralTokens[loan.token].enabled,
-            'WQBorrowing: Token is disabled'
-        );
-        uint256 returned = loan.amount + (fee * loan.amount) / 1e18;
+        require(enabledTokens[loan.token], 'WQBorrowing: Token is disabled');
+        uint256 returned = loan.credit +
+            (((block.timestamp - loan.borrowedAt) * loan.credit * loan.apy) /
+                YEAR) /
+            1e18;
         // Take native coins
         require(returned == msg.value, 'WQBorrowing: Invalid refund amount');
         // and send back to fund
@@ -141,14 +148,14 @@ contract WQBorrowing is
     }
 
     /**
-     * @notice Set fee for loan using
-     * @param _fee Fee amount
+     * @notice Set rate per year amount
+     * @param _apy Fee amount
      */
-    function setFee(uint256 _fee) external {
+    function setApy(uint256 _apy) external {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
             'WQBorrowing: You are not have an admin role'
         );
-        fee = _fee;
+        apy = _apy;
     }
 }

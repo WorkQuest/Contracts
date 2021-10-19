@@ -8,9 +8,9 @@ const { parseEther } = require('ethers/lib/utils')
 const nullstr = '0x0000000000000000000000000000000000000000'
 const job_hash = web3.utils.keccak256('JOBHASH')
 const cost = parseEther('1')
-const comission = '9999999999934464'
+const comission = parseEther('0.01')
 const cost_comission = parseEther('1.01')
-const reward = '990000000000065500'
+const reward = parseEther('0.99');
 const double_comission = parseEther('0.02')
 const forfeit = parseEther('0.1')
 const cost_after_forfeit = parseEther('0.9')
@@ -128,14 +128,9 @@ describe('Work Quest test', () => {
             .connect(employer)
             .newWorkQuest(job_hash, cost, deadline)
 
-        let work_quest_address = (
-            await work_quest_factory.getWorkQuests(employer.address)
-        )[0]
-        work_quest = await hre.ethers.getContractAt(
-            'WorkQuest',
-            work_quest_address
-        )
-        await work_quest.deployed()
+        let work_quest_address = (await work_quest_factory.getWorkQuests(employer.address))[0];
+        work_quest = await hre.ethers.getContractAt('WorkQuest', work_quest_address);
+        await work_quest.deployed();
 
         call_flow = [
             {
@@ -144,7 +139,7 @@ describe('Work Quest test', () => {
                     {
                         from: employer.address,
                         to: work_quest.address,
-                        value: cost_comission,
+                        value: cost_comission.toString(),
                     },
                 ],
             },
@@ -210,18 +205,23 @@ describe('Work Quest test', () => {
 
             let info = await work_quest.connect(employer).getInfo()
             expect(info[6]).to.be.equal(JobStatus.Published)
-        })
+        });
 
         it('Publish job from other statuses: fail', async () => {
-            expect(
-                work_quest.connect(employer).assignJob(worker.address)
-            ).to.be.revertedWith(acces_denied_err)
-
-            // await employer.sendTransaction({
-            //   to: work_quest.address,
-            //   value: cost_comission
-            // });
-        })
+            await employer.sendTransaction({
+                to: work_quest.address,
+                value: cost_comission,
+            });
+            for (let val of call_flow.slice(setStatus.WaitWorker, setStatus.Finished + 1)) {
+                await val.func(...val.args)
+                await expect(
+                    employer.sendTransaction({
+                        to: work_quest.address,
+                        value: cost_comission,
+                    })
+                ).to.be.revertedWith(acces_denied_err)
+            }
+        });
     })
 
     describe('Assign worker to job', () => {
@@ -647,39 +647,34 @@ describe('Work Quest test', () => {
             }
             expect(
                 (await web3.eth.getBalance(work_quest.address)).toString()
-            ).to.be.equal(cost.toString())
+            ).to.be.equal(cost.toString());
 
-            let feeReceiverBalance = await web3.eth.getBalance(
-                feeReceiver.address
-            )
+            let feeReceiverBalance = (await web3.eth.getBalance(feeReceiver.address));
             let workerBalance = await web3.eth.getBalance(worker.address)
 
-            await work_quest.connect(employer).acceptJobResult()
+            await work_quest.connect(employer).acceptJobResult();
 
-            // FIXME: different values for ever test
-            // expect(
-            //   (await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance).toString()
-            // ).to.be.equal('');
-            // expect(
-            //   (await web3.eth.getBalance(worker.address) - workerBalance).toString()
-            // ).to.be.equal('');
+            expect(
+                ((await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance) / 1e18).toFixed(2)
+            ).to.be.equal('0.01');
+            expect(
+                ((await web3.eth.getBalance(worker.address) - workerBalance) / 1e18).toFixed(2)
+            ).to.be.equal('0.99');
 
-            expect(await web3.eth.getBalance(work_quest.address)).to.be.equal(
-                '0'
-            )
-
-            let info = await work_quest.connect(employer).getInfo()
-            expect(info[6]).to.be.equal(JobStatus.Finished)
+            expect(
+                await web3.eth.getBalance(work_quest.address)
+            ).to.be.equal('0');
+            let info = await work_quest.connect(employer).getInfo();
+            expect(info[6]).to.be.equal(JobStatus.Finished);
         })
 
         it('Accept job by arbiter: success', async () => {
-            // Contract balance before accept
-            // expect(
-            //   (await web3.eth.getBalance(work_quest.address)).toString()
-            // ).to.be.equal(cost.toString());
-
             let info = await work_quest.connect(employer).getInfo()
             expect(info[1]).to.be.equal(cost)
+
+            let employerBalance = await web3.eth.getBalance(employer.address);
+            let workerBalance = await web3.eth.getBalance(worker.address);
+            let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address);
 
             for (let val of call_flow.slice(
                 setStatus.Published,
@@ -688,23 +683,15 @@ describe('Work Quest test', () => {
                 await val.func(...val.args)
             }
 
-            let employerBalance = await web3.eth.getBalance(employer.address)
-            let workerBalance = await web3.eth.getBalance(worker.address)
-            let feeReceiverBalance = await web3.eth.getBalance(
-                feeReceiver.address
-            )
-
-            // expect(
-            //   (await web3.eth.getBalance(employer.address) - employerBalance).toString()
-            // ).to.equal(forfeit.toString());
-
-            //FIXME: different values for ever test
-            // expect(
-            //   (await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance).toString()
-            // ).to.equal("");
-            // expect(
-            //   (await web3.eth.getBalance(worker.address) - workerBalance).toString()
-            // ).to.equal('');
+            expect(
+                ((employerBalance - await web3.eth.getBalance(employer.address)) / 1e18).toFixed(2)
+            ).to.equal((cost_comission / 1e18).toFixed(2));
+            expect(
+                ((await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance) / 1e18).toFixed(2)
+            ).to.equal((double_comission / 1e18).toFixed(2));
+            expect(
+                ((await web3.eth.getBalance(worker.address) - workerBalance) / 1e18).toFixed(2)
+            ).to.equal((reward / 1e18).toFixed(2));
 
             expect(await web3.eth.getBalance(work_quest.address)).to.equal('0')
 
@@ -835,7 +822,9 @@ describe('Work Quest test', () => {
             sig = ethers.utils.splitSignature(signature)
         });
         it('TEST 1: Add affiliat for worker, revert 1: if affiliat is zero', async () => {
-            await expect(WQReferral.addAffiliat(sig.v, sig.r, sig.s, nullstr)).to.be.revertedWith(
+            await expect(
+                WQReferral.addAffiliat(sig.v, sig.r, sig.s, nullstr)
+            ).to.be.revertedWith(
                 'WQReferral: affiliat cannot be zero address'
             )
         });
@@ -858,7 +847,9 @@ describe('Work Quest test', () => {
         it('TEST 4: Add affiliat for worker, normal operation', async () => {
             // TODO
             await WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
-            expect(await WQReferral.connect(worker).hasAffiliat(worker.address)).to.be.equals(true);
+            expect(
+                await WQReferral.connect(worker).hasAffiliat(worker.address)
+            ).to.be.equals(true);
             // expect( referal[0]).to.be.equal(affiliat.address);
         });
 

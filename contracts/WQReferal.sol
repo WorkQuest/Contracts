@@ -94,16 +94,6 @@ contract WQReferral is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    /** @notice Check msg.sender is admin role
-     */
-    modifier onlyAdmin() {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQReferal: You should have an admin role'
-        );
-        _;
-    }
-
     /** @dev
      */
     function addAffiliat(
@@ -142,13 +132,8 @@ contract WQReferral is
     /**
      * @dev Utils function for check whether an address has the affiliat
      */
-    function hasAffiliat(address _referral)
-        external
-        view
-        returns (bool hasAffiliat_)
-    {
-        hasAffiliat_ = referrals[_referral].affiliat != address(0);
-        return hasAffiliat_;
+    function hasAffiliat(address _referral) external view returns (bool) {
+        return referrals[_referral].affiliat != address(0);
     }
 
     /**
@@ -187,7 +172,6 @@ contract WQReferral is
         uint256 rewardAmount = affiliats[msg.sender].rewardTotal -
             affiliats[msg.sender].rewardPaid;
         require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
-        require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
         require(
             token.balanceOf(address(this)) > rewardAmount,
             'WQReferral: Balance on contract too low'
@@ -205,11 +189,17 @@ contract WQReferral is
             affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
     }
 
-    function updateFactory(address payable _factory) external onlyAdmin {
+    function updateFactory(address payable _factory)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         factory = _factory;
     }
 
-    function setReferralBonus(uint256 _referralBonus) external onlyAdmin {
+    function setReferralBonus(uint256 _referralBonus)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         referralBonus = _referralBonus;
     }
 }

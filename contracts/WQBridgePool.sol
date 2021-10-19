@@ -6,6 +6,8 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+
 
 contract WQBridgePool is
     Initializable,
@@ -13,6 +15,7 @@ contract WQBridgePool is
     PausableUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using AddressUpgradeable for address payable;
 
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BRIDGE_ROLE = keccak256('BRIDGE_ROLE');
@@ -46,8 +49,7 @@ contract WQBridgePool is
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            (bool success, ) = recipient.call{value: amount}('');
-            require(success, 'WQBridgePool: transfer native coins fail');
+            recipient.sendValue(amount);
         }
         emit Transferred(token, recipient, amount);
     }
@@ -61,11 +63,11 @@ contract WQBridgePool is
         uint256 amount,
         address token
     ) external onlyRole(ADMIN_ROLE) {
+        require(recipient != payable(0), "WQBridge: invalid recipient address");
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            (bool success, ) = recipient.call{value: amount}('');
-            require(success, 'WQBridgePool: transfer native coins fail');
+            recipient.sendValue(amount);
         }
         emit Transferred(token, recipient, amount);
     }
