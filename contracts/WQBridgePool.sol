@@ -8,7 +8,6 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 
-
 contract WQBridgePool is
     Initializable,
     AccessControlUpgradeable,
@@ -63,7 +62,7 @@ contract WQBridgePool is
         uint256 amount,
         address token
     ) external onlyRole(ADMIN_ROLE) {
-        require(recipient != payable(0), "WQBridge: invalid recipient address");
+        require(recipient != payable(0), 'WQBridge: invalid recipient address');
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {

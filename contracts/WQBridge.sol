@@ -122,7 +122,7 @@ contract WQBridge is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
         chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?
-        require(_pool != payable(0), "WQBridge: invalid pool address");
+        require(_pool != payable(0), 'WQBridge: invalid pool address');
         pool = _pool;
     }
 
@@ -292,7 +292,7 @@ contract WQBridge is
      * @param _pool Address of pool
      */
     function updatePool(address payable _pool) external onlyRole(ADMIN_ROLE) {
-        require(_pool != payable(0), "WQBridge: invalid pool address");
+        require(_pool != payable(0), 'WQBridge: invalid pool address');
         pool = _pool;
     }
 
@@ -335,7 +335,7 @@ contract WQBridge is
         uint256 amount,
         address token
     ) external onlyRole(ADMIN_ROLE) {
-        require(recipient != payable(0), "WQBridge: invalid recipient address");
+        require(recipient != payable(0), 'WQBridge: invalid recipient address');
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {

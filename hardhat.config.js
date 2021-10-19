@@ -26,21 +26,29 @@ if (!process.env.MNEMONIC) {
   mnemonic = process.env.MNEMONIC;
 }
 
-let infuraApiKey;
-if (!process.env.INFURA_API_KEY) {
-  throw new Error('Please set your INFURA_API_KEY in a .env file');
+let providerApiKey;
+if (!process.env.PROVIDER_API_KEY) {
+  throw new Error('Please set your PROVIDER_API_KEY in a .env file');
 } else {
-  infuraApiKey = process.env.INFURA_API_KEY;
+  providerApiKey = process.env.PROVIDER_API_KEY;
 }
+
+let explorerApiKey;
+if (!process.env.EXPLORER_API_KEY) {
+  throw new Error('Please set your EXPLORER_API_KEY in a .env file');
+} else {
+  explorerApiKey = process.env.EXPLORER_API_KEY;
+}
+
 
 function createNetworkConfig(network) {
   // const url = `https://${network}.infura.io/v3/${infuraApiKey}`;
-  const url = `https://speedy-nodes-nyc.moralis.io/${infuraApiKey}/eth/${network}`;
+  const url = `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/eth/${network}`;
   return {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 80000000000,
+    gasPrice: 70000000000,
     url: url
   };
 }
@@ -91,7 +99,7 @@ module.exports = {
     }
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: explorerApiKey
   },
   mocha: {
     timeout: 20000

@@ -71,9 +71,9 @@ contract WQLiquidityMining is
     event Claimed(uint256 amount, uint256 time, address indexed sender);
     event Unstaked(uint256 amount, uint256 time, address indexed sender);
 
-/// @custom:oz-upgrades-unsafe-allow constructor
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
-    
+
     function initialize(
         uint256 _startTime,
         uint256 _rewardTotal,
