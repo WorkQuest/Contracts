@@ -144,7 +144,7 @@ contract WQStaking is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                 duration == 30 || duration == 60 || duration == 90,
                 'WQStaking: duration must be 30, 60 or 90 days'
             );
-            staker.unstakeTime = block.timestamp + duration * 86400; // ATTENTION change duration from days to minutes to accelerate process
+            staker.unstakeTime = block.timestamp + duration * 60; // ATTENTION change duration from days to minutes to accelerate process
         }
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
