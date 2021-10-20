@@ -151,7 +151,7 @@ contract WQReferral is
             WorkQuestFactory(factory).workquestValid(msg.sender) == true,
             'WQReferal: sender is not valid WorkQuest contract'
         );
-        uint256 tokenPrice = oracle.getTokenPriceUSD();
+        uint256 tokenPrice = oracle.getTokenPriceUSD('WQT');
         require(
             tokenPrice != 0,
             'WQReferal: tokenPrice received from oracle is zero'
