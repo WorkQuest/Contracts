@@ -140,11 +140,18 @@ contract WQReferral is
      * @dev calculate referal reward for affiliat at end of quest
      */
     function calcReferral(address referral) external nonReentrant {
-        uint256 tokenPrice = oracle.getTokenPriceUSD();
+        Account storage userAccount = referrals[referral];
+        require(!userAccount.paid, 'WQReferral: Bonus already paid');
+        require(
+            userAccount.affiliat != address(0),
+            'WQReferral: Address is not registered'
+        );
+        userAccount.paid = true;
         require(
             WorkQuestFactory(factory).workquestValid(msg.sender) == true,
             'WQReferal: sender is not valid WorkQuest contract'
         );
+        uint256 tokenPrice = oracle.getTokenPriceUSD();
         require(
             tokenPrice != 0,
             'WQReferal: tokenPrice received from oracle is zero'
@@ -154,13 +161,6 @@ contract WQReferral is
             token.balanceOf(address(this)) > bonusAmount,
             'WQReferral: Balance on contract too low'
         );
-        Account storage userAccount = referrals[referral];
-        require(!userAccount.paid, 'WQReferral: Bonus already paid');
-        require(
-            userAccount.affiliat != address(0),
-            'WQReferral: Address is not registered'
-        );
-        userAccount.paid = true;
         referrals[userAccount.affiliat].reward += bonusAmount;
         affiliats[userAccount.affiliat].rewardTotal += bonusAmount;
         emit PaidReferral(referral, userAccount.affiliat, bonusAmount);

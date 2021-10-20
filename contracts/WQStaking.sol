@@ -338,13 +338,14 @@ contract WQStaking is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         returns (
             uint256 staked_,
             uint256 claim_,
-            uint256 _balance
+            uint256 _balance,
+            uint256 unstakeTime
         )
     {
         Staker storage staker = stakes[user];
         staked_ = staker.amount;
         claim_ = getClaim(user);
-        return (staked_, claim_, stakeToken.balanceOf(user));
+        return (staked_, claim_, stakeToken.balanceOf(user), staker.unstakeTime);
     }
 
     /**
