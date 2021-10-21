@@ -28,10 +28,10 @@ async function main() {
     if (!process.env.CLAIM_PERIOD) {
         throw new Error(`Please set your CLAIM_PERIOD in a .env-${network} file`);
     }
-    if (!process.env.MIN_STAKE) {
+    if (!process.env.MIN_STAKE_NATIVE) {
         throw new Error(`Please set your MIN_STAKE_NATIVE in a .env-${network} file`);
     }
-    if (!process.env.MAX_STAKE) {
+    if (!process.env.MAX_STAKE_NATIVE) {
         throw new Error(`Please set your MAX_STAKE_NATIVE in a .env-${network} file`);
     }
     if (!process.env.WQT_TOKEN) {
