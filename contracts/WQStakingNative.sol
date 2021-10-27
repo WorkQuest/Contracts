@@ -6,6 +6,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 
 contract WQStakingNative is
     Initializable,
@@ -278,6 +279,20 @@ contract WQStakingNative is
         tokensPerStake = _tps;
         totalStaked = _totalStaked;
         totalDistributed = _totalDistributed;
+    }
+
+    /**
+     * @dev Set minimum of users staked amount
+     */
+    function setMinStake(uint256 amount) external onlyRole(ADMIN_ROLE) {
+        minStake = amount;
+    }
+
+    /**
+     * @dev Set maximum of users total staked amount
+     */
+    function setMaxStake(uint256 amount) external onlyRole(ADMIN_ROLE) {
+        maxStake = amount;
     }
 
     /**
