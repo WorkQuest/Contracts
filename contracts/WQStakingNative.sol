@@ -5,16 +5,17 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 
 contract WQStakingNative is
     Initializable,
     AccessControlUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-
+    using AddressUpgradeable for address payable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
@@ -39,14 +40,10 @@ contract WQStakingNative is
         uint256 maxStake;
         uint256 totalStaked;
         uint256 totalDistributed;
-        address rewardTokenAddress;
     }
 
     // Stakers info by token holders.
     mapping(address => Staker) public stakes;
-
-    // ERC20 token earned by stakers as reward.
-    IERC20Upgradeable public rewardToken;
 
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
@@ -66,15 +63,17 @@ contract WQStakingNative is
 
     uint256 public tokensPerStake;
     uint256 public rewardProduced;
-    uint256 public allProduced;
+    uint256 public earlierProduced;
     uint256 public producedTime;
-
     uint256 public totalStaked;
     uint256 public totalDistributed;
 
     event Staked(uint256 amount, uint256 time, address indexed sender);
     event Claimed(uint256 amount, uint256 time, address indexed sender);
     event Unstaked(uint256 amount, uint256 time, address indexed sender);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 
     function initialize(
         uint256 _startTime,
@@ -83,11 +82,11 @@ contract WQStakingNative is
         uint256 _stakePeriod,
         uint256 _claimPeriod,
         uint256 _minStake,
-        uint256 _maxStake,
-        address _rewardToken
+        uint256 _maxStake
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
@@ -95,7 +94,6 @@ contract WQStakingNative is
         claimPeriod = _claimPeriod;
         minStake = _minStake;
         maxStake = _maxStake;
-        rewardToken = IERC20Upgradeable(_rewardToken);
         producedTime = _startTime;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -103,6 +101,12 @@ contract WQStakingNative is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @dev stake `amount` of tokens to the contract
@@ -168,7 +172,7 @@ contract WQStakingNative is
         staker.amount -= _amount;
         totalStaked -= _amount;
 
-        payable(msg.sender).transfer(_amount);
+        payable(msg.sender).sendValue(_amount);
 
         emit Unstaked(_amount, block.timestamp, msg.sender);
     }
@@ -197,7 +201,8 @@ contract WQStakingNative is
         staker.claimedAt = block.timestamp;
         totalDistributed += reward;
 
-        rewardToken.safeTransfer(msg.sender, reward);
+        payable(msg.sender).sendValue(reward);
+
         emit Claimed(reward, block.timestamp, msg.sender);
     }
 
@@ -243,7 +248,7 @@ contract WQStakingNative is
      */
     function produced() private view returns (uint256) {
         return
-            allProduced +
+            earlierProduced +
             (rewardTotal * (block.timestamp - producedTime)) /
             distributionTime;
     }
@@ -257,60 +262,6 @@ contract WQStakingNative is
             }
             rewardProduced = rewardProducedAtNow;
         }
-    }
-
-    /**
-     * @dev setReward - sets amount of reward during `distributionTime`
-     */
-    function setReward(uint256 _amount) external onlyRole(ADMIN_ROLE) {
-        allProduced = produced();
-        producedTime = block.timestamp;
-        rewardTotal = _amount;
-    }
-
-    /**
-     * @dev updateStakingInfo - synchronize the smart contracts
-     */
-    function updateStakingInfo(
-        uint256 _tps,
-        uint256 _totalStaked,
-        uint256 _totalDistributed
-    ) external onlyRole(ADMIN_ROLE) {
-        tokensPerStake = _tps;
-        totalStaked = _totalStaked;
-        totalDistributed = _totalDistributed;
-    }
-
-    /**
-     * @dev Set minimum of users staked amount
-     */
-    function setMinStake(uint256 amount) external onlyRole(ADMIN_ROLE) {
-        minStake = amount;
-    }
-
-    /**
-     * @dev Set maximum of users total staked amount
-     */
-    function setMaxStake(uint256 amount) external onlyRole(ADMIN_ROLE) {
-        maxStake = amount;
-    }
-
-    /**
-     * @dev updateStakerInfo - update user information
-     */
-    function updateStakerInfo(
-        address _user,
-        uint256 _amount,
-        uint256 _rewardAllowed,
-        uint256 _rewardDebt,
-        uint256 _distributed
-    ) external onlyRole(ADMIN_ROLE) {
-        Staker storage staker = stakes[_user];
-
-        staker.amount = _amount;
-        staker.rewardAllowed = _rewardAllowed;
-        staker.rewardDebt = _rewardDebt;
-        staker.distributed = _distributed;
     }
 
     /**
@@ -344,9 +295,100 @@ contract WQStakingNative is
             minStake: minStake,
             maxStake: maxStake,
             totalStaked: totalStaked,
-            totalDistributed: totalDistributed,
-            rewardTokenAddress: address(rewardToken)
+            totalDistributed: totalDistributed
         });
         return info_;
+    }
+
+    function updateStartTime(uint256 _startTimeNew)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        earlierProduced = produced();
+        startTime = _startTimeNew;
+        producedTime = _startTimeNew;
+    }
+
+    /**
+     * @dev setReward - sets amount of reward during `distributionTime`
+     */
+    function updateRewardTotal(uint256 _amount) external onlyRole(ADMIN_ROLE) {
+        earlierProduced = produced();
+        producedTime = block.timestamp;
+        rewardTotal = _amount;
+    }
+
+    function updateDistributionTime(uint256 _distributionTime)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        earlierProduced = produced();
+        producedTime = block.timestamp;
+        distributionTime = _distributionTime;
+    }
+
+    /**
+     * @dev Set staking period
+     */
+    function setStakePeriod(uint256 _stakePeriod)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        stakePeriod = _stakePeriod;
+    }
+
+    /**
+     * @dev Set claiming period
+     */
+    function setClaimPeriod(uint256 _claimPeriod)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        claimPeriod = _claimPeriod;
+    }
+
+    /**
+     * @dev Set minimum of users staked amount
+     */
+    function setMinStake(uint256 amount) external onlyRole(ADMIN_ROLE) {
+        minStake = amount;
+    }
+
+    /**
+     * @dev Set maximum of users total staked amount
+     */
+    function setMaxStake(uint256 amount) external onlyRole(ADMIN_ROLE) {
+        maxStake = amount;
+    }
+
+    /**
+     * @dev updateStakingInfo - synchronize the smart contracts
+     */
+    function updateStakingInfo(
+        uint256 _tokensPerStake,
+        uint256 _totalStaked,
+        uint256 _totalDistributed
+    ) external onlyRole(ADMIN_ROLE) {
+        tokensPerStake = _tokensPerStake;
+        totalStaked = _totalStaked;
+        totalDistributed = _totalDistributed;
+    }
+
+    /**
+     * @dev updateStakerInfo - update user information
+     */
+    function updateStakerInfo(
+        address _user,
+        uint256 _amount,
+        uint256 _rewardAllowed,
+        uint256 _rewardDebt,
+        uint256 _distributed
+    ) external onlyRole(ADMIN_ROLE) {
+        Staker storage staker = stakes[_user];
+
+        staker.amount = _amount;
+        staker.rewardAllowed = _rewardAllowed;
+        staker.rewardDebt = _rewardDebt;
+        staker.distributed = _distributed;
     }
 }

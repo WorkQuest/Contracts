@@ -51,7 +51,7 @@ async function main() {
          process.env.MIN_STAKE,
          process.env.MAX_STAKE,
          process.env.WQT_TOKEN],
-        { initializer: 'initialize' }
+        { initializer: 'initialize', kind: 'uups' }
     );
     console.log("Proxy of StakingNative has been deployed to:", staking.address);
 

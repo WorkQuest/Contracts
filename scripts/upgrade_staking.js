@@ -17,8 +17,8 @@ async function main() {
 
   console.log("Upgrade...");
   const WQStaking = await ethers.getContractFactory("WQStaking");
-  const staking = await upgrades.upgradeProxy(process.env.STAKING, WQStaking);
-  console.log("Token has been upgraded to:", staking.address);
+  const staking = await upgrades.upgradeProxy(process.env.STAKING, WQStaking, {kind: 'transparent'});
+  console.log("WQStaking has been upgraded to:", staking.address);
 }
 
 main()
