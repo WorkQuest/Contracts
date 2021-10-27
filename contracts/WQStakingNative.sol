@@ -16,6 +16,7 @@ contract WQStakingNative is
     UUPSUpgradeable
 {
     using AddressUpgradeable for address payable;
+
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
@@ -42,9 +43,6 @@ contract WQStakingNative is
         uint256 totalDistributed;
     }
 
-    // Stakers info by token holders.
-    mapping(address => Staker) public stakes;
-
     /// @notice Common contract configuration variables
     /// @notice Time of start staking
     uint256 public startTime;
@@ -67,6 +65,9 @@ contract WQStakingNative is
     uint256 public producedTime;
     uint256 public totalStaked;
     uint256 public totalDistributed;
+
+    // Stakers info by token holders.
+    mapping(address => Staker) public stakes;
 
     event Staked(uint256 amount, uint256 time, address indexed sender);
     event Claimed(uint256 amount, uint256 time, address indexed sender);
