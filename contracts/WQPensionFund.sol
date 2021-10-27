@@ -6,7 +6,8 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WQFundInterface.sol';
 
 contract WQPensionFund is
@@ -16,14 +17,26 @@ contract WQPensionFund is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
+    using AddressUpgradeable for address payable;
+
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+
+    struct PensionWallet {
+        uint256 amount;
+        uint256 fee;
+        uint256 unlockDate;
+        uint256 createdAt;
+    }
 
     uint256 public lockTime;
     uint256 public defaultFee;
     uint256 public contributed;
     uint256 public borrowed;
+
+    /// @notice Pension wallet info of worker
+    mapping(address => PensionWallet) public wallets;
 
     /// @notice Event emitted when funds transferred to contract
     event Received(address from, uint256 amount);
@@ -33,16 +46,6 @@ contract WQPensionFund is
 
     /// @notice Event emitted when funds withrew from contract
     event Borrowed(uint256 amount);
-
-    struct PensionWallet {
-        uint256 amount;
-        uint256 fee;
-        uint256 unlockDate;
-        uint256 createdAt;
-    }
-
-    /// @notice Pension wallet info of worker
-    mapping(address => PensionWallet) public wallets;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -55,6 +58,7 @@ contract WQPensionFund is
         initializer
     {
         __AccessControl_init();
+        __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -102,7 +106,7 @@ contract WQPensionFund is
         require(amount <= wallet.amount);
         wallet.amount -= amount;
         contributed -= amount;
-        payable(msg.sender).transfer(amount);
+        payable(msg.sender).sendValue(amount);
         emit Withdrew(msg.sender, amount);
     }
 
@@ -121,11 +125,10 @@ contract WQPensionFund is
         wallet.fee = fee;
     }
 
-    function updateDefaultFee(uint256 _defaultFee) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQPension: You are not have an admin role'
-        );
+    function updateDefaultFee(uint256 _defaultFee)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         defaultFee = _defaultFee;
     }
 
@@ -133,22 +136,30 @@ contract WQPensionFund is
         return contributed - borrowed;
     }
 
-    function borrow(uint256 amount) external override nonReentrant {
-        require(
-            hasRole(BORROWER_ROLE, msg.sender),
-            "WQPension: You don't have a borrower role"
-        );
+    function borrow(uint256 amount)
+        external
+        override
+        nonReentrant
+        onlyRole(BORROWER_ROLE)
+    {
         require(
             amount <= contributed - borrowed,
             'WQPension: Insuffience amount'
         );
         borrowed += amount;
-        payable(msg.sender).transfer(amount);
+        payable(msg.sender).sendValue(amount);
         emit Borrowed(amount);
     }
 
-    // TODO: implement it
-    function refund() external payable override {}
+    function refund()
+        external
+        payable
+        override
+        nonReentrant
+        onlyRole(BORROWER_ROLE)
+    {
+        borrowed -= msg.value;
+    }
 
     receive() external payable {
         revert();
