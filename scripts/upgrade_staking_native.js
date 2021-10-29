@@ -17,7 +17,7 @@ async function main() {
 
   console.log("Upgrade...");
   const WQStakingNative = await ethers.getContractFactory("WQStakingNative");
-  const staking_native = await upgrades.upgradeProxy(process.env.STAKING_NATIVE, WQStakingNative, { kind: 'transparent' });
+  const staking_native = await upgrades.upgradeProxy(process.env.STAKING_NATIVE, WQStakingNative, { kind: 'uups' });
   console.log("WQStakingNative has been upgraded to:", staking_native.address);
 }
 

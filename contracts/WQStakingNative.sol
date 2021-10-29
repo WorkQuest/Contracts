@@ -72,6 +72,7 @@ contract WQStakingNative is
     event Staked(uint256 amount, uint256 time, address indexed sender);
     event Claimed(uint256 amount, uint256 time, address indexed sender);
     event Unstaked(uint256 amount, uint256 time, address indexed sender);
+    event Received(uint256 amount, uint256 time, address indexed sender);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -146,6 +147,10 @@ contract WQStakingNative is
         staker.amount += msg.value;
         staker.stakedAt = block.timestamp;
         emit Staked(msg.value, block.timestamp, msg.sender);
+    }
+
+    receive() external payable {
+        emit Received(msg.value, block.timestamp, msg.sender);
     }
 
     /**
@@ -360,6 +365,13 @@ contract WQStakingNative is
      */
     function setMaxStake(uint256 amount) external onlyRole(ADMIN_ROLE) {
         maxStake = amount;
+    }
+
+    /**
+     * @dev Set earlier produced amount
+     */
+    function setEarlierProduced(uint256 amount) external onlyRole(ADMIN_ROLE) {
+        earlierProduced = amount;
     }
 
     /**
