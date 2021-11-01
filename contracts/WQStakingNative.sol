@@ -77,6 +77,14 @@ contract WQStakingNative is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
+    modifier dailyLocked() {
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
+            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
+        );
+        _;
+    }
+
     function initialize(
         uint256 _startTime,
         uint256 _rewardTotal,
@@ -111,20 +119,12 @@ contract WQStakingNative is
     {}
 
     /**
-     * @dev stake `amount` of tokens to the contract
-     *
-     * Parameters:
-     *
-     * - `_amount` - stake amount
+     * @dev stake native coins to the contract
      */
-    function stake() external payable nonReentrant {
+    function stake() external payable nonReentrant dailyLocked {
         require(
             block.timestamp > startTime,
             'WQStaking: Staking time has not come yet'
-        );
-        require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            'WQStaking: Daily lock'
         );
         require(
             msg.value >= minStake,
@@ -155,17 +155,10 @@ contract WQStakingNative is
 
     /**
      * @dev unstake - return staked amount
-     *
-     * Parameters:
-     *
-     * - `_amount` - stake amount
+     * @param _amount Unstake amount
      */
 
-    function unstake(uint256 _amount) external nonReentrant {
-        require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            'WQStaking: Daily lock'
-        );
+    function unstake(uint256 _amount) external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
         require(
             staker.amount >= _amount,
@@ -173,24 +166,18 @@ contract WQStakingNative is
         );
 
         update();
-
         staker.rewardAllowed += (_amount * tokensPerStake) / 1e18;
         staker.amount -= _amount;
         totalStaked -= _amount;
 
         payable(msg.sender).sendValue(_amount);
-
         emit Unstaked(_amount, block.timestamp, msg.sender);
     }
 
     /**
      * @dev claim available rewards
      */
-    function claim() external nonReentrant {
-        require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            'WQStaking: Daily lock'
-        );
+    function claim() external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
         require(
             block.timestamp - staker.claimedAt > claimPeriod,
@@ -210,6 +197,44 @@ contract WQStakingNative is
         payable(msg.sender).sendValue(reward);
 
         emit Claimed(reward, block.timestamp, msg.sender);
+    }
+
+    /**
+     * @dev Reinvestment rewards
+     */
+
+    function autoRenewal() external nonReentrant dailyLocked {
+        require(
+            block.timestamp > startTime,
+            'WQStaking: Staking time has not come yet'
+        );
+        Staker storage staker = stakes[msg.sender];
+        require(
+            block.timestamp - staker.claimedAt > claimPeriod,
+            'WQStaking: You cannot claim tokens yet'
+        );
+        require(
+            block.timestamp - staker.stakedAt > stakePeriod,
+            'WQStaking: You cannot stake tokens yet'
+        );
+        if (totalStaked > 0) {
+            update();
+        }
+        uint256 renewalReward = calcReward(msg.sender, tokensPerStake) %
+            (maxStake - staker.amount);
+        require(
+            renewalReward > 0,
+            'WQStaking: You cannot reinvest rewards'
+        );
+        staker.amount += renewalReward;
+        staker.rewardDebt += (renewalReward * tokensPerStake) / 1e20;
+        staker.distributed += renewalReward;
+        staker.stakedAt = block.timestamp;
+        staker.claimedAt = block.timestamp;
+        totalDistributed += renewalReward;
+        totalStaked += renewalReward;
+        emit Claimed(renewalReward, block.timestamp, msg.sender);
+        emit Staked(renewalReward, block.timestamp, msg.sender);
     }
 
     /**

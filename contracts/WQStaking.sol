@@ -84,6 +84,14 @@ contract WQStaking is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
+    modifier dailyLocked() {
+        require(
+            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
+            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
+        );
+        _;
+    }
+
     function initialize(
         uint256 _startTime,
         uint256 _rewardTotal,
@@ -128,14 +136,14 @@ contract WQStaking is
      *
      * - `_amount` - stake amount
      */
-    function stake(uint256 _amount, uint256 duration) external nonReentrant {
+    function stake(uint256 _amount, uint256 duration)
+        external
+        nonReentrant
+        dailyLocked
+    {
         require(
             block.timestamp > startTime,
             'WQStaking: Staking time has not come yet'
-        );
-        require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
         );
         require(
             _amount >= minStake,
@@ -151,21 +159,22 @@ contract WQStaking is
                 duration == 30 || duration == 60 || duration == 90,
                 'WQStaking: duration must be 30, 60 or 90 days'
             );
-            staker.unstakeTime = block.timestamp + duration * 86400; // ATTENTION change duration from days to minutes to accelerate process
+            staker.unstakeTime = block.timestamp + duration * 86400;
         }
         require(
             block.timestamp - staker.stakedAt > stakePeriod,
             'WQStaking: You cannot stake tokens yet'
         );
+
         if (totalStaked > 0) {
             update();
         }
-        // Transfer specified amount of staking tokens to the contract
-        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
-        staker.rewardDebt += (_amount * tokensPerStake) / 1e18;
+        staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
         totalStaked += _amount;
         staker.amount += _amount;
         staker.stakedAt = block.timestamp;
+
+        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
         emit tokensStaked(_amount, block.timestamp, msg.sender);
     }
 
@@ -177,11 +186,7 @@ contract WQStaking is
      * - `_amount` - stake amount
      */
 
-    function unstake(uint256 _amount) external nonReentrant {
-        require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
-        );
+    function unstake(uint256 _amount) external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
         require(
             staker.unstakeTime <= block.timestamp,
@@ -193,28 +198,22 @@ contract WQStaking is
         );
 
         update();
-
-        staker.rewardAllowed += (_amount * tokensPerStake) / 1e18;
+        staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
         staker.amount -= _amount;
         totalStaked -= _amount;
 
         stakeToken.safeTransfer(msg.sender, _amount);
-
         emit tokensUnstaked(_amount, block.timestamp, msg.sender);
     }
 
     /**
      * @dev claim available rewards
      */
-    function claim() external nonReentrant {
-        require(
-            block.timestamp % 86400 >= 600 && block.timestamp % 86400 <= 85800,
-            'WQStaking: Daily lock from 23:50 to 00:10 UTC'
-        );
+    function claim() external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
         require(
             block.timestamp - staker.claimedAt > claimPeriod,
-            'WQStaking: You cannot stake tokens yet'
+            'WQStaking: You cannot claim tokens yet'
         );
 
         if (totalStaked > 0) {
@@ -232,6 +231,44 @@ contract WQStaking is
     }
 
     /**
+     * @dev Reinvestment rewards
+     */
+
+    function autoRenewal() external nonReentrant dailyLocked {
+        require(
+            block.timestamp > startTime,
+            'WQStaking: Staking time has not come yet'
+        );
+        Staker storage staker = stakes[msg.sender];
+        require(
+            block.timestamp - staker.claimedAt > claimPeriod,
+            'WQStaking: You cannot claim tokens yet'
+        );
+        require(
+            block.timestamp - staker.stakedAt > stakePeriod,
+            'WQStaking: You cannot stake tokens yet'
+        );
+        if (totalStaked > 0) {
+            update();
+        }
+        uint256 renewalReward = calcReward(msg.sender, tokensPerStake) %
+            (maxStake - staker.amount);
+        require(
+            renewalReward > 0,
+            'WQStaking: You cannot reinvest the rewards'
+        );
+        staker.amount += renewalReward;
+        staker.rewardDebt += (renewalReward * tokensPerStake) / 1e20;
+        staker.distributed += renewalReward;
+        staker.stakedAt = block.timestamp;
+        staker.claimedAt = block.timestamp;
+        totalDistributed += renewalReward;
+        totalStaked += renewalReward;
+        emit tokensClaimed(renewalReward, block.timestamp, msg.sender);
+        emit tokensStaked(renewalReward, block.timestamp, msg.sender);
+    }
+
+    /**
      * @dev calcReward - calculates available reward
      */
     function calcReward(address _staker, uint256 _tps)
@@ -242,7 +279,7 @@ contract WQStaking is
         Staker storage staker = stakes[_staker];
 
         reward =
-            ((staker.amount * _tps) / 1e18) +
+            ((staker.amount * _tps) / 1e20) +
             staker.rewardAllowed -
             staker.distributed -
             staker.rewardDebt;
@@ -259,7 +296,7 @@ contract WQStaking is
             uint256 rewardProducedAtNow = produced();
             if (rewardProducedAtNow > rewardProduced) {
                 uint256 producedNew = rewardProducedAtNow - rewardProduced;
-                _tps += (producedNew * 1e18) / totalStaked;
+                _tps += (producedNew * 1e20) / totalStaked;
             }
         }
         reward = calcReward(_staker, _tps);
@@ -283,7 +320,7 @@ contract WQStaking is
         if (rewardProducedAtNow > rewardProduced) {
             uint256 producedNew = rewardProducedAtNow - rewardProduced;
             if (totalStaked > 0) {
-                tokensPerStake += (producedNew * 1e18) / totalStaked;
+                tokensPerStake += (producedNew * 1e20) / totalStaked;
             }
             rewardProduced = rewardProducedAtNow;
         }

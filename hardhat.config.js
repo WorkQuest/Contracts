@@ -66,17 +66,17 @@ module.exports = {
       chainId: 20210811
     },
     bsctestnet: {
-      url: "https://data-seed-prebsc-2-s2.binance.org:8545",
+      url: "https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet",
       chainId: 97,
       gas: "auto",
-      gasPrice: 10000000000,
+      gasPrice: 5000000000,
       accounts: { mnemonic: mnemonic }
     },
     bscmainnet: {
-      url: "https://bsc-dataseed.binance.org/",
+      url: "https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/mainnet",
       chainId: 56,
       gas: "auto",
-      gasPrice: 10000000000,
+      gasPrice: 5000000000,
       accounts: { mnemonic: mnemonic }
     },
     mainnet: createNetworkConfig('mainnet'),
@@ -90,13 +90,26 @@ module.exports = {
     tests: './test',
   },
   solidity: {
-    version: "0.8.4",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200
-      }
-    }
+    compilers: [
+      {
+        version: "0.8.4",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: "0.8.9",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+    ]
   },
   etherscan: {
     apiKey: explorerApiKey
