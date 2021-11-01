@@ -12,6 +12,7 @@ contract WQInsuranceFactory is
     AccessControlUpgradeable,
     UUPSUpgradeable
 {
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     uint256 constant MONTH = 2592000;
@@ -49,7 +50,9 @@ contract WQInsuranceFactory is
         __UUPSUpgradeable_init();
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
     }
 
     function _authorizeUpgrade(address newImplementation)
