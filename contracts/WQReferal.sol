@@ -54,7 +54,7 @@ contract WQReferral is
     /// @notice address of price oracle
     WQPriceOracle oracle;
     /// @notice address of workquest valid factory
-    address payable public factory;
+    WorkQuestFactory public factory;
 
     mapping(address => Account) public referrals;
     mapping(address => AffiliatInfo) public affiliats;
@@ -148,7 +148,7 @@ contract WQReferral is
         );
         userAccount.paid = true;
         require(
-            WorkQuestFactory(factory).workquestValid(msg.sender) == true,
+            factory.workquestValid(msg.sender) == true,
             'WQReferal: sender is not valid WorkQuest contract'
         );
         uint256 tokenPrice = oracle.getTokenPriceUSD('WQT');
@@ -189,11 +189,11 @@ contract WQReferral is
             affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
     }
 
-    function updateFactory(address payable _factory)
+    function updateFactory(address _factory)
         external
         onlyRole(ADMIN_ROLE)
     {
-        factory = _factory;
+        factory = WorkQuestFactory(_factory);
     }
 
     function setReferralBonus(uint256 _referralBonus)

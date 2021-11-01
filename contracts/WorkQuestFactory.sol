@@ -171,11 +171,6 @@ contract WorkQuestFactory is
         feeReceiver = _feeReceiver;
     }
 
-    /// @notice Prevents accidental sending of ether to the factory
-    receive() external payable {
-        revert();
-    }
-
     /**
      * @notice Update address of refferal contract
      * @param _referral  Address of refferal contract

@@ -8,6 +8,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WQPriceOracle.sol';
 import './WQFundInterface.sol';
 
@@ -18,13 +19,14 @@ contract WQBorrowing is
     UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using AddressUpgradeable for address payable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     uint256 public constant YEAR = 31536000;
 
     struct BorrowInfo {
-        uint256 credit;
         uint256 collateral;
+        uint256 credit;
         uint256 borrowedAt;
         uint256 apy;
         bool borrowed;
@@ -32,8 +34,9 @@ contract WQBorrowing is
         WQFundInterface fund;
     }
 
-    uint256 public apy;
-    WQPriceOracle public oracle;
+    uint256 apy;
+
+    WQPriceOracle oracle;
 
     WQFundInterface[] public funds;
 
@@ -86,17 +89,18 @@ contract WQBorrowing is
         loan.borrowed = true;
         loan.collateral = collateralAmount;
         loan.token = token;
+        loan.borrowedAt = block.timestamp;
+        loan.apy = apy;
         loan.credit =
             ((collateralAmount *
                 oracle.getTokenPriceUSD(
                     IERC20MetadataUpgradeable(address(token)).symbol()
                 )) * 1000) /
             1500e18;
-        loan.borrowedAt = block.timestamp;
 
         bool success = false;
         for (uint256 i = 0; i < funds.length; i++) {
-            if (loan.credit > funds[i].balanceOf()) {
+            if (loan.credit >= funds[i].balanceOf()) {
                 funds[i].borrow(loan.credit);
                 success = true;
                 loan.fund = funds[i];
@@ -112,7 +116,7 @@ contract WQBorrowing is
             collateralAmount
         );
         // Send native coins
-        payable(msg.sender).transfer(loan.credit);
+        payable(msg.sender).sendValue(loan.credit);
         emit Borrowed(collateralAmount, token, loan.credit, msg.sender);
     }
 
