@@ -15,6 +15,8 @@ contract WQDeposit is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
+    using AddressUpgradeable for address payable;
+
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
@@ -48,28 +50,36 @@ contract WQDeposit is
      * TODO: implement it
      * @notice Contribute native moneys to contract
      */
-    function contribute() external payable nonReentrant {}
+    function deposit() external payable nonReentrant {}
 
     function balanceOf() external view override returns (uint256) {
         return contributed - borrowed;
     }
 
-    function borrow(uint256 amount) external override nonReentrant {
-        require(
-            hasRole(BORROWER_ROLE, msg.sender),
-            "WQPension: You don't have a borrower role"
-        );
+    function borrow(uint256 amount)
+        external
+        override
+        nonReentrant
+        onlyRole(BORROWER_ROLE)
+    {
         require(
             amount <= contributed - borrowed,
             'WQPension: Insuffience amount'
         );
         borrowed += amount;
-        payable(msg.sender).transfer(amount);
+        payable(msg.sender).sendValue(amount);
         emit Borrowed(amount);
     }
 
-    // TODO: implement it
-    function refund() external payable override {}
+    function refund()
+        external
+        payable
+        override
+        nonReentrant
+        onlyRole(BORROWER_ROLE)
+    {
+        borrowed -= msg.value;
+    }
 
     receive() external payable {
         revert();
