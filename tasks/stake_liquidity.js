@@ -1,4 +1,4 @@
-task("stake_liquidity", "Transfer WQT tokens to recipient")
+task("stake_liquidity", "Stake LP-tokens to liquidity mining contract")
     .addParam("amount", "Amount of tokens")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
