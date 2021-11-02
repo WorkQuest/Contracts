@@ -66,14 +66,14 @@ module.exports = {
       chainId: 20210811
     },
     bsctestnet: {
-      url: "https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet",
+      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet`,
       chainId: 97,
       gas: "auto",
       gasPrice: 5000000000,
       accounts: { mnemonic: mnemonic }
     },
     bscmainnet: {
-      url: "https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/mainnet",
+      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/mainnet`,
       chainId: 56,
       gas: "auto",
       gasPrice: 5000000000,

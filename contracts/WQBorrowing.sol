@@ -95,8 +95,8 @@ contract WQBorrowing is
             ((collateralAmount *
                 oracle.getTokenPriceUSD(
                     IERC20MetadataUpgradeable(address(token)).symbol()
-                )) * 1000) /
-            1500e18;
+                )) * 10) /
+            15e18;
 
         bool success = false;
         for (uint256 i = 0; i < funds.length; i++) {
@@ -127,8 +127,8 @@ contract WQBorrowing is
         BorrowInfo storage loan = borrowers[msg.sender];
         require(enabledTokens[loan.token], 'WQBorrowing: Token is disabled');
         uint256 returned = loan.credit +
-            (((block.timestamp - loan.borrowedAt) * loan.credit * loan.apy) /
-                YEAR) /
+            ((block.timestamp - loan.borrowedAt) * loan.credit * loan.apy) /
+            YEAR /
             1e18;
         // Take native coins
         require(returned == msg.value, 'WQBorrowing: Invalid refund amount');
@@ -143,12 +143,23 @@ contract WQBorrowing is
      * @notice Add address of fund
      * @param fund Address of fund
      */
-    function addFund(address fund) external {
+    function addFund(address fund) external onlyRole(ADMIN_ROLE) {
+        funds.push(WQFundInterface(fund));
+    }
+
+    /**
+     * @notice Add address of fund
+     * @param fund Address of fund
+     */
+    function updateFund(uint256 index, address fund)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         require(
             hasRole(ADMIN_ROLE, msg.sender),
             'WQBorrowing: You are not have an admin role'
         );
-        funds.push(WQFundInterface(fund));
+        funds[index] = WQFundInterface(fund);
     }
 
     /**
