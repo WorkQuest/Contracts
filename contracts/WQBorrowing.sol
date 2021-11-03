@@ -26,6 +26,7 @@ contract WQBorrowing is
 
     struct BorrowInfo {
         uint256 collateral;
+        uint256 price;
         uint256 credit;
         uint256 borrowedAt;
         uint256 apy;
@@ -47,6 +48,7 @@ contract WQBorrowing is
     event Borrowed(
         uint256 collateral,
         IERC20Upgradeable token,
+        uint256 price,
         uint256 loan,
         address borrower
     );
@@ -79,6 +81,7 @@ contract WQBorrowing is
      */
     function borrow(uint256 collateralAmount, IERC20Upgradeable token)
         external
+        nonReentrant
     {
         require(
             enabledTokens[token],
@@ -91,12 +94,11 @@ contract WQBorrowing is
         loan.token = token;
         loan.borrowedAt = block.timestamp;
         loan.apy = apy;
-        loan.credit =
-            ((collateralAmount *
-                oracle.getTokenPriceUSD(
-                    IERC20MetadataUpgradeable(address(token)).symbol()
-                )) * 10) /
-            15e18;
+        uint256 price = oracle.getTokenPriceUSD(
+            IERC20MetadataUpgradeable(address(token)).symbol()
+        );
+        loan.credit = (collateralAmount * price * 2) / 3e18;
+        loan.price = price;
 
         bool success = false;
         for (uint256 i = 0; i < funds.length; i++) {
@@ -117,14 +119,15 @@ contract WQBorrowing is
         );
         // Send native coins
         payable(msg.sender).sendValue(loan.credit);
-        emit Borrowed(collateralAmount, token, loan.credit, msg.sender);
+        emit Borrowed(collateralAmount, token, price, loan.credit, msg.sender);
     }
 
     /**
      * @notice Refund loan
      */
-    function refund() external payable {
+    function refund() external payable nonReentrant {
         BorrowInfo storage loan = borrowers[msg.sender];
+        require(loan.borrowed, 'WQBorrowing: You a not loaned funds');
         require(enabledTokens[loan.token], 'WQBorrowing: Token is disabled');
         uint256 returned = loan.credit +
             ((block.timestamp - loan.borrowedAt) * loan.credit * loan.apy) /
@@ -132,10 +135,13 @@ contract WQBorrowing is
             1e18;
         // Take native coins
         require(returned == msg.value, 'WQBorrowing: Invalid refund amount');
+        loan.borrowed = false;
+        loan.credit = 0;
         // and send back to fund
         loan.fund.refund{value: msg.value}();
         //Send tokens
         loan.token.safeTransfer(msg.sender, loan.collateral);
+        loan.collateral = 0;
         emit Refunded(msg.sender, msg.value);
     }
 
