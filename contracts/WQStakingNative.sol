@@ -220,8 +220,10 @@ contract WQStakingNative is
         if (totalStaked > 0) {
             update();
         }
-        uint256 renewalReward = calcReward(msg.sender, tokensPerStake) %
-            (maxStake - staker.amount);
+        uint256 renewalReward = calcReward(msg.sender, tokensPerStake);
+        if (renewalReward > maxStake - staker.amount){
+            renewalReward = maxStake - staker.amount;
+        }
         require(renewalReward > 0, 'WQStaking: You cannot reinvest rewards');
         staker.amount += renewalReward;
         staker.rewardDebt += (renewalReward * tokensPerStake) / 1e20;
