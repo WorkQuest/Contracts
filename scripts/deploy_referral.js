@@ -15,27 +15,24 @@ async function main() {
     for (const k in envConfig) {
         process.env[k] = envConfig[k]
     }
-    if (!process.env.WQ_REFERRAL_REWARD) {
+    if (!process.env.REFERRAL_REWARD) {
         throw new Error(
-            `Plese set your WQ_REFERRAL_REWARD in a .env-${network} file`
+            `Plese set your REFERRAL_REWARD in a .env-${network} file`
         )
     }
     if (!process.env.WQT_TOKEN) {
         throw new Error(`Plese set your WQT_TOKEN in a .env-${network} file`)
     }
     // TODO when WQOracle is finished add throw smth
-    if (!process.env.WQ_ORACLE) {
-        throw new Error(`Plese set your WQ_ORACLE in a .env-${network} file`)
+    if (!process.env.PRICE_ORACLE) {
+        throw new Error(`Plese set your PRICE_ORACLE in a .env-${network} file`)
     }
-    if (!process.env.BACKEND_ADDR) {
-        throw new Error(`Plese set your BACKEND_ADDR in a .env-${network} file`)
+    if (!process.env.REFERRAL_SERVICE) {
+        throw new Error(`Plese set your REFERRAL_SERVICE in a .env-${network} file`)
     }
     if (!process.env.WORK_QUEST_FACTORY) {
         throw new Error(`Plese set your WORK_QUEST_FACTORY in a .env-${network} file`)
     }
-    // const WQoracle = await hre.ethers.getContractFactory("WQPriceOracle");
-    // const oracle = await WQoracle.deploy();
-    // await oracle.deployed();
 
     console.log('Deploying...')
     const WQReferral = await hre.ethers.getContractFactory('WQReferral')
@@ -44,17 +41,14 @@ async function main() {
         [
             process.env.WQT_TOKEN,
             process.env.WQ_ORACLE,
-            process.env.BACKEND_ADDR,
+            process.env.REFERRAL_SERVICE,
             process.env.WQ_REFERRAL_REWARD,
         ],
         { initializer: 'initialize' }
-    )
+    );
     console.log('WQReferral has been deployed to:', wqReferral.address)
-    // await wqReferral.updateFactory(process.env.WORK_QUEST_FACTORY)
 
-    envConfig['WQ_REFERRAL'] = wqReferral.address;
-    // envConfig['WQ_ORACLE'] = oracle.address;                     // ATTENTION remove when oracle became more adequate 
-
+    envConfig['REFERRAL'] = wqReferral.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig))
 }
 

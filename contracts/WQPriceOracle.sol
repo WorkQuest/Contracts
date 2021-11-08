@@ -16,6 +16,8 @@ contract WQPriceOracle is
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     bytes32 public constant SERVICE_ROLE = keccak256('SERVICE_ROLE');
 
+    uint256 validTime;
+
     struct TokenInfo {
         uint256 price;
         uint256 updatedAt;
@@ -26,7 +28,10 @@ contract WQPriceOracle is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address service) public initializer {
+    function initialize(address service, uint256 _validTime)
+        public
+        initializer
+    {
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -35,6 +40,7 @@ contract WQPriceOracle is
         _setupRole(SERVICE_ROLE, service);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(SERVICE_ROLE, ADMIN_ROLE);
+        validTime = _validTime;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -50,6 +56,10 @@ contract WQPriceOracle is
         returns (uint256)
     {
         require(tokens[symbol].enabled, 'WQPriceOracle: Token is disabled');
+        require(
+            block.timestamp - tokens[symbol].updatedAt <= validTime,
+            'WQPriceOracle: Price is outdated'
+        );
         return tokens[symbol].price;
     }
 
@@ -68,7 +78,7 @@ contract WQPriceOracle is
                     .toEthSignedMessageHash()
                     .recover(v, r, s)
             ),
-            'WQReferal: validator is not a service'
+            'WQPriceOracle: validator is not a service'
         );
         tokens[symbol].price = price;
         tokens[symbol].updatedAt = block.timestamp;
