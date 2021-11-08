@@ -62,8 +62,4 @@ package-lock.json
 *.txt
 *.docx
 oldContracts/
-<<<<<<< HEAD
-=======
-
->>>>>>> d4c8e05944526318422ce7bcf8f83ae45b9070c8
 coverage
