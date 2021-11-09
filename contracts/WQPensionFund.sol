@@ -28,24 +28,36 @@ contract WQPensionFund is
         uint256 fee;
         uint256 unlockDate;
         uint256 createdAt;
+        uint256 rewardAllowed;
+        uint256 rewardDebt;
+        uint256 rewardDistributed;
     }
 
     uint256 public lockTime;
     uint256 public defaultFee;
     uint256 public contributed;
+    uint256 public rewardsPerContributed;
+    uint256 public rewardsProduced;
+    uint256 public rewardsDistributed;
     uint256 public borrowed;
 
     /// @notice Pension wallet info of worker
     mapping(address => PensionWallet) public wallets;
 
     /// @notice Event emitted when funds transferred to contract
-    event Received(address from, uint256 amount);
+    event Received(address user, uint256 amount);
 
     /// @notice Event emitted when funds withrew from contract
-    event Withdrew(address to, uint256 amount);
+    event Withdrew(address user, uint256 amount);
 
-    /// @notice Event emitted when funds withrew from contract
-    event Borrowed(uint256 amount);
+    /// @notice Event emitted when rewards claimed
+    event Claimed(address user, uint256 amount);
+
+    /// @notice Event emitted when funds borrowed
+    event Borrowed(address user, uint256 amount);
+
+    /// @notice Event emitted when funds returned
+    event Refunded(address user, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -79,9 +91,9 @@ contract WQPensionFund is
 
     /**
      * @notice Contribute native moneys to contract on 3 years
-     * @dev First contributing set variable createdAt as current timestamp,
-     * @dev unlockDate as current_timestamp + 3*365 days
-     * @dev and fee as DEFAULT_FEE value (1%)
+     * @dev First contributing set variable createdAt to current timestamp,
+     * @dev unlockDate to current_timestamp + 3*365 days
+     * @dev and fee to DEFAULT_FEE value (1%)
      * @param worker Address of worker
      */
     function contribute(address worker) external payable nonReentrant {
@@ -91,6 +103,7 @@ contract WQPensionFund is
             wallet.unlockDate = block.timestamp + lockTime;
             wallet.fee = defaultFee;
         }
+        wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
         wallet.amount += msg.value;
         contributed += msg.value;
         emit Received(worker, msg.value);
@@ -102,12 +115,29 @@ contract WQPensionFund is
      */
     function withdraw(uint256 amount) external nonReentrant {
         PensionWallet storage wallet = wallets[msg.sender];
-        require(block.timestamp >= wallet.unlockDate);
-        require(amount <= wallet.amount);
+        require(
+            block.timestamp >= wallet.unlockDate,
+            'WQPensionFund: Lock time is not over yet'
+        );
+        require(amount <= wallet.amount, 'WQPensionFund: Amount is invalid');
+        wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
         contributed -= amount;
         payable(msg.sender).sendValue(amount);
         emit Withdrew(msg.sender, amount);
+    }
+
+    function claim() external nonReentrant {
+        PensionWallet storage wallet = wallets[msg.sender];
+        require(block.timestamp >= wallet.unlockDate);
+        uint256 reward = ((wallet.amount * rewardsPerContributed) / 1e20) +
+            wallet.rewardAllowed -
+            wallet.rewardDistributed -
+            wallet.rewardDebt;
+        wallet.rewardDistributed += reward;
+        rewardsDistributed += reward;
+        payable(msg.sender).sendValue(reward);
+        emit Claimed(msg.sender, reward);
     }
 
     /**
@@ -123,6 +153,10 @@ contract WQPensionFund is
             wallet.unlockDate = block.timestamp + lockTime;
         }
         wallet.fee = fee;
+    }
+
+    function getFee(address user) external view returns (uint256) {
+        return wallets[user].fee;
     }
 
     function updateDefaultFee(uint256 _defaultFee)
@@ -148,20 +182,19 @@ contract WQPensionFund is
         );
         borrowed += amount;
         payable(msg.sender).sendValue(amount);
-        emit Borrowed(amount);
+        emit Borrowed(msg.sender, amount);
     }
 
-    function refund()
+    function refund(uint256 rewards)
         external
         payable
         override
         nonReentrant
         onlyRole(BORROWER_ROLE)
     {
-        borrowed -= msg.value;
-    }
-
-    receive() external payable {
-        revert();
+        borrowed -= (msg.value - rewards);
+        rewardsProduced += rewards;
+        rewardsPerContributed += (rewards * 1e20) / contributed;
+        emit Refunded(msg.sender, msg.value);
     }
 }

@@ -129,19 +129,27 @@ contract WQBorrowing is
         BorrowInfo storage loan = borrowers[msg.sender];
         require(loan.borrowed, 'WQBorrowing: You a not loaned funds');
         require(enabledTokens[loan.token], 'WQBorrowing: Token is disabled');
-        uint256 returned = loan.credit +
-            ((block.timestamp - loan.borrowedAt) * loan.credit * loan.apy) /
+        uint256 fee = ((block.timestamp - loan.borrowedAt) *
+            loan.credit *
+            loan.apy) /
             YEAR /
             1e18;
         // Take native coins
-        require(returned == msg.value, 'WQBorrowing: Invalid refund amount');
+        require(
+            msg.value >= loan.credit + fee,
+            'WQBorrowing: Invalid refund amount'
+        );
         loan.borrowed = false;
         loan.credit = 0;
         // and send back to fund
-        loan.fund.refund{value: msg.value}();
+        loan.fund.refund{value: loan.credit + fee}(fee);
         //Send tokens
         loan.token.safeTransfer(msg.sender, loan.collateral);
         loan.collateral = 0;
+        // Return change
+        if (msg.value > loan.credit + fee) {
+            payable(msg.sender).sendValue(msg.value - loan.credit - fee);
+        }
         emit Refunded(msg.sender, msg.value);
     }
 
@@ -154,29 +162,31 @@ contract WQBorrowing is
     }
 
     /**
-     * @notice Add address of fund
+     * @notice Update address of fund
+     * @param index index of funds
      * @param fund Address of fund
      */
     function updateFund(uint256 index, address fund)
         external
         onlyRole(ADMIN_ROLE)
     {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQBorrowing: You are not have an admin role'
-        );
         funds[index] = WQFundInterface(fund);
+    }
+
+    /**
+     * @notice Remove address from funds
+     * @param index index of fund
+     */
+    function removeFund(uint256 index) external onlyRole(ADMIN_ROLE) {
+        funds[index] = funds[funds.length - 1];
+        funds.pop();
     }
 
     /**
      * @notice Set rate per year amount
      * @param _apy Fee amount
      */
-    function setApy(uint256 _apy) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WQBorrowing: You are not have an admin role'
-        );
+    function setApy(uint256 _apy) external onlyRole(ADMIN_ROLE) {
         apy = _apy;
     }
 }

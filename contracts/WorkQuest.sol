@@ -339,7 +339,7 @@ contract WorkQuest is AccessControl {
     function _transferFunds() internal {
         uint256 newCost = cost - forfeit;
         uint256 comission = (newCost * fee) / 1e18;
-        (, uint256 pensionFee, , ) = WQPensionFund(pensionFund).wallets(worker);
+        uint256 pensionFee = WQPensionFund(pensionFund).getFee(worker);
         uint256 pensionContribute = (newCost * pensionFee) / 1e18;
         worker.transfer(newCost - comission - pensionContribute);
         if (pensionFee > 0) {

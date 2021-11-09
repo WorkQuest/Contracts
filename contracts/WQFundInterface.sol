@@ -7,5 +7,5 @@ interface WQFundInterface {
 
     function borrow(uint256 amount) external;
     
-    function refund() external payable;
+    function refund(uint256 rewards) external payable;
 }
