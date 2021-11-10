@@ -15,14 +15,17 @@ async function main() {
     for (const k in envConfig) {
         process.env[k] = envConfig[k]
     }
-    if (!process.env.REFERRAL) {
-        throw new Error(`Plese set your REFERRAL in a .env-${network} file`)
+    if (!process.env.PENSION_FUND) {
+        throw new Error(`Plese set your PENSION_FUND in a .env-${network} file`)
     }
 
     console.log('Upgrade...')
-    const WQReferral = await hre.ethers.getContractFactory('WQReferral')
-    const wqReferral = await upgrades.upgradeProxy(process.env.REFERRAL, WQReferral,  { kind: 'uups' });
-    console.log('WQReferral has been upgraded at:', wqReferral.address)
+    const PensionFund = await hre.ethers.getContractFactory('WQPensionFund')
+    const pension_fund = await upgrades.upgradeProxy(
+        process.env.PENSION_FUND,
+        PensionFund
+    )
+    console.log('Done!', pension_fund.address);
 }
 
 main()

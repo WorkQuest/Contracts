@@ -32,9 +32,6 @@ async function main() {
         'WorkQuestFactory has been upgraded at:',
         work_quest_factory.address
     )
-
-    envConfig['WORK_QUEST_FACTORY'] = work_quest_factory.address
-    fs.writeFileSync(`.env-${network}`, stringify(envConfig))
 }
 
 main()

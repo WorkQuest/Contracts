@@ -23,7 +23,6 @@ async function main() {
     if (!process.env.WQT_TOKEN) {
         throw new Error(`Plese set your WQT_TOKEN in a .env-${network} file`)
     }
-    // TODO when WQOracle is finished add throw smth
     if (!process.env.PRICE_ORACLE) {
         throw new Error(`Plese set your PRICE_ORACLE in a .env-${network} file`)
     }
@@ -40,9 +39,9 @@ async function main() {
         WQReferral,
         [
             process.env.WQT_TOKEN,
-            process.env.WQ_ORACLE,
+            process.env.PRICE_ORACLE,
             process.env.REFERRAL_SERVICE,
-            process.env.WQ_REFERRAL_REWARD,
+            process.env.REFERRAL_REWARD,
         ],
         { initializer: 'initialize' }
     );

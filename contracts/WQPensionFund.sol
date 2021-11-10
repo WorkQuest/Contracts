@@ -43,19 +43,39 @@ contract WQPensionFund is
     mapping(address => PensionWallet) public wallets;
 
     /// @notice Event emitted when funds transferred to contract
-    event Received(address user, uint256 amount);
+    event Received(
+        address indexed user,
+        uint256 indexed amount,
+        uint256 timestamp
+    );
 
     /// @notice Event emitted when funds withrew from contract
-    event Withdrew(address user, uint256 amount);
+    event Withdrew(
+        address indexed user,
+        uint256 indexed amount,
+        uint256 timestamp
+    );
 
     /// @notice Event emitted when rewards claimed
-    event Claimed(address user, uint256 amount);
+    event Claimed(
+        address indexed user,
+        uint256 indexed amount,
+        uint256 timestamp
+    );
 
     /// @notice Event emitted when funds borrowed
-    event Borrowed(address user, uint256 amount);
+    event Borrowed(
+        address indexed user,
+        uint256 indexed amount,
+        uint256 timestamp
+    );
 
     /// @notice Event emitted when funds returned
-    event Refunded(address user, uint256 amount);
+    event Refunded(
+        address indexed user,
+        uint256 indexed amount,
+        uint256 timestamp
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -104,7 +124,7 @@ contract WQPensionFund is
         wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
         wallet.amount += msg.value;
         contributed += msg.value;
-        emit Received(worker, msg.value);
+        emit Received(worker, msg.value, block.timestamp);
     }
 
     /**
@@ -122,12 +142,15 @@ contract WQPensionFund is
         wallet.amount -= amount;
         contributed -= amount;
         payable(msg.sender).sendValue(amount);
-        emit Withdrew(msg.sender, amount);
+        emit Withdrew(msg.sender, amount, block.timestamp);
     }
 
     function claim() external nonReentrant {
         PensionWallet storage wallet = wallets[msg.sender];
-        require(block.timestamp >= wallet.unlockDate);
+        require(
+            block.timestamp >= wallet.unlockDate,
+            'WQPensionFund: Lock time is not over yet'
+        );
         uint256 reward = ((wallet.amount * rewardsPerContributed) / 1e20) +
             wallet.rewardAllowed -
             wallet.rewardDistributed -
@@ -135,7 +158,7 @@ contract WQPensionFund is
         wallet.rewardDistributed += reward;
         rewardsDistributed += reward;
         payable(msg.sender).sendValue(reward);
-        emit Claimed(msg.sender, reward);
+        emit Claimed(msg.sender, reward, block.timestamp);
     }
 
     /**
@@ -151,6 +174,15 @@ contract WQPensionFund is
             wallet.unlockDate = block.timestamp + lockTime;
         }
         wallet.fee = fee;
+    }
+
+    function extendLockTime() external {
+        PensionWallet storage wallet = wallets[msg.sender];
+        require(
+            block.timestamp >= wallet.unlockDate,
+            'WQPensionFund: Lock time is not over yet'
+        );
+        wallet.unlockDate = block.timestamp + 31536000;
     }
 
     function getFee(address user) external view returns (uint256) {
@@ -180,7 +212,7 @@ contract WQPensionFund is
         );
         borrowed += amount;
         payable(msg.sender).sendValue(amount);
-        emit Borrowed(msg.sender, amount);
+        emit Borrowed(msg.sender, amount, block.timestamp);
     }
 
     function refund(uint256 rewards)
@@ -193,6 +225,6 @@ contract WQPensionFund is
         borrowed -= (msg.value - rewards);
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
-        emit Refunded(msg.sender, msg.value);
+        emit Refunded(msg.sender, msg.value, block.timestamp);
     }
 }

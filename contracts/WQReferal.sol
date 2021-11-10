@@ -52,7 +52,7 @@ contract WQReferral is
     /// @notice referral bonus amount in USD
     uint256 public referralBonus;
     /// @notice address of price oracle
-    WQPriceOracle oracle;
+    WQPriceOracle public oracle;
     /// @notice address of workquest valid factory
     WorkQuestFactory public factory;
 
@@ -156,7 +156,7 @@ contract WQReferral is
             tokenPrice != 0,
             'WQReferal: tokenPrice received from oracle is zero'
         );
-        uint256 bonusAmount = referralBonus / tokenPrice;
+        uint256 bonusAmount = (referralBonus * 1e18) / tokenPrice;
         require(
             token.balanceOf(address(this)) > bonusAmount,
             'WQReferral: Balance on contract too low'
@@ -189,10 +189,7 @@ contract WQReferral is
             affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
     }
 
-    function updateFactory(address _factory)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function updateFactory(address _factory) external onlyRole(ADMIN_ROLE) {
         factory = WorkQuestFactory(_factory);
     }
 
