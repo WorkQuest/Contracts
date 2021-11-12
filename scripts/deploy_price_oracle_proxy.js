@@ -17,13 +17,13 @@ async function main() {
         throw new Error(`Please set your PRICE_ORACLE_SERVICE in a .env-${network} file`);
     }
 
-    if (!process.env.PRICE_ORACLE_VALID_TIME) {
-        throw new Error(`Please set your PRICE_ORACLE_VALID_TIME in a .env-${network} file`);
+    if (!process.env.PRICE_ORACLE_VALID_BLOCKS) {
+        throw new Error(`Please set your PRICE_ORACLE_VALID_BLOCKS in a .env-${network} file`);
     }
 
     console.log("Deploying...");
     const PriceOracle = await hre.ethers.getContractFactory("WQPriceOracle");
-    const price_oracle = await upgrades.deployProxy(PriceOracle, [process.env.PRICE_ORACLE_SERVICE, process.env.PRICE_ORACLE_VALID_TIME], { initializer: 'initialize' })
+    const price_oracle = await upgrades.deployProxy(PriceOracle, [process.env.PRICE_ORACLE_SERVICE, process.env.PRICE_ORACLE_VALID_BLOCKS], { initializer: 'initialize' })
     console.log("Price Oracle has been deployed to:", price_oracle.address);
 
     envConfig["PRICE_ORACLE"] = price_oracle.address;
