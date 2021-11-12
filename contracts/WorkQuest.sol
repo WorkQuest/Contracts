@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts/access/AccessControl.sol';
 import './WQPensionFund.sol';
@@ -214,7 +214,7 @@ contract WorkQuest is AccessControl {
     function declineJob() external {
         require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
         status = JobStatus.Published;
-        worker = address(0);
+        worker = payable(0);
         emit JobDeclined();
     }
 

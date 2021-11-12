@@ -37,22 +37,22 @@ describe("Bridge test", () => {
     beforeEach(async () => {
         [bridge_owner, sender, recipient, validator, not_validator] = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory("WQToken");
-        token = await upgrades.deployProxy(WQToken, [amount], { initializer: 'initialize' });
+        token = await upgrades.deployProxy(WQToken, [amount], { initializer: 'initialize', kind: 'transparent' });
         await token.deployed();
         await token.transfer(sender.address, amount);
 
         const WQBridgeToken = await ethers.getContractFactory("WQBridgeToken");
-        lockable_token = await upgrades.deployProxy(WQBridgeToken, ["LockToken", lockable_symbol], { initializer: 'initialize' });
+        lockable_token = await upgrades.deployProxy(WQBridgeToken, ["LockToken", lockable_symbol], { initializer: 'initialize', kind: 'transparent' });
         await lockable_token.deployed();
         await lockable_token.grantRole(await lockable_token.MINTER_ROLE(), bridge_owner.address);
         await lockable_token.mint(sender.address, amount);
 
         const BridgePool = await ethers.getContractFactory("WQBridgePool");
-        bridge_pool = await upgrades.deployProxy(BridgePool, [], { initializer: 'initialize' });
+        bridge_pool = await upgrades.deployProxy(BridgePool, [], { initializer: 'initialize', kind: 'transparent' });
         await bridge_pool.deployed();
 
         const Bridge = await ethers.getContractFactory("WQBridge");
-        bridge = await upgrades.deployProxy(Bridge, [chainWQ, bridge_pool.address], { initializer: 'initialize' });
+        bridge = await upgrades.deployProxy(Bridge, [chainWQ, bridge_pool.address], { initializer: 'initialize', kind: 'transparent' });
         await bridge.deployed();
         await bridge.grantRole(await bridge.VALIDATOR_ROLE(), validator.address);
         await bridge.updateChain(chainETH, true);

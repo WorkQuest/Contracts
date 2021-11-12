@@ -5,23 +5,26 @@ const { ethers } = require('hardhat')
 require('@nomiclabs/hardhat-waffle')
 const { parseEther } = require('ethers/lib/utils')
 
-const nullstr = '0x0000000000000000000000000000000000000000'
-const job_hash = web3.utils.keccak256('JOBHASH')
-const cost = parseEther('1')
-const comission = parseEther('0.01')
-const cost_comission = parseEther('1.01')
+const nullstr = '0x0000000000000000000000000000000000000000';
+const job_hash = web3.utils.keccak256('JOBHASH');
+const cost = parseEther('1');
+const comission = parseEther('0.01');
+const cost_comission = parseEther('1.01');
 const reward = parseEther('0.99');
-const double_comission = parseEther('0.02')
-const forfeit = parseEther('0.1')
-const cost_after_forfeit = parseEther('0.9')
-const reward_after_forfeit = parseEther('0.891')
-const comission_after_forfeit = '8999999999967232'
-const double_comission_after_forfeit = parseEther('0.019')
-const acces_denied_err = 'WorkQuest: Access denied or invalid status'
-const WORKQUEST_FEE = '10000000000000000'
-const PENSION_LOCK_TIME = '60'
-const PENSION_DEFAULT_FEE = '10000000000000000'
-const twentyBucksInWQT = (20 / 228).toFixed(18) // TODO 228 is fixed value that oracle returns now
+const double_comission = parseEther('0.02');
+const forfeit = parseEther('0.1');
+const cost_after_forfeit = parseEther('0.9');
+const reward_after_forfeit = parseEther('0.891');
+const comission_after_forfeit = '8999999999967232';
+const double_comission_after_forfeit = parseEther('0.019');
+const acces_denied_err = 'WorkQuest: Access denied or invalid status';
+const WORKQUEST_FEE = '10000000000000000';
+const PENSION_LOCK_TIME = '60';
+const PENSION_DEFAULT_FEE = '10000000000000000';
+const PRICE_ORACLE_VALID_BLOCKS = "100";
+const PRICE = parseEther("228");
+const SYMBOL = "WQT";
+const twentyBucksInWQT = (20 / 228).toFixed(18); // TODO 228 is fixed value that oracle returns now
 //      if price is asked
 
 const JobStatus = Object.freeze({
@@ -55,78 +58,77 @@ let work_quest
 let token
 let affiliat
 let WQReferral
-let WQPriceOracle
+let priceOracle
 
 describe('Work Quest test', () => {
-    let call_flow
-    const twentyWQT = parseEther('20')
-    const totalSupplyOfWQToken = parseEther('1000000000')
-    const zero = parseEther('0')
-    const dateNow = Math.floor(Date.now / 1000)
-    let deadline = ethers.BigNumber.from('9999999999')
-    let oneK = parseEther('1000')
-    let referalBonus = parseEther(twentyBucksInWQT.toString())
+    let call_flow;
+    const twentyWQT = parseEther('20');
+    const totalSupplyOfWQToken = parseEther('100000000');
+    const zero = parseEther('0');
+    const dateNow = Math.floor(Date.now / 1000);
+    let deadline = '9999999999';
+    let oneK = parseEther('1000');
+    let referalBonus = parseEther(twentyBucksInWQT.toString());
 
     beforeEach(async () => {
-        require('dotenv').config()
-            ;[
-                work_quest_owner,
-                employer,
-                worker,
-                arbiter,
-                feeReceiver,
-                affiliat,
-                validator
-            ] = await ethers.getSigners()
+        require('dotenv').config();
+        [
+            work_quest_owner,
+            employer,
+            worker,
+            arbiter,
+            feeReceiver,
+            affiliat,
+            validator
+        ] = await ethers.getSigners();
 
-        const PensionFund = await hre.ethers.getContractFactory('WQPensionFund')
-        const pension_fund = await upgrades.deployProxy(PensionFund, [
-            PENSION_LOCK_TIME,
-            PENSION_DEFAULT_FEE,
-        ])
-        await pension_fund.deployed()
+        const PensionFund = await hre.ethers.getContractFactory('WQPensionFund');
+        const pension_fund = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE], { initializer: 'initialize', kind: 'uups' });
+        await pension_fund.deployed();
 
-        const WQPriceOracleContract = await hre.ethers.getContractFactory(
-            'WQPriceOracle'
-        )
-        WQPriceOracle = await WQPriceOracleContract.deploy()
-        await WQPriceOracle.deployed()
+        const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
+        priceOracle = await upgrades.deployProxy(PriceOracle, [validator.address, PRICE_ORACLE_VALID_BLOCKS], { initializer: 'initialize', kind: 'uups' });
+        await priceOracle.deployed();
+        await priceOracle.updateToken(1, SYMBOL);
+        let nonce = "1";
+        let message = web3.utils.soliditySha3(
+            { t: 'uint256', v: nonce },
+            { t: 'uint256', v: PRICE.toString() },
+            { t: 'string', v: SYMBOL }
+        );
+        let signature = await web3.eth.sign(message, validator.address);
+        let sig = ethers.utils.splitSignature(signature);
+        await priceOracle.connect(worker).setTokenPriceUSD(nonce, PRICE, sig.v, sig.r, sig.s, SYMBOL);
 
-        const WQToken = await ethers.getContractFactory('WQToken')
-        token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], {
-            initializer: 'initialize',
-        })
+        const WQToken = await ethers.getContractFactory('WQToken');
+        token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], { initializer: 'initialize', kind: 'uups' });
+        // token = await WQToken.deploy();
         await token.deployed();
 
-        const WQReferralContract = await hre.ethers.getContractFactory(
-            'WQReferral'
-        )
+        const WQReferralContract = await hre.ethers.getContractFactory('WQReferral');
         WQReferral = await upgrades.deployProxy(
             WQReferralContract,
-            [token.address, WQPriceOracle.address, validator.address, twentyWQT],
-            { initializer: 'initialize' }
+            [token.address, priceOracle.address, validator.address, twentyWQT],
+            { initializer: 'initialize', kind: 'uups' }
         )
         await WQReferral.deployed();
         await WQReferral.grantRole(await WQReferral.SERVICE_ROLE(), validator.address);
 
         await token.connect(work_quest_owner).transfer(affiliat.address, oneK)
 
-        const WorkQuestFactory = await hre.ethers.getContractFactory(
-            'WorkQuestFactory'
-        )
-        work_quest_factory = await upgrades.deployProxy(WorkQuestFactory, [
-            WORKQUEST_FEE,
-            feeReceiver.address,
-            pension_fund.address,
-            WQReferral.address,
-        ])
-        await work_quest_factory.deployed()
+        const WorkQuestFactory = await hre.ethers.getContractFactory('WorkQuestFactory');
+        work_quest_factory = await upgrades.deployProxy(WorkQuestFactory,
+            [
+                WORKQUEST_FEE,
+                feeReceiver.address,
+                pension_fund.address,
+                WQReferral.address,
+            ], { initializer: 'initialize', kind: 'uups' })
+        await work_quest_factory.deployed();
 
-        await work_quest_factory.updateArbiter(arbiter.address, true)
+        await work_quest_factory.updateArbiter(arbiter.address, true);
 
-        await work_quest_factory
-            .connect(employer)
-            .newWorkQuest(job_hash, cost, deadline)
+        await work_quest_factory.connect(employer).newWorkQuest(job_hash, cost, deadline);
 
         let work_quest_address = (await work_quest_factory.getWorkQuests(employer.address))[0];
         work_quest = await hre.ethers.getContractAt('WorkQuest', work_quest_address);

@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.4;
 
-import '@openzeppelin/contracts/access/AccessControl.sol';
-import '@openzeppelin/contracts/utils/math/Math.sol';
-import '@openzeppelin/contracts/utils/math/SafeCast.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol';
 
-contract WQToken is AccessControl {
+contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
     bytes32 public constant BURNER_ROLE = keccak256('BURNER_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     /// @notice Checkpoint structure
     struct Checkpoint {
@@ -38,8 +41,6 @@ contract WQToken is AccessControl {
 
     /// @notice Address of an owner
     address public owner;
-
-    bool private _initialized;
 
     mapping(address => address) private _delegates;
 
@@ -87,19 +88,28 @@ contract WQToken is AccessControl {
         uint256 newBalance
     );
 
-    function initialize(uint256 initialSupply) external {
-        require(
-            !_initialized,
-            'WQT: Contract instance has already been initialized'
-        );
-        _initialized = true;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    function initialize(uint256 initialSupply) external initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
         owner = msg.sender;
         _mint(owner, initialSupply);
         _setupRole(DEFAULT_ADMIN_ROLE, owner);
         _setupRole(ADMIN_ROLE, owner);
+        _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @notice Returns the amount of tokens owned by `account`.
@@ -263,7 +273,7 @@ contract WQToken is AccessControl {
      * @notice Get number of checkpoints for `account`.
      */
     function numCheckpoints(address account) public view returns (uint32) {
-        return SafeCast.toUint32(_checkpoints[account].length);
+        return SafeCastUpgradeable.toUint32(_checkpoints[account].length);
     }
 
     /**
@@ -485,7 +495,7 @@ contract WQToken is AccessControl {
         uint256 high = ckpts.length;
         uint256 low = 0;
         while (low < high) {
-            uint256 mid = Math.average(low, high);
+            uint256 mid = MathUpgradeable.average(low, high);
             if (ckpts[mid].fromBlock > blockNumber) {
                 high = mid;
             } else {
@@ -506,12 +516,12 @@ contract WQToken is AccessControl {
         newWeight = op(oldWeight, delta);
 
         if (pos > 0 && ckpts[pos - 1].fromBlock == block.number) {
-            ckpts[pos - 1].votes = SafeCast.toUint224(newWeight);
+            ckpts[pos - 1].votes = SafeCastUpgradeable.toUint224(newWeight);
         } else {
             ckpts.push(
                 Checkpoint({
-                    fromBlock: SafeCast.toUint32(block.number),
-                    votes: SafeCast.toUint224(newWeight)
+                    fromBlock: SafeCastUpgradeable.toUint32(block.number),
+                    votes: SafeCastUpgradeable.toUint224(newWeight)
                 })
             );
         }

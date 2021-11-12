@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
@@ -56,6 +56,9 @@ contract WorkQuestFactory is
         uint256 createdAt
     );
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     /**
      * @notice Create new WorkQuestFactory contract
      * @param _fee Fee of jobs cost
@@ -85,17 +88,6 @@ contract WorkQuestFactory is
         override
         onlyRole(UPGRADER_ROLE)
     {}
-
-    /**
-     * @notice Check msg.sender is admin role
-     */
-    modifier onlyAdmin() {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'WorkQuestFactory: You should have an admin role'
-        );
-        _;
-    }
 
     /**
      * @notice Get list of adresses of employers workquests
@@ -146,7 +138,7 @@ contract WorkQuestFactory is
      */
     function updateArbiter(address payable _arbiter, bool _enabled)
         external
-        onlyAdmin
+        onlyRole(ADMIN_ROLE)
     {
         ArbiterInfo storage a = arbiters[_arbiter];
         if (arbiterList.length == 0 || arbiterList[a.idx] != _arbiter) {
@@ -166,7 +158,7 @@ contract WorkQuestFactory is
      */
     function updateFeeReceiver(address payable _feeReceiver)
         external
-        onlyAdmin
+        onlyRole(ADMIN_ROLE)
     {
         feeReceiver = _feeReceiver;
     }
@@ -175,7 +167,10 @@ contract WorkQuestFactory is
      * @notice Update address of refferal contract
      * @param _referral  Address of refferal contract
      */
-    function updateRefferal(address payable _referral) external onlyAdmin {
+    function updateRefferal(address payable _referral)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         referral = _referral;
     }
 
