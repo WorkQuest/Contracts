@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 
 contract WQPriceOracle is
     Initializable,
@@ -12,23 +12,27 @@ contract WQPriceOracle is
     UUPSUpgradeable
 {
     using ECDSAUpgradeable for bytes32;
-    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
-    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
-    bytes32 public constant SERVICE_ROLE = keccak256('SERVICE_ROLE');
-
-    uint256 validTime;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
 
     struct TokenInfo {
         uint256 price;
-        uint256 updatedAt;
+        uint256 updatedBlock;
         bool enabled;
     }
-    mapping(string => TokenInfo) tokens;
+
+    uint256 public validBlocks;
+    uint256 public lastNonce;
+    mapping(string => TokenInfo) public tokens;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address service, uint256 _validTime)
+    /**
+     * @dev
+     */
+    function initialize(address service, uint256 _validBlocks)
         public
         initializer
     {
@@ -40,7 +44,7 @@ contract WQPriceOracle is
         _setupRole(SERVICE_ROLE, service);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(SERVICE_ROLE, ADMIN_ROLE);
-        validTime = _validTime;
+        validBlocks = _validBlocks;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -49,38 +53,73 @@ contract WQPriceOracle is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    /// @notice get other tokens price in USD
+    /**
+     * @dev get price of token in USD
+     * @param symbol symbol of token
+     */
     function getTokenPriceUSD(string memory symbol)
         public
         view
         returns (uint256)
     {
-        require(tokens[symbol].enabled, 'WQPriceOracle: Token is disabled');
+        TokenInfo storage token = tokens[symbol];
+        require(token.enabled, "WQPriceOracle: Token is disabled");
+        require(block.number > token.updatedBlock, "WQPriceOracle: Same block");
         require(
-            block.timestamp - tokens[symbol].updatedAt <= validTime,
-            'WQPriceOracle: Price is outdated'
+            block.number - token.updatedBlock <= validBlocks,
+            "WQPriceOracle: Price is outdated"
         );
-        return tokens[symbol].price;
+        return token.price;
     }
 
+    /**
+     * @dev Set price of token in USD
+     * @param nonce Serial number of transaction
+     * @param symbol Symbol of token
+     * @param price Price of token in USD
+     * @param v V of signature
+     * @param r R of signature
+     * @param s S of signature
+     */
     function setTokenPriceUSD(
-        string memory symbol,
+        uint256 nonce,
         uint256 price,
         uint8 v,
         bytes32 r,
-        bytes32 s
+        bytes32 s,
+        string memory symbol
     ) external {
-        require(tokens[symbol].enabled, 'WQPriceOracle: Token is disabled');
+        require(tokens[symbol].enabled, "WQPriceOracle: Token is disabled");
+        require(nonce > lastNonce, "WQPriceOracle: This price has already been set earlier");
         require(
             hasRole(
                 SERVICE_ROLE,
-                keccak256(abi.encodePacked(symbol, price))
+                keccak256(abi.encodePacked(nonce, price, symbol))
                     .toEthSignedMessageHash()
                     .recover(v, r, s)
             ),
-            'WQPriceOracle: validator is not a service'
+            "WQPriceOracle: validator is not a service"
         );
         tokens[symbol].price = price;
-        tokens[symbol].updatedAt = block.timestamp;
+        tokens[symbol].updatedBlock = block.number;
+        lastNonce = nonce;
+    }
+
+    /**
+     * @dev Set number of blocks during which the price is valid
+     * @param _validBlocks Number of blocks
+     */
+    function setValidBlocks(uint256 _validBlocks)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        validBlocks = _validBlocks;
+    }
+
+    function updateToken(bool enabled, string memory symbol)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        tokens[symbol].enabled = enabled;
     }
 }
