@@ -214,6 +214,7 @@ contract WorkQuest is AccessControl {
     function declineJob() external {
         require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
         status = JobStatus.Published;
+        worker = address(0);
         emit JobDeclined();
     }
 
