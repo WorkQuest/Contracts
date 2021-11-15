@@ -141,14 +141,14 @@ contract WorkQuest is AccessControl {
         public
         view
         returns (
-            bytes32,
-            uint256,
-            uint256,
-            address,
-            address,
-            address,
-            JobStatus,
-            uint256
+            bytes32 jobHash,
+            uint256 cost,
+            uint256 forfeit,
+            address employer,
+            address worker,
+            address arbiter,
+            JobStatus status,
+            uint256 deadline
         )
     {
         return (
