@@ -10,9 +10,7 @@ task("update_arbiter", "Update arbiter in workquest factory")
         const dotenv = require('dotenv');
         dotenv.config();
         const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-        for (const k in envConfig) {
-            process.env[k] = envConfig[k]
-        }
+        for (const k in envConfig) {process.env[k] = envConfig[k];}
         if (!process.env.WORK_QUEST_FACTORY) {
             throw new Error(`Please set your WORK_QUEST_FACTORY in a .env-${network} file`);
         }

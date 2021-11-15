@@ -175,6 +175,17 @@ contract WorkQuestFactory is
     }
 
     /**
+     * @notice Update address of pension fund contract
+     * @param _pensionFund  Address of pension fund contract
+     */
+    function updatePensionFund(address payable _pensionFund)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        pensionFund = _pensionFund;
+    }
+
+    /**
      * @notice Get next enabled arbiter
      */
     function getArbiter() internal returns (address payable) {

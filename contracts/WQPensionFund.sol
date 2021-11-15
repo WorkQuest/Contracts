@@ -196,6 +196,10 @@ contract WQPensionFund is
         defaultFee = _defaultFee;
     }
 
+    function updateLockTime(uint256 _lockTime) external onlyRole(ADMIN_ROLE) {
+        lockTime = _lockTime;
+    }
+
     function balanceOf() external view override returns (uint256) {
         return contributed - borrowed;
     }
