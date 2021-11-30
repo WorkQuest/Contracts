@@ -438,7 +438,7 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             'WQT: Not enough balance to delegate'
         );
         address currentDelegate = _delegates[delegator];
-        _freezings[delegatee] = amount;
+        _freezings[delegator] = amount;
         _delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -457,7 +457,7 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             address(0),
             _freezings[delegator]
         );
-        _freezings[delegatee] = 0;
+        _freezings[delegator] = 0;
         delete _delegates[msg.sender];
     }
 
