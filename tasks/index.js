@@ -15,3 +15,4 @@ require('./stake_native.js');
 require('./stake_tokens.js');
 require('./read_staking.js');
 require('./add_funds_to_borrowing.js');
+require('./get_workquests.js');

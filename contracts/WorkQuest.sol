@@ -150,18 +150,7 @@ contract WorkQuest is AccessControl {
             JobStatus status,
             uint256 deadline
         )
-    {
-        return (
-            jobHash,
-            cost,
-            forfeit,
-            employer,
-            worker,
-            arbiter,
-            status,
-            deadline
-        );
-    }
+    {}
 
     function cancelJob() external {
         require(status == JobStatus.New && msg.sender == employer, errMsg);

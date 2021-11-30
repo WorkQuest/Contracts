@@ -50,6 +50,8 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
 
     mapping(address => uint256) private _voteLockedTokenBalance;
 
+    mapping(address => uint256) private _freezings;
+
     mapping(address => mapping(address => uint256)) private _allowances;
 
     /**
@@ -119,13 +121,6 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /**
-     * @notice Returns the amount of locked tokens
-     */
-    function votePowerOf(address account) public view returns (uint256) {
-        return _voteLockedTokenBalance[account];
-    }
-
-    /**
      * @notice Moves `amount` tokens from the caller's account to `recipient`. Emits a {Transfer} event.
      * @param recipient Recipient address
      * @param amount Amount value
@@ -178,15 +173,7 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         uint256 amount
     ) public returns (bool) {
         _transfer(sender, recipient, amount);
-
-        uint256 currentAllowance = _allowances[sender][msg.sender];
-        require(
-            currentAllowance >= amount,
-            'WQT: transfer amount exceeds allowance'
-        );
-        unchecked {
-            _approve(sender, msg.sender, currentAllowance - amount);
-        }
+        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
 
         return true;
     }
@@ -218,14 +205,11 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         public
         returns (bool)
     {
-        uint256 currentAllowance = _allowances[msg.sender][spender];
-        require(
-            currentAllowance >= subtractedValue,
-            'WQT: decreased allowance below zero'
+        _approve(
+            msg.sender,
+            spender,
+            _allowances[msg.sender][spender] - subtractedValue
         );
-        unchecked {
-            _approve(msg.sender, spender, currentAllowance - subtractedValue);
-        }
 
         return true;
     }
@@ -256,6 +240,127 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             'WQT: Sender should be a bridge'
         );
         _burn(account, amount);
+    }
+
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal {
+        require(sender != address(0), 'WQT: transfer from the zero address');
+        require(recipient != address(0), 'WQT: transfer to the zero address');
+
+        _beforeTokenTransfer(sender, recipient, amount);
+        _balances[sender] -= amount;
+        _balances[recipient] += amount;
+
+        emit Transfer(sender, recipient, amount);
+    }
+
+    function _approve(
+        address account,
+        address spender,
+        uint256 amount
+    ) internal {
+        require(account != address(0), 'WQT: approve from the zero address');
+        require(spender != address(0), 'WQT: approve to the zero address');
+
+        _allowances[account][spender] = amount;
+        emit Approval(account, spender, amount);
+    }
+
+    /**
+     * @dev Maximum token supply. Defaults to `type(uint224).max` (2^224^ - 1).
+     */
+    function _maxSupply() internal pure returns (uint224) {
+        return type(uint224).max;
+    }
+
+    /** @notice Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     */
+    function _mint(address account, uint256 amount) internal {
+        require(account != address(0), 'WQT: mint to the zero address');
+        totalSupply += amount;
+        require(
+            totalSupply <= _maxSupply(),
+            'WQT: total supply risks overflowing votes'
+        );
+        _beforeTokenTransfer(address(0), account, amount);
+        _balances[account] += amount;
+        emit Transfer(address(0), account, amount);
+    }
+
+    /**
+     * @notice Destroys `amount` tokens from `account`, reducing the
+     * total supply.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     * - `account` must have at least `amount` tokens.
+     */
+    function _burn(address account, uint256 amount) internal {
+        require(account != address(0), 'WQT: burn from the zero address');
+        _beforeTokenTransfer(account, address(0), amount);
+
+        totalSupply -= amount;
+        _balances[account] -= amount;
+        emit Transfer(account, address(0), amount);
+    }
+
+    /**
+     * @notice Hook that is called before any transfer of tokens. This includes
+     * minting and burning.
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * will be transferred to `to`.
+     * - when `from` is zero, `amount` tokens will be minted for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     *
+     * address from,
+     * address to,
+     * uint256 amount
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal view {
+        require(
+            !_locked || msg.sender == _saleContract,
+            'WQT: Transfers locked'
+        );
+        if (from != address(0)) {
+            require(
+                amount <= _balances[from] - _freezings[from],
+                'WQT: Token amount exceeds balance'
+            );
+        }
+    }
+
+    /**
+     * @notice DAO Voting functions
+     */
+
+    /**
+     * @notice Returns the amount of locked tokens
+     */
+    function freezed(address account) public view returns (uint256) {
+        return _freezings[account];
     }
 
     /**
@@ -312,118 +417,6 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         return _delegate(msg.sender, delegatee, amount);
     }
 
-    function withdrawVotingRights(address delegatee, uint256 amount) public {
-        require(_voteLockedTokenBalance[delegatee] >= amount);
-        require(
-            delegatee != address(0),
-            "WQT: Cant't withdraw from the zero address"
-        );
-        _voteLockedTokenBalance[delegatee] -= amount;
-        _balances[msg.sender] += amount;
-        _moveVotingPower(
-            delegatee,
-            msg.sender,
-            _voteLockedTokenBalance[delegatee]
-        );
-    }
-
-    /**
-     * @notice Set the address of the sale contract.
-     * `saleContract` can make token transfers
-     * even when the token contract state is locked.
-     * Transfer lock serves the purpose of preventing
-     * the creation of fake Uniswap pools.
-     *
-     * Added by WorkQuest Team.
-     *
-     */
-    function setSaleContract(address saleContract) public {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender) && _saleContract == address(0),
-            'WQT: Caller must be owner and _saleContract yet unset'
-        );
-        _saleContract = saleContract;
-    }
-
-    /**
-     * @notice Lock token transfers.
-     *
-     * Added by WorkQuest Team.
-     *
-     */
-    function lockTransfers() public {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
-            'WQT: Caller must be owner and _unlockFixed false'
-        );
-        _locked = true;
-    }
-
-    /**
-     * @notice Unlock token transfers.
-     *
-     * Added by WorkQuest Team.
-     *
-     */
-    function unlockTransfers() public {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
-            'WQT: Caller must be owner and _unlockFixed false'
-        );
-        _locked = false;
-    }
-
-    /**
-     * @notice Permanently unlock token transfers.
-     * After this, further locking is impossible.
-     *
-     * Added by WorkQuest Team.
-     *
-     */
-    function unlockTransfersPermanent() public {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
-            'WQT: Caller must be owner and _unlockFixed false'
-        );
-        _locked = false;
-        _unlockFixed = true;
-    }
-
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal {
-        require(sender != address(0), 'WQT: transfer from the zero address');
-        require(recipient != address(0), 'WQT: transfer to the zero address');
-
-        _beforeTokenTransfer();
-
-        uint256 senderBalance = _balances[sender];
-        require(
-            senderBalance >= amount,
-            'WQT: transfer amount exceeds balance'
-        );
-        unchecked {
-            _balances[sender] = senderBalance - amount;
-        }
-        _balances[recipient] += amount;
-
-        emit Transfer(sender, recipient, amount);
-    }
-
-    function _approve(
-        address account,
-        address spender,
-        uint256 amount
-    ) internal {
-        require(account != address(0), 'WQT: approve from the zero address');
-        require(spender != address(0), 'WQT: approve to the zero address');
-
-        _allowances[account][spender] = amount;
-        emit Approval(account, spender, amount);
-    }
-
     /**
      * @dev Change delegation for `delegator` to `delegatee`.
      */
@@ -434,7 +427,7 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     ) internal {
         require(
             delegator != address(0),
-            "WQT: Cant't delegate fromt the zero address"
+            "WQT: Cant't delegate from the zero address"
         );
         require(
             delegatee != address(0),
@@ -444,18 +437,28 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             amount <= _balances[delegator],
             'WQT: Not enough balance to delegate'
         );
-        address currentDelegate = delegates(delegator);
-        _voteLockedTokenBalance[delegatee] += amount;
-        _balances[delegator] -= amount;
+        address currentDelegate = _delegates[delegator];
+        _freezings[delegatee] = amount;
         _delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
 
+        _moveVotingPower(currentDelegate, delegatee, amount);
+    }
+
+    function undelegate() public {
+        _undelegate(msg.sender);
+    }
+
+    function _undelegate(address delegator) internal {
+        emit DelegateChanged(delegator, _delegates[delegator], address(0));
         _moveVotingPower(
-            currentDelegate,
-            delegatee,
-            _voteLockedTokenBalance[delegatee]
+            _delegates[delegator],
+            address(0),
+            _freezings[delegator]
         );
+        _freezings[delegatee] = 0;
+        delete _delegates[msg.sender];
     }
 
     function _moveVotingPower(
@@ -535,92 +538,69 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         return a - b;
     }
 
-    function getChainId() internal view returns (uint256) {
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-        return chainId;
-    }
+    /**
+     * @notice Admin functions
+     */
 
     /**
-     * @dev Maximum token supply. Defaults to `type(uint224).max` (2^224^ - 1).
+     * @notice Set the address of the sale contract.
+     * `saleContract` can make token transfers
+     * even when the token contract state is locked.
+     * Transfer lock serves the purpose of preventing
+     * the creation of fake Uniswap pools.
+     *
+     * Added by WorkQuest Team.
+     *
      */
-    function _maxSupply() internal pure returns (uint224) {
-        return type(uint224).max;
-    }
-
-    /** @notice Creates `amount` tokens and assigns them to `account`, increasing
-     * the total supply.
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     */
-    function _mint(address account, uint256 amount) internal {
-        require(account != address(0), 'WQT: mint to the zero address');
+    function setSaleContract(address saleContract) public {
         require(
-            totalSupply <= _maxSupply(),
-            'WQT: total supply risks overflowing votes'
+            hasRole(ADMIN_ROLE, msg.sender) && _saleContract == address(0),
+            'WQT: Caller must be owner and _saleContract yet unset'
         );
-
-        _beforeTokenTransfer();
-
-        totalSupply += amount;
-        _balances[account] += amount;
-        emit Transfer(address(0), account, amount);
+        _saleContract = saleContract;
     }
 
     /**
-     * @notice Destroys `amount` tokens from `account`, reducing the
-     * total supply.
+     * @notice Lock token transfers.
      *
-     * Emits a {Transfer} event with `to` set to the zero address.
+     * Added by WorkQuest Team.
      *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens.
      */
-    function _burn(address account, uint256 amount) internal {
-        require(account != address(0), 'WQT: burn from the zero address');
-
-        _beforeTokenTransfer();
-
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, 'WQT: burn amount exceeds balance');
-        unchecked {
-            _balances[account] = accountBalance - amount;
-        }
-        totalSupply -= amount;
-
-        emit Transfer(account, address(0), amount);
-    }
-
-    /**
-     * @notice Hook that is called before any transfer of tokens. This includes
-     * minting and burning.
-     *
-     * Calling conditions:
-     *
-     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
-     * will be transferred to `to`.
-     * - when `from` is zero, `amount` tokens will be minted for `to`.
-     * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
-     * - `from` and `to` are never both zero.
-     *
-     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
-     *
-     * address from,
-     * address to,
-     * uint256 amount
-     */
-    function _beforeTokenTransfer() internal view {
+    function lockTransfers() public {
         require(
-            !_locked || msg.sender == _saleContract,
-            'WQT: Transfers locked'
+            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
+            'WQT: Caller must be owner and _unlockFixed false'
         );
+        _locked = true;
+    }
+
+    /**
+     * @notice Unlock token transfers.
+     *
+     * Added by WorkQuest Team.
+     *
+     */
+    function unlockTransfers() public {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
+            'WQT: Caller must be owner and _unlockFixed false'
+        );
+        _locked = false;
+    }
+
+    /**
+     * @notice Permanently unlock token transfers.
+     * After this, further locking is impossible.
+     *
+     * Added by WorkQuest Team.
+     *
+     */
+    function unlockTransfersPermanent() public {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender) && !_unlockFixed,
+            'WQT: Caller must be owner and _unlockFixed false'
+        );
+        _locked = false;
+        _unlockFixed = true;
     }
 }

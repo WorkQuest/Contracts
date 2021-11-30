@@ -48,7 +48,7 @@ function createNetworkConfig(network) {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 70000000000,
+    gasPrice: 120000000000,
     url: url
   };
 }

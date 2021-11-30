@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.4;
+pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
@@ -93,8 +93,7 @@ contract WQDAOVoting is
         address indexed voter,
         uint256 proposalId,
         bool support,
-        uint256 votes,
-        string reason
+        uint256 votes
     );
 
     /// @notice An event emitted when a proposal has been executed in the Timelock
@@ -120,6 +119,7 @@ contract WQDAOVoting is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setupRole(CHAIRPERSON_ROLE, chairPerson);
         _setRoleAdmin(CHAIRPERSON_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         token = WQTInterface(_voteToken);
     }
 
@@ -145,7 +145,7 @@ contract WQDAOVoting is
             'Proposer votes below proposal threshold'
         );
 
-        Proposal storage proposal = proposals[proposalCount++];
+        Proposal storage proposal = proposals[++proposalCount];
 
         proposal.id = proposalCount;
         proposal.proposer = msg.sender;
@@ -218,19 +218,13 @@ contract WQDAOVoting is
      * @notice Cast a vote for a proposal with a reason
      * @param _proposalId The id of the proposal to vote on
      * @param _support The support value for the vote
-     * @param _justification The reason given for the vote by the voter
      */
-    function doVote(
-        uint256 _proposalId,
-        bool _support,
-        string calldata _justification
-    ) public {
+    function doVote(uint256 _proposalId, bool _support) public {
         emit VoteCast(
             msg.sender,
             _proposalId,
             _support,
-            castVoteInternal(msg.sender, _proposalId, _support),
-            _justification
+            castVoteInternal(msg.sender, _proposalId, _support)
         );
     }
 
@@ -246,10 +240,8 @@ contract WQDAOVoting is
         uint256 _proposalId,
         bool _support
     ) internal returns (uint256) {
-        require(
-            token.votePowerOf(msg.sender) > voteThreshold,
-            'Voter votes below vote threshold'
-        );
+        uint256 votes = token.getVotes(_voter);
+        require(votes > voteThreshold, 'Voter votes below vote threshold');
         require(proposalCount > _proposalId, 'Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
         Receipt storage receipt = proposal.receipts[_voter];
@@ -259,7 +251,6 @@ contract WQDAOVoting is
             block.timestamp < proposal.proposalExpireTime,
             'Proposal expired'
         );
-        uint256 votes = token.getVotes(_voter);
 
         if (_support) {
             proposal.forVotes = add256(proposal.forVotes, votes);
@@ -276,11 +267,13 @@ contract WQDAOVoting is
         return votes;
     }
 
-    function executeVoting(uint256 _proposalId) public {
-        require(
-            hasRole(CHAIRPERSON_ROLE, msg.sender),
-            'Caller is not a chairperson'
-        );
+    /**
+     *
+     */
+    function executeVoting(uint256 _proposalId)
+        public
+        onlyRole(CHAIRPERSON_ROLE)
+    {
         require(proposalCount > _proposalId, 'Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.active == true, 'Voting is closed');
@@ -301,6 +294,7 @@ contract WQDAOVoting is
     }
 
     /**
+     * @dev Change voting parameters
      * @param _minimumQuorum The initial number of members must vote on a proposal for it to be executed
      * @param _votingPeriod The initial voting period
      */
