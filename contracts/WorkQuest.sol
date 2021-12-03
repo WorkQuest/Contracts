@@ -141,16 +141,27 @@ contract WorkQuest is AccessControl {
         public
         view
         returns (
-            bytes32 jobHash,
-            uint256 cost,
-            uint256 forfeit,
-            address employer,
-            address worker,
-            address arbiter,
-            JobStatus status,
-            uint256 deadline
+            bytes32 _jobHash,
+            uint256 _cost,
+            uint256 _forfeit,
+            address _employer,
+            address _worker,
+            address _arbiter,
+            JobStatus _status,
+            uint256 _deadline
         )
-    {}
+    {
+        return (
+            jobHash,
+            cost,
+            forfeit,
+            employer,
+            worker,
+            arbiter,
+            status,
+            deadline
+        );
+    }
 
     function cancelJob() external {
         require(status == JobStatus.New && msg.sender == employer, errMsg);

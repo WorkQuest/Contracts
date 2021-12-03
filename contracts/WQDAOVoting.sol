@@ -33,8 +33,6 @@ contract WQDAOVoting is
         uint256 proposalExpireTime;
         // Flag marking whether the proposal is active
         bool active;
-        address recipient;
-        bytes byteCode;
         string description;
         // Receipts of ballots for the entire set of voters
         mapping(address => Receipt) receipts;
@@ -53,6 +51,24 @@ contract WQDAOVoting is
     struct VoteResult {
         bool succeded;
         bool defeated;
+    }
+
+    struct ProposalInfo {
+        uint256 id;
+        address proposer;
+        uint256 forVotes;
+        uint256 againstVotes;
+        uint256 numVoters;
+        uint256 proposalExpireTime;
+        bool active;
+        string description;
+    }
+
+    struct ProposalPages {
+        uint256 count;
+        uint256 offset;
+        uint256 limit;
+        ProposalInfo[] pages;
     }
 
     // Administrator for this contract
@@ -135,17 +151,13 @@ contract WQDAOVoting is
      
      * @return Proposal id of new proposal
      */
-    function addProposal(
-        address _recipient,
-        string memory _description,
-        bytes memory _byteCode
-    ) public returns (uint256) {
+    function addProposal(string memory _description) public returns (uint256) {
         require(
             token.balanceOf(msg.sender) > proposalThreshold,
             'Proposer votes below proposal threshold'
         );
 
-        Proposal storage proposal = proposals[++proposalCount];
+        Proposal storage proposal = proposals[proposalCount++];
 
         proposal.id = proposalCount;
         proposal.proposer = msg.sender;
@@ -154,8 +166,6 @@ contract WQDAOVoting is
         proposal.againstVotes = 0;
         proposal.active = true;
         proposal.proposalExpireTime = block.timestamp + votingPeriod;
-        proposal.recipient = _recipient;
-        proposal.byteCode = _byteCode;
         proposal.description = _description;
 
         emit ProposalCreated(
@@ -166,6 +176,36 @@ contract WQDAOVoting is
             minimumQuorum
         );
         return proposal.id;
+    }
+
+    /**
+     * @dev Get information about proposal
+     */
+
+    function getProposals(uint256 offset, uint256 limit)
+        external
+        view
+        returns (ProposalPages memory page)
+    {
+        page.count = proposalCount;
+        page.offset = offset;
+        if (limit > proposalCount - offset) {
+            limit = proposalCount - offset;
+        }
+        page.limit = limit;
+        page.pages = new ProposalInfo[](limit);
+        for (uint256 i = 0; i < limit; i++) {
+            page.pages[i].id = proposals[offset + i].id;
+            page.pages[i].proposer = proposals[offset + i].proposer;
+            page.pages[i].forVotes = proposals[offset + i].forVotes;
+            page.pages[i].againstVotes = proposals[offset + i].againstVotes;
+            page.pages[i].numVoters = proposals[offset + i].numVoters;
+            page.pages[i].proposalExpireTime = proposals[offset + i]
+                .proposalExpireTime;
+            page.pages[i].active = proposals[offset + i].active;
+            page.pages[i].description = proposals[offset + i].description;
+        }
+        return page;
     }
 
     /**
@@ -192,7 +232,7 @@ contract WQDAOVoting is
         view
         returns (uint8 proposalState)
     {
-        require(proposalCount >= _proposalId, 'Invalid proposal id');
+        require(_proposalId < proposalCount, 'Invalid proposal id');
         if (proposals[_proposalId].active) return 2;
         else return voteResults[_proposalId].succeded ? 1 : 0;
     }
@@ -208,9 +248,7 @@ contract WQDAOVoting is
             proposal.forVotes > proposal.againstVotes &&
             proposal.numVoters > minimumQuorum
         ) {
-            (result.succeded, ) = proposal.recipient.call{value: 0}(
-                proposal.byteCode
-            );
+            result.succeded = true;
         } else result.defeated = true;
     }
 
@@ -242,7 +280,7 @@ contract WQDAOVoting is
     ) internal returns (uint256) {
         uint256 votes = token.getVotes(_voter);
         require(votes > voteThreshold, 'Voter votes below vote threshold');
-        require(proposalCount > _proposalId, 'Invalid proposal id');
+        require(_proposalId < proposalCount, 'Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
         Receipt storage receipt = proposal.receipts[_voter];
         require(proposal.active == true, 'Voting is closed');
@@ -274,7 +312,7 @@ contract WQDAOVoting is
         public
         onlyRole(CHAIRPERSON_ROLE)
     {
-        require(proposalCount > _proposalId, 'Invalid proposal id');
+        require(_proposalId < proposalCount, 'Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.active == true, 'Voting is closed');
         proposal.active = false;

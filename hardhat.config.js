@@ -48,7 +48,7 @@ function createNetworkConfig(network) {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 120000000000,
+    gasPrice: 100000000000,
     url: url
   };
 }
@@ -60,10 +60,10 @@ module.exports = {
       url: "http://127.0.0.1:8545/"
     },
     wqdevnet: {
-      url: "https://dev-node-ams3.workquest.co/",
+      url: "https://dev-node-nyc3.workquest.co/",
       accounts: { mnemonic: mnemonic },
       gasPrice: 10000000000,
-      chainId: 20210811
+      chainId: 20211201
     },
     bsctestnet: {
       url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet`,

@@ -172,9 +172,12 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         address recipient,
         uint256 amount
     ) public returns (bool) {
+        require(
+            amount <= _allowances[sender][msg.sender],
+            'WQT: Transfer amount exceeds allowance'
+        );
         _transfer(sender, recipient, amount);
         _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
-
         return true;
     }
 
@@ -205,6 +208,10 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
         public
         returns (bool)
     {
+        require(
+            subtractedValue <= _allowances[msg.sender][spender],
+            'WQT: Decreased allowance below zero'
+        );
         _approve(
             msg.sender,
             spender,
@@ -337,7 +344,7 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      */
     function _beforeTokenTransfer(
         address from,
-        address to,
+        address,
         uint256 amount
     ) internal view {
         require(
