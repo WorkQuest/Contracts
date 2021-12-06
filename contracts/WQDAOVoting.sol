@@ -29,8 +29,10 @@ contract WQDAOVoting is
         uint256 againstVotes;
         // Current number of voters in this proposal
         uint256 numVoters;
+        // Start time of proposal
+        uint256 startTime;
         // Expire time of proposal
-        uint256 proposalExpireTime;
+        uint256 expireTime;
         // Flag marking whether the proposal is active
         bool active;
         string description;
@@ -55,11 +57,12 @@ contract WQDAOVoting is
 
     struct ProposalInfo {
         uint256 id;
-        address proposer;
         uint256 forVotes;
         uint256 againstVotes;
         uint256 numVoters;
-        uint256 proposalExpireTime;
+        uint256 startTime;
+        uint256 expireTime;
+        address proposer;
         bool active;
         string description;
     }
@@ -71,16 +74,14 @@ contract WQDAOVoting is
         ProposalInfo[] pages;
     }
 
-    // Administrator for this contract
-    address public admin;
+    /// @dev The address of the governance token
+    WQTInterface public token;
 
-    // The duration of voting on a proposal, in blocks
-    uint256 public votingPeriod;
-
+    /// @dev minimum quorum of voters for for making a decision
     uint256 public minimumQuorum;
 
-    // The total number of proposals
-    uint256 public proposalCount;
+    /// @dev The duration of voting on a proposal, in seconds
+    uint256 public votingPeriod;
 
     // Minimum quantity of tokens for proposals
     uint256 public proposalThreshold;
@@ -88,8 +89,8 @@ contract WQDAOVoting is
     // Minimum quantity of tokens for voting
     uint256 public voteThreshold;
 
-    //The address of the governance token
-    WQTInterface public token;
+    // The total number of proposals
+    uint256 public proposalCount;
 
     //The record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
@@ -115,21 +116,22 @@ contract WQDAOVoting is
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint256 id);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     /**
      * @notice Initializes the contract
      * @param chairPerson Chairperson address
      * @param _voteToken The address of the DAO token
      */
-    function initialize(address chairPerson, address _voteToken)
-        public
-        initializer
-    {
+    function initialize(
+        address chairPerson,
+        address _voteToken,
+        uint256 _minimumQuorum,
+        uint256 _votingPeriod
+    ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
-
-        proposalThreshold = 10000e18; //10,000
-        voteThreshold = 100e18; //100
-
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
@@ -137,6 +139,10 @@ contract WQDAOVoting is
         _setRoleAdmin(CHAIRPERSON_ROLE, ADMIN_ROLE);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         token = WQTInterface(_voteToken);
+        minimumQuorum = _minimumQuorum;
+        votingPeriod = _votingPeriod;
+        proposalThreshold = 10000e18; //10,000
+        voteThreshold = 100e18; //100
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -159,13 +165,14 @@ contract WQDAOVoting is
 
         Proposal storage proposal = proposals[proposalCount++];
 
-        proposal.id = proposalCount;
+        proposal.id = proposalCount - 1;
         proposal.proposer = msg.sender;
         proposal.numVoters = 0;
         proposal.forVotes = 0;
         proposal.againstVotes = 0;
         proposal.active = true;
-        proposal.proposalExpireTime = block.timestamp + votingPeriod;
+        proposal.startTime = block.timestamp;
+        proposal.expireTime = block.timestamp + votingPeriod;
         proposal.description = _description;
 
         emit ProposalCreated(
@@ -200,8 +207,8 @@ contract WQDAOVoting is
             page.pages[i].forVotes = proposals[offset + i].forVotes;
             page.pages[i].againstVotes = proposals[offset + i].againstVotes;
             page.pages[i].numVoters = proposals[offset + i].numVoters;
-            page.pages[i].proposalExpireTime = proposals[offset + i]
-                .proposalExpireTime;
+            page.pages[i].startTime = proposals[offset + i].startTime;
+            page.pages[i].expireTime = proposals[offset + i].expireTime;
             page.pages[i].active = proposals[offset + i].active;
             page.pages[i].description = proposals[offset + i].description;
         }
@@ -285,15 +292,12 @@ contract WQDAOVoting is
         Receipt storage receipt = proposal.receipts[_voter];
         require(proposal.active == true, 'Voting is closed');
         require(receipt.hasVoted == false, 'Voter has already voted');
-        require(
-            block.timestamp < proposal.proposalExpireTime,
-            'Proposal expired'
-        );
+        require(block.timestamp < proposal.expireTime, 'Proposal expired');
 
         if (_support) {
-            proposal.forVotes = add256(proposal.forVotes, votes);
+            proposal.forVotes += votes;
         } else {
-            proposal.againstVotes = add256(proposal.againstVotes, votes);
+            proposal.againstVotes += votes;
         }
 
         proposal.numVoters++;
@@ -320,17 +324,6 @@ contract WQDAOVoting is
         emit ProposalExecuted(_proposalId);
     }
 
-    function add256(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, 'addition overflow');
-        return c;
-    }
-
-    function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, 'subtraction underflow');
-        return a - b;
-    }
-
     /**
      * @dev Change voting parameters
      * @param _minimumQuorum The initial number of members must vote on a proposal for it to be executed
@@ -338,9 +331,20 @@ contract WQDAOVoting is
      */
     function changeVotingRules(uint256 _minimumQuorum, uint256 _votingPeriod)
         external
+        onlyRole(ADMIN_ROLE)
     {
-        require(hasRole(ADMIN_ROLE, msg.sender), 'Caller is not an admin');
         minimumQuorum = _minimumQuorum;
         votingPeriod = _votingPeriod;
+    }
+
+    function setProposalThreshold(uint256 amount)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        proposalThreshold = amount;
+    }
+
+    function setVoteThreshold(uint256 amount) external onlyRole(ADMIN_ROLE) {
+        voteThreshold = amount;
     }
 }

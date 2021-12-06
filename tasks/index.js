@@ -16,3 +16,5 @@ require('./stake_tokens.js');
 require('./read_staking.js');
 require('./add_funds_to_borrowing.js');
 require('./get_workquests.js');
+require('./add_chairperson_to_voting.js');
+require('./set_voting_rules.js');
