@@ -444,13 +444,15 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
             amount <= _balances[delegator],
             'WQT: Not enough balance to delegate'
         );
-        address currentDelegate = _delegates[delegator];
+        emit DelegateChanged(delegator, _delegates[delegator], delegatee);
+        _moveVotingPower(
+            _delegates[delegator],
+            address(0),
+            _freezings[delegator]
+        );
+        _moveVotingPower(address(0), delegatee, amount);
         _freezings[delegator] = amount;
         _delegates[delegator] = delegatee;
-
-        emit DelegateChanged(delegator, currentDelegate, delegatee);
-
-        _moveVotingPower(currentDelegate, delegatee, amount);
     }
 
     function undelegate() public {

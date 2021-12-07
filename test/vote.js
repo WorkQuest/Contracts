@@ -19,9 +19,10 @@ describe('Governance token test', () => {
     let userOne;
     let userTwo;
     let userThree;
+    let userFour;
     let totalSupplyOfWQToken = parseEther('100000000');
     let proposalThreshold = parseEther('10001');
-    let totalSupplyWOProposalThreshold = parseEther((100000000 - 10001).toString());
+    let totalSupplyWOProposalThreshold = parseEther((100000000 - 11001).toString());
     let twenty = parseEther('20');
     let thirty = parseEther('30');
     let fifty = parseEther('50');
@@ -30,22 +31,31 @@ describe('Governance token test', () => {
     let fourK = parseEther('4000');
     let oneMln = parseEther('1000000');
     let tenMln = parseEther('10000000');
-    let minimumQuorum = parseEther('3');
+    let minimumQuorum = 3;
     let minute = ethers.BigNumber.from('60');
     let votingPeriod = ethers.BigNumber.from('86400'); // one day
 
     beforeEach(async () => {
-        [owner, userOne, userTwo, userThree] = await ethers.getSigners();
+        [owner, userOne, userTwo, userThree, userFour] = await ethers.getSigners();
 
         const WQToken = await ethers.getContractFactory('WQToken');
         token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], { initializer: 'initialize' });
 
         const DAOBallot = await ethers.getContractFactory('WQDAOVoting');
-        vote = await upgrades.deployProxy(DAOBallot, [owner.address, token.address], { initializer: 'initialize' });
+        vote = await upgrades.deployProxy(DAOBallot,
+            [
+                owner.address,
+                token.address,
+                minimumQuorum,
+                votingPeriod
+            ],
+            { initializer: 'initialize' });
         await vote.deployed();
-        await vote.changeVotingRules(minimumQuorum, votingPeriod);
+        // await vote.changeVotingRules(minimumQuorum, votingPeriod);
 
         await token.transfer(userOne.address, proposalThreshold);
+        await token.transfer(userThree.address, oneK);
+        await token.connect(userOne).delegate(userOne.address, proposalThreshold);
         await expect(
             vote.connect(userOne).addProposal('Free beer for workers on friday')
         ).to.not.reverted;
@@ -145,12 +155,12 @@ describe('Governance token test', () => {
         })
         describe('Delegate', () => {
             it('Delegate to user', async () => {
-                await token.delegate(userOne.address, tenMln)
-                expect(await token.getVotes(userOne.address)).to.equal(
+                await token.delegate(userFour.address, tenMln)
+                expect(await token.getVotes(userFour.address)).to.equal(
                     tenMln
                 )
                 expect(await token.delegates(owner.address)).to.equal(
-                    userOne.address
+                    userFour.address
                 )
                 expect(await token.freezed(owner.address)).to.equal(tenMln)
             })
@@ -165,12 +175,12 @@ describe('Governance token test', () => {
             it('Should properly change votepower and balance after redelegating', async () => {
                 // TODO test is not work rigth as planed, if reledegate from pair
                 // userA - UserB to UserC votePower of userC should equals UserC_delegates + UserB 
-                await token.delegate(userOne.address, tenMln);
-                await token.undelegate();
+                await token.delegate(userThree.address, tenMln);
+                // await token.undelegate();
                 await token.delegate(userTwo.address, tenMln);
                 expect(await token.delegates(owner.address)).to.equal(userTwo.address);
                 expect(await token.freezed(owner.address)).to.equal(tenMln);
-                expect(await token.getVotes(userOne.address)).to.equal(0);
+                expect(await token.getVotes(userThree.address)).to.equal(0);
                 expect(await token.getVotes(userTwo.address)).to.equal(tenMln);
             });
             it('Checkpoints', async () => {
@@ -196,10 +206,11 @@ describe('Governance token test', () => {
         })
         describe('Voting', () => {
             it('Should properly vote with enough votes', async () => {
-                await token.delegate(owner.address, oneK)
-                await vote.doVote(0, true)
+                await token.connect(userThree).delegate(userThree.address, oneK);
+                await vote.connect(userOne).addProposal("Should properly vote with enough votes");
+                await vote.connect(userThree).doVote(1, true)
                 expect(
-                    (await vote.getReceipt(0, owner.address)).votes
+                    (await vote.getReceipt(1, userThree.address)).votes
                 ).to.equal(oneK)
             })
             it("Shouldn't vote with wrong id", async () => {
@@ -209,24 +220,28 @@ describe('Governance token test', () => {
                 )
             })
             it("Shouldn't vote on expired votes", async () => {
-                await token.delegate(owner.address, oneK);
-                await vote.addProposal('Drink on thursdays');
-
+                await token.connect(userThree).delegate(userThree.address, oneK);
+                await vote.connect(userOne).addProposal('Drink on thursdays');
                 await ethers.provider.send("evm_increaseTime", [moreThanDay]);
                 await ethers.provider.send("evm_mine", []);
 
-                await expect(vote.doVote(1, true)).to.revertedWith('Proposal expired');
+                await expect(
+                    vote.connect(userThree).doVote(1, true)
+                ).to.revertedWith('Proposal expired');
             })
             it("Shouldn't vote multiple times", async () => {
-                await token.delegate(owner.address, oneK);
-                await vote.doVote(0, true);
-                await token.delegate(owner.address, oneK);
-                await expect(vote.doVote(0, true)).to.revertedWith('Voter has already voted');
+                await token.connect(userThree).delegate(userThree.address, oneK);
+                await vote.connect(userOne).addProposal('Drink on thursdays');
+                await vote.connect(userThree).doVote(1, true);
+                await expect(
+                    vote.connect(userThree).doVote(1, true)
+                ).to.revertedWith('Voter has already voted');
             })
             it("Shouldn't vote on executed votes", async () => {
                 await vote.executeVoting(0);
-                await token.delegate(owner.address, oneK);
-                await expect(vote.doVote(0, true)).to.revertedWith('Voting is closed')
+                await expect(
+                    vote.connect(userOne).doVote(0, true)
+                ).to.revertedWith('Voting is closed')
             })
         })
         describe('Executing', () => {
@@ -255,20 +270,23 @@ describe('Governance token test', () => {
                 await token.transfer(userOne.address, oneK);
                 await token.transfer(userTwo.address, twoK);
                 await token.transfer(userThree.address, twoK);
-                await token.delegate(owner.address, fourK);
+                await token.delegate(owner.address, proposalThreshold);
                 await token.connect(userOne).delegate(userOne.address, oneK);
                 await token.connect(userTwo).delegate(userTwo.address, twoK);
-                await vote.doVote(0, true);
-                await vote.connect(userOne).doVote(0, false);
-                await vote.connect(userTwo).doVote(0, false);
-                await vote.executeVoting(0);
-                expect(await vote.state(0)).to.equal(0);
+                await vote.addProposal('Should properly execute proposal');
+                await vote.doVote(1, true);
+                await vote.connect(userOne).doVote(1, false);
+                await vote.connect(userTwo).doVote(1, false);
+                await vote.executeVoting(1);
+                expect(await vote.state(1)).to.equal(0);
             })
             it("Should return 'defeated' if not enough quorum", async () => {
-                await token.delegate(owner.address, fourK);
-                await vote.doVote(0, true);
-                await vote.executeVoting(0);
-                expect(await vote.state(0)).to.equal(0);
+                await token.delegate(owner.address, proposalThreshold);
+                await token.connect(userThree).delegate(userThree.address, oneK);
+                await vote.addProposal('Should properly execute proposal');
+                await vote.connect(userThree).doVote(1, true);
+                await vote.executeVoting(1);
+                expect(await vote.state(1)).to.equal(0);
             })
         })
     })

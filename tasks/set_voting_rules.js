@@ -20,7 +20,7 @@ task("set_voting_rules", "Set rules of voting")
             throw new Error(`Please set your DAO_VOTING_PERIOD in a .env-${network} file`);
         }
 
-        console.log(`Try to add chairperson ${args.to} to voting`);
+        console.log(`Try set rules to voting`);
         const voting = await hre.ethers.getContractAt("WQDAOVoting", process.env.DAO_BALLOT);
         await voting.changeVotingRules(process.env.DAO_MINIMUM_QUORUM, process.env.DAO_VOTING_PERIOD);
         console.log("Done");
