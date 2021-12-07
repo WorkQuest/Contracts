@@ -109,6 +109,11 @@
       "address": "0xCd6bc294aA2B2dFB7af793fe308e0Ef1114F8738",
       "txHash": "0x6feb12731ea5523586a4ecdae0cf49bdac4d8abbc857c7ec7fb41fd7ae3e71ee",
       "kind": "uups"
+    },
+    {
+      "address": "0xbF09428BDEdD21f8698C44e3B327Ec405B1Ba64d",
+      "txHash": "0x7a938c6d279ac576041bf92581911bc1618bf8304130b9be3393f0252d9da12b",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -6903,6 +6908,243 @@
             "label": "mapping(uint256 => struct WQDAOVoting.VoteResult)"
           },
           "t_struct(VoteResult)6208_storage": {
+            "label": "struct WQDAOVoting.VoteResult",
+            "members": [
+              {
+                "label": "succeded",
+                "type": "t_bool"
+              },
+              {
+                "label": "defeated",
+                "type": "t_bool"
+              }
+            ]
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)43_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(RoleData)43_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          }
+        }
+      }
+    },
+    "082ef38307f04ff93ce3d222ff57bb09c3fc4cba3d412422b6444ba194c92b28": {
+      "address": "0x4BA51Fe3779F4ed687221B07b335c22a9e4dcB2c",
+      "txHash": "0xb0514e46dc7a17b7d606ec13b822e4bfad93f62d2d29650f664268948969b760",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:21"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:26"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:30"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:35"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)43_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:63"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:219"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:214"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:80"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "token",
+            "type": "t_contract(WQTInterface)13397",
+            "src": "contracts/WQDAOVoting.sol:81"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "minimumQuorum",
+            "type": "t_uint256",
+            "src": "contracts/WQDAOVoting.sol:84"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "votingPeriod",
+            "type": "t_uint256",
+            "src": "contracts/WQDAOVoting.sol:87"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "proposalThreshold",
+            "type": "t_uint256",
+            "src": "contracts/WQDAOVoting.sol:90"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "voteThreshold",
+            "type": "t_uint256",
+            "src": "contracts/WQDAOVoting.sol:93"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "proposalCount",
+            "type": "t_uint256",
+            "src": "contracts/WQDAOVoting.sol:96"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "proposals",
+            "type": "t_mapping(t_uint256,t_struct(Proposal)6198_storage)",
+            "src": "contracts/WQDAOVoting.sol:99"
+          },
+          {
+            "contract": "WQDAOVoting",
+            "label": "voteResults",
+            "type": "t_mapping(t_uint256,t_struct(VoteResult)6210_storage)",
+            "src": "contracts/WQDAOVoting.sol:100"
+          }
+        ],
+        "types": {
+          "t_contract(WQTInterface)13397": {
+            "label": "contract WQTInterface"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_mapping(t_uint256,t_struct(Proposal)6198_storage)": {
+            "label": "mapping(uint256 => struct WQDAOVoting.Proposal)"
+          },
+          "t_struct(Proposal)6198_storage": {
+            "label": "struct WQDAOVoting.Proposal",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint256"
+              },
+              {
+                "label": "proposer",
+                "type": "t_address"
+              },
+              {
+                "label": "forVotes",
+                "type": "t_uint256"
+              },
+              {
+                "label": "againstVotes",
+                "type": "t_uint256"
+              },
+              {
+                "label": "numVoters",
+                "type": "t_uint256"
+              },
+              {
+                "label": "startTime",
+                "type": "t_uint256"
+              },
+              {
+                "label": "expireTime",
+                "type": "t_uint256"
+              },
+              {
+                "label": "blockNumber",
+                "type": "t_uint256"
+              },
+              {
+                "label": "active",
+                "type": "t_bool"
+              },
+              {
+                "label": "description",
+                "type": "t_string_storage"
+              },
+              {
+                "label": "receipts",
+                "type": "t_mapping(t_address,t_struct(Receipt)6205_storage)"
+              }
+            ]
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_mapping(t_address,t_struct(Receipt)6205_storage)": {
+            "label": "mapping(address => struct WQDAOVoting.Receipt)"
+          },
+          "t_struct(Receipt)6205_storage": {
+            "label": "struct WQDAOVoting.Receipt",
+            "members": [
+              {
+                "label": "hasVoted",
+                "type": "t_bool"
+              },
+              {
+                "label": "support",
+                "type": "t_bool"
+              },
+              {
+                "label": "votes",
+                "type": "t_uint256"
+              }
+            ]
+          },
+          "t_mapping(t_uint256,t_struct(VoteResult)6210_storage)": {
+            "label": "mapping(uint256 => struct WQDAOVoting.VoteResult)"
+          },
+          "t_struct(VoteResult)6210_storage": {
             "label": "struct WQDAOVoting.VoteResult",
             "members": [
               {

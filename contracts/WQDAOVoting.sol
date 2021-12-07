@@ -33,6 +33,8 @@ contract WQDAOVoting is
         uint256 startTime;
         // Expire time of proposal
         uint256 expireTime;
+        // Block number, when proposal created
+        uint256 blockNumber;
         // Flag marking whether the proposal is active
         bool active;
         string description;
@@ -62,6 +64,7 @@ contract WQDAOVoting is
         uint256 numVoters;
         uint256 startTime;
         uint256 expireTime;
+        uint256 blockNumber;
         address proposer;
         bool active;
         string description;
@@ -159,7 +162,7 @@ contract WQDAOVoting is
      */
     function addProposal(string memory _description) public returns (uint256) {
         require(
-            token.balanceOf(msg.sender) > proposalThreshold,
+            token.getVotes(msg.sender) >= proposalThreshold,
             'Proposer votes below proposal threshold'
         );
 
@@ -173,6 +176,7 @@ contract WQDAOVoting is
         proposal.active = true;
         proposal.startTime = block.timestamp;
         proposal.expireTime = block.timestamp + votingPeriod;
+        proposal.blockNumber = block.number;
         proposal.description = _description;
 
         emit ProposalCreated(
@@ -209,6 +213,7 @@ contract WQDAOVoting is
             page.pages[i].numVoters = proposals[offset + i].numVoters;
             page.pages[i].startTime = proposals[offset + i].startTime;
             page.pages[i].expireTime = proposals[offset + i].expireTime;
+            page.pages[i].blockNumber = proposals[offset + i].blockNumber;
             page.pages[i].active = proposals[offset + i].active;
             page.pages[i].description = proposals[offset + i].description;
         }
@@ -285,10 +290,10 @@ contract WQDAOVoting is
         uint256 _proposalId,
         bool _support
     ) internal returns (uint256) {
-        uint256 votes = token.getVotes(_voter);
-        require(votes > voteThreshold, 'Voter votes below vote threshold');
         require(_proposalId < proposalCount, 'Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
+        uint256 votes = token.getPastVotes(_voter, proposal.blockNumber);
+        require(votes >= voteThreshold, 'Voter votes below vote threshold');
         Receipt storage receipt = proposal.receipts[_voter];
         require(proposal.active == true, 'Voting is closed');
         require(receipt.hasVoted == false, 'Voter has already voted');

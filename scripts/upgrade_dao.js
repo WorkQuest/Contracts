@@ -13,14 +13,14 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.BRIDGE) {
-    throw new Error(`Please set your BRIDGE in a .env-${network} file`);
+  if (!process.env.DAO_BALLOT) {
+    throw new Error(`Please set your DAO_BALLOT in a .env-${network} file`);
   }
 
   console.log("Upgrade...");
-  const WQBridge = await ethers.getContractFactory("WQBridge");
-  const bridge = await upgrades.upgradeProxy(process.env.BRIDGE, WQBridge);
-  console.log("Bridge has been upgraded to:", bridge.address);
+  const DAOVoting = await ethers.getContractFactory("WQDAOVoting");
+  const voting = await upgrades.upgradeProxy(process.env.DAO_BALLOT, DAOVoting);
+  console.log("Bridge has been upgraded to:", voting.address);
 }
 
 main()
