@@ -20,7 +20,7 @@ async function main() {
   console.log("Upgrade...");
   const DAOVoting = await ethers.getContractFactory("WQDAOVoting");
   const voting = await upgrades.upgradeProxy(process.env.DAO_BALLOT, DAOVoting);
-  console.log("Bridge has been upgraded to:", voting.address);
+  console.log("Voting has been upgraded to:", voting.address);
 }
 
 main()

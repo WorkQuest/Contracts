@@ -68,6 +68,8 @@ contract WQDAOVoting is
         address proposer;
         bool active;
         string description;
+        bool succeded;
+        bool defeated;
     }
 
     struct ProposalPages {
@@ -105,7 +107,8 @@ contract WQDAOVoting is
         address proposer,
         string description,
         uint256 votingPeriod,
-        uint256 minimumQuorum
+        uint256 minimumQuorum,
+        uint256 timestamp
     );
 
     /// @notice An event emitted when a vote has been cast on a proposal
@@ -113,11 +116,12 @@ contract WQDAOVoting is
         address indexed voter,
         uint256 proposalId,
         bool support,
-        uint256 votes
+        uint256 votes,
+        uint256 timestamp
     );
 
     /// @notice An event emitted when a proposal has been executed in the Timelock
-    event ProposalExecuted(uint256 id);
+    event ProposalExecuted(uint256 id, bool succeded, bool defeated);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -184,7 +188,8 @@ contract WQDAOVoting is
             msg.sender,
             _description,
             votingPeriod,
-            minimumQuorum
+            minimumQuorum,
+            block.timestamp
         );
         return proposal.id;
     }
@@ -216,6 +221,8 @@ contract WQDAOVoting is
             page.pages[i].blockNumber = proposals[offset + i].blockNumber;
             page.pages[i].active = proposals[offset + i].active;
             page.pages[i].description = proposals[offset + i].description;
+            page.pages[i].succeded = voteResults[offset + i].succeded;
+            page.pages[i].defeated = voteResults[offset + i].defeated;
         }
         return page;
     }
@@ -274,7 +281,8 @@ contract WQDAOVoting is
             msg.sender,
             _proposalId,
             _support,
-            castVoteInternal(msg.sender, _proposalId, _support)
+            castVoteInternal(msg.sender, _proposalId, _support),
+            block.timestamp
         );
     }
 
@@ -315,7 +323,8 @@ contract WQDAOVoting is
     }
 
     /**
-     *
+     * @notice Calc voting state
+     * @param _proposalId Proposal ID
      */
     function executeVoting(uint256 _proposalId)
         public
@@ -326,7 +335,27 @@ contract WQDAOVoting is
         require(proposal.active == true, 'Voting is closed');
         proposal.active = false;
         calcState(_proposalId);
-        emit ProposalExecuted(_proposalId);
+        emit ProposalExecuted(
+            _proposalId,
+            voteResults[_proposalId].succeded,
+            voteResults[_proposalId].defeated
+        );
+    }
+
+    /**
+     * @notice Reject voting
+     * @param _proposalId Proposal ID
+     */
+    function rejectVoting(uint256 _proposalId)
+        public
+        onlyRole(CHAIRPERSON_ROLE)
+    {
+        require(_proposalId < proposalCount, 'Invalid proposal id');
+        require(proposals[_proposalId].active == true, 'Voting is closed');
+        proposals[_proposalId].active = false;
+        voteResults[_proposalId].succeded = false;
+        voteResults[_proposalId].defeated = true;
+        emit ProposalExecuted(_proposalId, false, true);
     }
 
     /**
