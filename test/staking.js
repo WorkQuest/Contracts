@@ -288,7 +288,7 @@ describe("1. Staking tests", () => {
 
         it("STEP3: Set reward (as admin)", async () => {
             let _rewardTotal = 10;
-            await staking.setReward(_rewardTotal);
+            await staking.updateRewardTotal(_rewardTotal);
             let _rewardTotalContract = await staking.rewardTotal();
             let _distributionTimeContract = await staking.producedTime();
             let blNum = await hre.ethers.provider.send("eth_blockNumber", []);
@@ -301,7 +301,7 @@ describe("1. Staking tests", () => {
             let _rewardTotal = 10;
             let _rewardTotalContractBefore = await staking.rewardTotal();
             let _distributionTimeContractBefore = await staking.producedTime();
-            await expect(staking.connect(accounts[1]).setReward(_rewardTotal)).to.be.revertedWith("is missing role");
+            await expect(staking.connect(accounts[1]).updateRewardTotal(_rewardTotal)).to.be.revertedWith("is missing role");
             let _rewardTotalContractAfter = await staking.rewardTotal();
             let _distributionTimeContractAfter = await staking.producedTime();
             expect(_rewardTotalContractAfter).to.equal(_rewardTotalContractBefore);
@@ -314,12 +314,14 @@ describe("1. Staking tests", () => {
             let _rewardAllowed = 20;
             let _rewardDebt = 30;
             let _distributed = 40;
-            await staking.updateStakerInfo(_user, _amount, _rewardAllowed, _rewardDebt, _distributed);
+            let _unstakeTime = 50;
+            await staking.updateStakerInfo(_user, _amount, _rewardAllowed, _rewardDebt, _distributed, _unstakeTime);
             let _staker = await staking.stakes(_user);
             expect(_staker.amount).to.equal(_amount);
             expect(_staker.rewardAllowed).to.equal(_rewardAllowed);
             expect(_staker.rewardDebt).to.equal(_rewardDebt);
             expect(_staker.distributed).to.equal(_distributed);
+            expect(_staker.unstakeTime).to.equal(_unstakeTime);
         });
 
         it("STEP6: Update staker info (as not admin)", async () => {
@@ -328,13 +330,15 @@ describe("1. Staking tests", () => {
             let _rewardAllowed = 20;
             let _rewardDebt = 30;
             let _distributed = 40;
+            let _unstakeTime = 50;
             let _stakerBefore = await staking.stakes(_user);
-            await expect(staking.connect(accounts[1]).updateStakerInfo(_user, _amount, _rewardAllowed, _rewardDebt, _distributed)).to.be.revertedWith("is missing role");
+            await expect(staking.connect(accounts[1]).updateStakerInfo(_user, _amount, _rewardAllowed, _rewardDebt, _distributed, _unstakeTime)).to.be.revertedWith("is missing role");
             let _stakerAfter = await staking.stakes(_user);
             expect(_stakerBefore.amount).to.equal(_stakerAfter.amount);
             expect(_stakerBefore.rewardAllowed).to.equal(_stakerAfter.rewardAllowed);
             expect(_stakerBefore.rewardDebt).to.equal(_stakerAfter.rewardDebt);
             expect(_stakerBefore.distributed).to.equal(_stakerAfter.distributed);
+            expect(_stakerBefore.unstakeTime).to.equal(_stakerAfter.unstakeTime);
         });
     });
 });
