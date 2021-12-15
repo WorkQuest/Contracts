@@ -6,7 +6,7 @@ BigNumber.config({ EXPONENTIAL_AT: 60 });
 const Web3 = require('web3');
 const { parseEther } = require("ethers/lib/utils");
 const web3 = new Web3(hre.network.provider);
-const rewardTotal = parseEther("10000");
+const rewardTotal = parseEther("100");
 const distributionTime = 2678400; //31 day
 const stakePeriod = 86400;
 const claimPeriod = 86400;
@@ -50,7 +50,7 @@ describe("2. Staking NATIVE coin tests", () => {
         const Staking = await ethers.getContractFactory("WQStakingNative");
         validStartTime = getValidStakingTimestamp(await getTimestamp());
         await hre.ethers.provider.send("evm_setNextBlockTimestamp", [validStartTime]);
-        staking = await upgrades.deployProxy(Staking, [validStartTime, rewardTotal, distributionTime, stakePeriod, claimPeriod, minStake, maxStake, token.address], { initializer: 'initialize' });
+        staking = await upgrades.deployProxy(Staking, [validStartTime, rewardTotal, distributionTime, stakePeriod, claimPeriod, minStake, maxStake], { initializer: 'initialize' });
         await token.transfer(staking.address, parseEther("2500000000000"));
     }
 
@@ -89,9 +89,6 @@ describe("2. Staking NATIVE coin tests", () => {
             expect(
                 staking_info.totalDistributed
             ).to.to.equal(0);
-            expect(
-                staking_info.rewardTokenAddress
-            ).to.to.equal(token.address);
         });
     });
 
@@ -236,26 +233,28 @@ describe("2. Staking NATIVE coin tests", () => {
             await expect(staking.connect(accounts[1]).unstake(minStake)).to.be.revertedWith("WQStaking: Daily lock");
         });
     });
-/**
- *       "100.000000000000000000" - staked
- *     "7 600.000000000000000000" - expected
- 195953232000.000000000000000000
- * "7 600 000.000000000000000000" - actual
- */
+    /**
+     *       "100.000000000000000000" - staked
+     *     "7 600.000000000000000000" - expected
+     195953232000.000000000000000000
+     * "7 600 000.000000000000000000" - actual
+     */
     describe("Claim", () => {
         it("STEP1: claim: success", async () => {
             await redeploy()
             let overrides = {
                 value: minStake
             }
+            await web3.eth.sendTransaction({from: accounts[2].address, to: staking.address, value: parseEther("300").toString()});
             const monthAmount = 3
             await staking.connect(accounts[1]).stake(overrides);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [(await staking.startTime()).toNumber() + distributionTime * monthAmount]);
             let _addressInfo = await staking.getInfoByAddress(accounts[1].address);
             expect(_addressInfo.staked_).to.equal(minStake);
+            let tokenBalanceBefore = await web3.eth.getBalance(accounts[1].address);
             await staking.connect(accounts[1]).claim();
-            let tokenBalanceAfter = await token.balanceOf(accounts[1].address);
-            expect(tokenBalanceAfter).to.equal(new BigNumber(rewardTotal.toString()).multipliedBy(monthAmount).toString());
+            let tokenBalanceAfter = await web3.eth.getBalance(accounts[1].address);
+            expect(((tokenBalanceAfter - tokenBalanceBefore)/1e18).toFixed(2)).to.equal('300.00');
         });
     });
 
@@ -288,7 +287,7 @@ describe("2. Staking NATIVE coin tests", () => {
 
         it("STEP3: Set reward (as admin)", async () => {
             let _rewardTotal = 10;
-            await staking.setReward(_rewardTotal);
+            await staking.updateRewardTotal(_rewardTotal);
             let _rewardTotalContract = await staking.rewardTotal();
             let _distributionTimeContract = await staking.producedTime();
             let blNum = await hre.ethers.provider.send("eth_blockNumber", []);
@@ -301,7 +300,7 @@ describe("2. Staking NATIVE coin tests", () => {
             let _rewardTotal = 10;
             let _rewardTotalContractBefore = await staking.rewardTotal();
             let _distributionTimeContractBefore = await staking.producedTime();
-            await expect(staking.connect(accounts[1]).setReward(_rewardTotal)).to.be.revertedWith("is missing role");
+            await expect(staking.connect(accounts[1]).updateRewardTotal(_rewardTotal)).to.be.revertedWith("is missing role");
             let _rewardTotalContractAfter = await staking.rewardTotal();
             let _distributionTimeContractAfter = await staking.producedTime();
             expect(_rewardTotalContractAfter).to.equal(_rewardTotalContractBefore);
