@@ -34,7 +34,7 @@ describe('Governance token test', () => {
     let minimumQuorum = 3;
     let minute = ethers.BigNumber.from('60');
     let votingPeriod = ethers.BigNumber.from('86400'); // one day
-
+    let nonce = 0;
     beforeEach(async () => {
         [owner, userOne, userTwo, userThree, userFour] = await ethers.getSigners();
 
@@ -51,13 +51,13 @@ describe('Governance token test', () => {
             ],
             { initializer: 'initialize' });
         await vote.deployed();
-        // await vote.changeVotingRules(minimumQuorum, votingPeriod);
 
         await token.transfer(userOne.address, proposalThreshold);
         await token.transfer(userThree.address, oneK);
         await token.connect(userOne).delegate(userOne.address, proposalThreshold);
+        nonce++;
         await expect(
-            vote.connect(userOne).addProposal('Free beer for workers on friday')
+            vote.connect(userOne).addProposal(nonce, 'Free beer for workers on friday')
         ).to.not.reverted;
     })
     describe('Deploy test', () => {
@@ -194,20 +194,23 @@ describe('Governance token test', () => {
         describe('Proposals', () => {
             it('Add proposal', async () => {
                 await token.transfer(userOne.address, proposalThreshold)
+                nonce++;
                 await expect(
-                    vote.connect(userOne).addProposal('IPA is better than lager')
+                    vote.connect(userOne).addProposal(nonce, 'IPA is better than lager')
                 ).to.not.reverted;
             })
             it("Shouldn't add proposal without enough votes for threshold", async () => {
+                nonce++;
                 await expect(
-                    vote.connect(userTwo).addProposal("Too poor can't proposal is not right")
+                    vote.connect(userTwo).addProposal(nonce, "Too poor can't proposal is not right")
                 ).to.revertedWith('Proposer votes below proposal threshold')
             })
         })
         describe('Voting', () => {
             it('Should properly vote with enough votes', async () => {
                 await token.connect(userThree).delegate(userThree.address, oneK);
-                await vote.connect(userOne).addProposal("Should properly vote with enough votes");
+                nonce++;
+                await vote.connect(userOne).addProposal(nonce, "Should properly vote with enough votes");
                 await vote.connect(userThree).doVote(1, true)
                 expect(
                     (await vote.getReceipt(1, userThree.address)).votes
@@ -221,7 +224,8 @@ describe('Governance token test', () => {
             })
             it("Shouldn't vote on expired votes", async () => {
                 await token.connect(userThree).delegate(userThree.address, oneK);
-                await vote.connect(userOne).addProposal('Drink on thursdays');
+                nonce++;
+                await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
                 await ethers.provider.send("evm_increaseTime", [moreThanDay]);
                 await ethers.provider.send("evm_mine", []);
 
@@ -231,7 +235,8 @@ describe('Governance token test', () => {
             })
             it("Shouldn't vote multiple times", async () => {
                 await token.connect(userThree).delegate(userThree.address, oneK);
-                await vote.connect(userOne).addProposal('Drink on thursdays');
+                nonce++;
+                await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
                 await vote.connect(userThree).doVote(1, true);
                 await expect(
                     vote.connect(userThree).doVote(1, true)
@@ -273,7 +278,8 @@ describe('Governance token test', () => {
                 await token.delegate(owner.address, proposalThreshold);
                 await token.connect(userOne).delegate(userOne.address, oneK);
                 await token.connect(userTwo).delegate(userTwo.address, twoK);
-                await vote.addProposal('Should properly execute proposal');
+                nonce++;
+                await vote.addProposal(nonce, 'Should properly execute proposal');
                 await vote.doVote(1, true);
                 await vote.connect(userOne).doVote(1, false);
                 await vote.connect(userTwo).doVote(1, false);
@@ -283,7 +289,8 @@ describe('Governance token test', () => {
             it("Should return 'defeated' if not enough quorum", async () => {
                 await token.delegate(owner.address, proposalThreshold);
                 await token.connect(userThree).delegate(userThree.address, oneK);
-                await vote.addProposal('Should properly execute proposal');
+                nonce++;
+                await vote.addProposal(nonce, 'Should properly execute proposal');
                 await vote.connect(userThree).doVote(1, true);
                 await vote.executeVoting(1);
                 expect(await vote.state(1)).to.equal(0);

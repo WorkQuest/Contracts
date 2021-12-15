@@ -21,6 +21,7 @@ contract WQDAOVoting is
     struct Proposal {
         //Unique id for looking up a proposal
         uint256 id;
+        uint256 nonce;
         //Creator of the proposal
         address proposer;
         // Current number of votes in favor of this proposal
@@ -59,6 +60,7 @@ contract WQDAOVoting is
 
     struct ProposalInfo {
         uint256 id;
+        uint256 nonce;
         uint256 forVotes;
         uint256 againstVotes;
         uint256 numVoters;
@@ -104,6 +106,7 @@ contract WQDAOVoting is
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(
         uint256 id,
+        uint256 nonce,
         address proposer,
         string description,
         uint256 votingPeriod,
@@ -164,7 +167,10 @@ contract WQDAOVoting is
      
      * @return Proposal id of new proposal
      */
-    function addProposal(string memory _description) public returns (uint256) {
+    function addProposal(uint256 nonce, string memory _description)
+        public
+        returns (uint256)
+    {
         require(
             token.getVotes(msg.sender) >= proposalThreshold,
             'Proposer votes below proposal threshold'
@@ -173,6 +179,7 @@ contract WQDAOVoting is
         Proposal storage proposal = proposals[proposalCount++];
 
         proposal.id = proposalCount - 1;
+        proposal.nonce = nonce;
         proposal.proposer = msg.sender;
         proposal.numVoters = 0;
         proposal.forVotes = 0;
@@ -185,6 +192,7 @@ contract WQDAOVoting is
 
         emit ProposalCreated(
             proposal.id,
+            nonce,
             msg.sender,
             _description,
             votingPeriod,
@@ -212,6 +220,7 @@ contract WQDAOVoting is
         page.pages = new ProposalInfo[](limit);
         for (uint256 i = 0; i < limit; i++) {
             page.pages[i].id = proposals[offset + i].id;
+            page.pages[i].nonce = proposals[offset + i].nonce;
             page.pages[i].proposer = proposals[offset + i].proposer;
             page.pages[i].forVotes = proposals[offset + i].forVotes;
             page.pages[i].againstVotes = proposals[offset + i].againstVotes;
