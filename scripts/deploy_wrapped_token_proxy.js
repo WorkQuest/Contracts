@@ -6,7 +6,7 @@ const stringify = require('dotenv-stringify')
 async function main() {
     dotenv.config()
     const accounts = await ethers.getSigners()
-    const sender = accounts[0].address
+    const sender = accounts[0].address;
     console.log('Sender address: ', sender)
 
     const network = hre.network.name;
@@ -32,7 +32,7 @@ async function main() {
             process.env.BRIDGE_TOKEN_NAME,
             process.env.BRIDGE_TOKEN_SYMBOL
         ],
-        { initializer: 'initialize'}
+        { initializer: 'initialize', gasPrice: "100", gasLimit: "50000000" }
     );
     await bridge_token.deployed();
     console.log(`${process.env.BRIDGE_TOKEN_NAME} has been deployed to:`, bridge_token.address);

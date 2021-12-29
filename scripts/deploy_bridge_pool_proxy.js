@@ -13,16 +13,13 @@ async function main() {
     const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
     for (const k in envConfig) { process.env[k] = envConfig[k]; }
-    if (!process.env.CHAIN_ID) {
-        throw new Error(`Please set your CHAIN_ID in a .env-${network} file`);
-    }
 
-    console.log("Deploying...");
     const Pool = await hre.ethers.getContractFactory("WQBridgePool");
-    const pool = await upgrades.deployProxy(Pool, [], { initializer: 'initialize' });
+    console.log("Deploying...");
+    const pool = await upgrades.deployProxy(Pool, [], { initializer: 'initialize', gasPrice: "10000000000", gasLimit: "3000000" });
     await pool.deployed();
-    envConfig["BRIDGE_POOL"] = pool.address;
     console.log("Bridge pool has been deployed to:", pool.address);
+    envConfig["BRIDGE_POOL"] = pool.address;
 
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }

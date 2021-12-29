@@ -20,7 +20,7 @@ async function main() {
 
   console.log("Deploying...");
   const WQToken = await ethers.getContractFactory("WQToken");
-  const wqt_token = await upgrades.deployProxy(WQToken, [process.env.TOKEN_TOTAL_SUPPLY], { initializer: 'initialize' });
+  const wqt_token = await upgrades.deployProxy(WQToken, [process.env.TOKEN_TOTAL_SUPPLY], { initializer: 'initialize', gasPrice: "10000000000", gasLimit: "5000000" });
   console.log("Proxy of WQT has been deployed to:", wqt_token.address);
 
   envConfig["WQT_TOKEN"] = wqt_token.address;
