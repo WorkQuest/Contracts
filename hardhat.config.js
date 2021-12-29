@@ -8,6 +8,9 @@ require('@openzeppelin/hardhat-upgrades')
 require('./tasks');
 
 require('dotenv').config();
+const BigNumber = require('bignumber.js');
+BigNumber.config({ EXPONENTIAL_AT: 60 });
+
 
 const chainIds = {
   ganache: 1337,
@@ -48,7 +51,7 @@ function createNetworkConfig(network) {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 50000000000,
+    gasPrice: 10000000000,
     url: url
   };
 }
@@ -57,13 +60,17 @@ module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     development: {
-      url: "http://127.0.0.1:8545/"
+      url: "http://127.0.0.1:8546/",
+      // accounts: { mnemonic: "" },
+      // chainId: 7305,
+      // gas: "auto",
+      // gasPrice: 6000000000000
     },
     wqdevnet: {
-      url: "https://dev-node-nyc3.workquest.co/",
+      url: "https://dev-node-fra1.workquest.co/",
       accounts: { mnemonic: mnemonic },
-      gasPrice: 10000000000,
-      chainId: 20211201
+      // gasPrice: 10000000000,
+      chainId: 20211224
     },
     bsctestnet: {
       url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet`,
