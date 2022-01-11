@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import '@openzeppelin/contracts/access/AccessControl.sol';
 import './WQPensionFund.sol';
-import './WQReferal.sol';
+import './WQReferral.sol';
 
-contract WorkQuest is AccessControl {
+contract WorkQuest {
     string constant errMsg = 'WorkQuest: Access denied or invalid status';
-    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     /**
      * @notice Job offer statuses
@@ -56,6 +54,9 @@ contract WorkQuest is AccessControl {
 
     /// @notice Event emitted when employer cancel job
     event JobCancelled();
+
+    /// @notice Event emitted when employer edit job
+    event JobEdited(bytes32 jobHash, uint256 cost);
 
     /// @notice Event emitted when employer publish job by transfer funds to contract
     event Received(address sender, uint256 amount);
@@ -125,11 +126,6 @@ contract WorkQuest is AccessControl {
         employer = _employer;
         arbiter = _arbiter;
         referal = _referal;
-        // TODO: grant admin role to admin  // CHECK
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(ADMIN_ROLE, msg.sender);
-        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
-
         emit WorkQuestCreated(jobHash);
     }
 
@@ -167,6 +163,13 @@ contract WorkQuest is AccessControl {
         require(status == JobStatus.New && msg.sender == employer, errMsg);
         status = JobStatus.Finished;
         emit JobCancelled();
+    }
+
+    function editJob(bytes32 _jobHash, uint256 _cost) external {
+        require(status == JobStatus.New && msg.sender == employer, errMsg);
+        jobHash = _jobHash;
+        cost = _cost;
+        emit JobEdited(_jobHash, _cost);
     }
 
     /**
@@ -327,14 +330,6 @@ contract WorkQuest is AccessControl {
         employer.transfer(cost - comission);
         feeReceiver.transfer(comission);
         emit ArbitrationRejectWork();
-    }
-
-    function setFeeReceiver(address payable _feeReceiver) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            "WorkQuest: You don't have an admin role"
-        );
-        feeReceiver = _feeReceiver;
     }
 
     function _transferFunds() internal {
