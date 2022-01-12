@@ -189,16 +189,7 @@ contract WQPensionFund is
         return wallets[user].fee;
     }
 
-    function updateDefaultFee(uint256 _defaultFee)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        defaultFee = _defaultFee;
-    }
-
-    function updateLockTime(uint256 _lockTime) external onlyRole(ADMIN_ROLE) {
-        lockTime = _lockTime;
-    }
+    /** Borrowing interface */
 
     function balanceOf() external view override returns (uint256) {
         return contributed - borrowed;
@@ -230,5 +221,17 @@ contract WQPensionFund is
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
         emit Refunded(msg.sender, msg.value, block.timestamp);
+    }
+
+    /** Admin functions */
+    function updateDefaultFee(uint256 _defaultFee)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        defaultFee = _defaultFee;
+    }
+
+    function updateLockTime(uint256 _lockTime) external onlyRole(ADMIN_ROLE) {
+        lockTime = _lockTime;
     }
 }

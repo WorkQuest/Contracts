@@ -67,10 +67,11 @@ module.exports = {
       // gasPrice: 6000000000000
     },
     wqdevnet: {
-      url: "https://dev-node-fra1.workquest.co/",
+      // url: "https://dev-node-fra1.workquest.co/",
+      url: "http://127.0.0.1:8545/",
       accounts: { mnemonic: mnemonic },
       // gasPrice: 10000000000,
-      chainId: 20211224
+      chainId: 20220112
     },
     bsctestnet: {
       url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet`,

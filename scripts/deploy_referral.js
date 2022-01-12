@@ -29,9 +29,6 @@ async function main() {
     if (!process.env.REFERRAL_SERVICE) {
         throw new Error(`Plese set your REFERRAL_SERVICE in a .env-${network} file`)
     }
-    if (!process.env.WORK_QUEST_FACTORY) {
-        throw new Error(`Plese set your WORK_QUEST_FACTORY in a .env-${network} file`)
-    }
 
     console.log('Deploying...')
     const WQReferral = await hre.ethers.getContractFactory('WQReferral')
