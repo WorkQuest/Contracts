@@ -112,7 +112,7 @@ contract WQBridge is
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialize(uint256 _chainId, address payable _pool)
+    function initialize(uint256 _chainId, address payable _pool, address validator)
         external
         initializer
     {
@@ -121,8 +121,8 @@ contract WQBridge is
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
+        _setupRole(VALIDATOR_ROLE, validator);
         chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?
-        require(_pool != payable(0), 'WQBridge: invalid pool address');
         pool = _pool;
     }
 

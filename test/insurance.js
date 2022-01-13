@@ -334,7 +334,7 @@ describe('Insurance tests', () => {
                 to: insurance.address,
                 value: magicValueOne,
             })
-            await hre.ethers.provider.send('evm_increaseTime', [38 * 86400])  // TODO connection between insuarance parameters and time increase
+            await hre.ethers.provider.send('evm_increaseTime', [38 * 86400])  // TODO connection between insurance parameters and time increase
             await expect(
                 insurance.connect(user1).claim()
             ).to.be.revertedWith(

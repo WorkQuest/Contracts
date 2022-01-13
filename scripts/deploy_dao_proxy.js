@@ -29,7 +29,7 @@ async function main() {
       process.env.WQT_TOKEN,
       process.env.DAO_MINIMUM_QUORUM,
       process.env.DAO_VOTING_PERIOD
-    ], { initializer: 'initialize' })
+    ], { initializer: 'initialize', kind: 'uups' })
   console.log("DAO Ballot has been deployed to:", dao_ballot.address);
 
   envConfig["DAO_BALLOT"] = dao_ballot.address;

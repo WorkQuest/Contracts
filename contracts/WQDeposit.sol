@@ -136,7 +136,7 @@ contract WQDeposit is
     {
         require(
             amount <= contributed - borrowed,
-            'WQPension: Insuffience amount'
+            'WQPension: Insufficient amount'
         );
         borrowed += amount;
         payable(msg.sender).sendValue(amount);

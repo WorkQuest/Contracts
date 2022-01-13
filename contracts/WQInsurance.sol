@@ -81,7 +81,7 @@ contract WQInsurance is AccessControl {
     function addMember(address member) external {
         require(
             hasRole(FACTORY_ROLE, msg.sender),
-            'WQInsuarance: Only factory can add members to contract'
+            'WQInsurance: Only factory can add members to contract'
         );
         require(
             memberCount < MAX_MEMBERS,

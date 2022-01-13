@@ -189,7 +189,9 @@ contract WQReferral is
             affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
     }
 
-    function updateFactory(address _factory) external onlyRole(ADMIN_ROLE) {
+    /** Admin Functions */
+
+    function setFactory(address _factory) external onlyRole(ADMIN_ROLE) {
         factory = WorkQuestFactory(_factory);
     }
 
@@ -198,5 +200,13 @@ contract WQReferral is
         onlyRole(ADMIN_ROLE)
     {
         referralBonus = _referralBonus;
+    }
+
+    /**
+     * @dev Set price oracle address
+     * @param _oracle Address of price oracle
+     */
+    function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
+        oracle = WQPriceOracle(_oracle);
     }
 }

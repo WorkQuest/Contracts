@@ -178,7 +178,7 @@ contract WorkQuest {
     receive() external payable {
         require(status == JobStatus.New, errMsg);
         uint256 comission = (cost * fee) / 1e18;
-        require(msg.value >= cost + comission, 'WorkQuest: Insuffience amount');
+        require(msg.value >= cost + comission, 'WorkQuest: Insufficient amount');
         status = JobStatus.Published;
         if (msg.value > cost + comission) {
             payable(msg.sender).transfer(msg.value - cost - comission);

@@ -17,8 +17,8 @@ task("set_factory_to_referral", "Set workquest factory address to referral contr
             throw new Error(`Plese set your REFERRAL in a .env-${network} file`)
         }
 
-        console.log(`Try set rules to voting`);
+        console.log(`Try set factory address to referral contract`);
         const ref = await hre.ethers.getContractAt("WQReferral", process.env.REFERRAL);
-        await ref.updateFactory(process.env.WORK_QUEST_FACTORY);
+        await ref.setFactory(process.env.WORK_QUEST_FACTORY);
         console.log("Done");
     });
