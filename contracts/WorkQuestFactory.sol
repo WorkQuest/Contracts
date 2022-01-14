@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WorkQuest.sol';
 
 contract WorkQuestFactory is
@@ -12,6 +12,7 @@ contract WorkQuestFactory is
     AccessControlUpgradeable,
     UUPSUpgradeable
 {
+    using AddressUpgradeable for address payable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
@@ -105,14 +106,13 @@ contract WorkQuestFactory is
      * @notice Create new work quest contract
      * @param jobHash Hash of a text of a job offer
      * @param cost Job cost amount
-     * @return workquest Address of workquest contract
      */
     function newWorkQuest(
         bytes32 jobHash,
         uint256 cost,
         uint256 deadline
-    ) external returns (address workquest) {
-        workquest = address(
+    ) external payable {
+        address workquest = address(
             new WorkQuest(
                 jobHash,
                 fee,
@@ -127,8 +127,8 @@ contract WorkQuestFactory is
         );
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
+        payable(workquest).sendValue(msg.value);
         emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp);
-        return workquest;
     }
 
     /**

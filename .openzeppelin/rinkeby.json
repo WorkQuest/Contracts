@@ -9752,6 +9752,183 @@
           }
         }
       }
+    },
+    "a0ff5f0b0037ec2c3ae93157152e24beef00e2848a241c263fc061ee8da2dff8": {
+      "address": "0x75c81Fd58f3b0f426d58Fc106188a67a2D9DA058",
+      "txHash": "0x01e9e0002a1640ae1a25ccd5baf562fb2dcda4c2c4b66522b6a29a32109a0e98",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:21"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:26"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:30"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:35"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)43_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:63"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:219"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:214"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:80"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "lastArbiter",
+            "type": "t_uint256",
+            "src": "contracts/WorkQuestFactory.sol:24"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "fee",
+            "type": "t_uint256",
+            "src": "contracts/WorkQuestFactory.sol:27"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "feeReceiver",
+            "type": "t_address_payable",
+            "src": "contracts/WorkQuestFactory.sol:30"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "pensionFund",
+            "type": "t_address_payable",
+            "src": "contracts/WorkQuestFactory.sol:33"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "referral",
+            "type": "t_address_payable",
+            "src": "contracts/WorkQuestFactory.sol:36"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "workquests",
+            "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
+            "src": "contracts/WorkQuestFactory.sol:39"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "arbiters",
+            "type": "t_mapping(t_address,t_struct(ArbiterInfo)15649_storage)",
+            "src": "contracts/WorkQuestFactory.sol:42"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "workquestValid",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "contracts/WorkQuestFactory.sol:45"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "arbiterList",
+            "type": "t_array(t_address_payable)dyn_storage",
+            "src": "contracts/WorkQuestFactory.sol:48"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_address_payable": {
+            "label": "address payable"
+          },
+          "t_mapping(t_address,t_array(t_address)dyn_storage)": {
+            "label": "mapping(address => address[])"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]"
+          },
+          "t_mapping(t_address,t_struct(ArbiterInfo)15649_storage)": {
+            "label": "mapping(address => struct WorkQuestFactory.ArbiterInfo)"
+          },
+          "t_struct(ArbiterInfo)15649_storage": {
+            "label": "struct WorkQuestFactory.ArbiterInfo",
+            "members": [
+              {
+                "label": "idx",
+                "type": "t_uint256"
+              },
+              {
+                "label": "status",
+                "type": "t_bool"
+              }
+            ]
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_array(t_address_payable)dyn_storage": {
+            "label": "address payable[]"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)43_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(RoleData)43_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          }
+        }
+      }
     }
   }
 }

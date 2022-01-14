@@ -116,7 +116,7 @@ contract WorkQuest {
         address payable _employer,
         address payable _arbiter,
         address payable _referal
-    ) {
+    ) payable {
         jobHash = _jobHash;
         fee = _fee;
         cost = _cost;
@@ -159,18 +159,18 @@ contract WorkQuest {
         );
     }
 
-    function cancelJob() external {
-        require(status == JobStatus.New && msg.sender == employer, errMsg);
-        status = JobStatus.Finished;
-        emit JobCancelled();
-    }
+    // function cancelJob() external {
+    //     require(status == JobStatus.New && msg.sender == employer, errMsg);
+    //     status = JobStatus.Finished;
+    //     emit JobCancelled();
+    // }
 
-    function editJob(bytes32 _jobHash, uint256 _cost) external {
-        require(status == JobStatus.New && msg.sender == employer, errMsg);
-        jobHash = _jobHash;
-        cost = _cost;
-        emit JobEdited(_jobHash, _cost);
-    }
+    // function editJob(bytes32 _jobHash, uint256 _cost) external {
+    //     require(status == JobStatus.New && msg.sender == employer, errMsg);
+    //     jobHash = _jobHash;
+    //     cost = _cost;
+    //     emit JobEdited(_jobHash, _cost);
+    // }
 
     /**
      * @notice Employer publish job by transfer funds to contract
