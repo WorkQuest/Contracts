@@ -54,7 +54,8 @@ contract WorkQuestFactory is
         bytes32 jobHash,
         address employer,
         address workquest,
-        uint256 createdAt
+        uint256 createdAt,
+        uint256 nonce
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -110,7 +111,8 @@ contract WorkQuestFactory is
     function newWorkQuest(
         bytes32 jobHash,
         uint256 cost,
-        uint256 deadline
+        uint256 deadline,
+        uint256 nonce
     ) external payable {
         address workquest = address(
             new WorkQuest(
@@ -128,7 +130,7 @@ contract WorkQuestFactory is
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
         payable(workquest).sendValue(msg.value);
-        emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp);
+        emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp, nonce);
     }
 
     /**

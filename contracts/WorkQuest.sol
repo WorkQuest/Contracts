@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import '@openzeppelin/contracts/utils/Address.sol';
 import './WQPensionFund.sol';
 import './WQReferral.sol';
 
 contract WorkQuest {
+    using Address for address payable;
+
     string constant errMsg = 'WorkQuest: Access denied or invalid status';
 
     /**
@@ -14,7 +17,6 @@ contract WorkQuest {
         New,
         Published,
         WaitWorker,
-        WaitJobStart,
         InProgress,
         WaitJobVerify,
         Arbitration,
@@ -59,13 +61,10 @@ contract WorkQuest {
     event JobEdited(bytes32 jobHash, uint256 cost);
 
     /// @notice Event emitted when employer publish job by transfer funds to contract
-    event Received(address sender, uint256 amount);
+    event Received(uint256 amount);
 
     /// @notice Event emitted when employer assign worker to job
     event Assigned(address worker);
-
-    /// @notice Event emitted when worker accepted job to work
-    event JobAccepted();
 
     /// @notice Event emitted when worker declined job
     event JobDeclined();
@@ -116,7 +115,7 @@ contract WorkQuest {
         address payable _employer,
         address payable _arbiter,
         address payable _referal
-    ) payable {
+    ) {
         jobHash = _jobHash;
         fee = _fee;
         cost = _cost;
@@ -159,32 +158,55 @@ contract WorkQuest {
         );
     }
 
-    // function cancelJob() external {
-    //     require(status == JobStatus.New && msg.sender == employer, errMsg);
-    //     status = JobStatus.Finished;
-    //     emit JobCancelled();
-    // }
+    function cancelJob() external {
+        require(
+            status == JobStatus.Published && msg.sender == employer,
+            errMsg
+        );
+        status = JobStatus.Finished;
+        payable(employer).sendValue(cost);
+        emit JobCancelled();
+    }
 
-    // function editJob(bytes32 _jobHash, uint256 _cost) external {
-    //     require(status == JobStatus.New && msg.sender == employer, errMsg);
-    //     jobHash = _jobHash;
-    //     cost = _cost;
-    //     emit JobEdited(_jobHash, _cost);
-    // }
+    function editJob(bytes32 _jobHash, uint256 _cost) external payable {
+        require(
+            status == JobStatus.Published && msg.sender == employer,
+            errMsg
+        );
+        jobHash = _jobHash;
+        if (_cost > cost) {
+            uint256 comission = ((_cost - cost) * fee) / 1e18;
+            require(
+                msg.value >= _cost - cost,
+                'WorkQuest: Insufficient amount'
+            );
+            if (msg.value > _cost - cost) {
+                payable(employer).sendValue(msg.value - cost - comission + _cost);
+            }
+            feeReceiver.sendValue(_cost - cost);
+            emit Received(msg.value);
+        } else if (_cost < cost) {
+            payable(employer).sendValue(cost - _cost);
+        }
+        cost = _cost;
+        emit JobEdited(_jobHash, _cost);
+    }
 
     /**
      * @notice Employer publish job by transfer funds to contract
      */
     receive() external payable {
-        require(status == JobStatus.New, errMsg);
         uint256 comission = (cost * fee) / 1e18;
-        require(msg.value >= cost + comission, 'WorkQuest: Insufficient amount');
+        require(
+            msg.value >= cost + comission,
+            'WorkQuest: Insufficient amount'
+        );
         status = JobStatus.Published;
         if (msg.value > cost + comission) {
-            payable(msg.sender).transfer(msg.value - cost - comission);
+            payable(employer).sendValue(msg.value - cost - comission);
         }
-        feeReceiver.transfer(comission);
-        emit Received(msg.sender, msg.value);
+        feeReceiver.sendValue(comission);
+        emit Received(cost);
     }
 
     /**
@@ -207,8 +229,8 @@ contract WorkQuest {
      */
     function acceptJob() external {
         require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
-        status = JobStatus.WaitJobStart;
-        emit JobAccepted();
+        status = JobStatus.InProgress;
+        emit JobStarted();
     }
 
     /**
@@ -219,18 +241,6 @@ contract WorkQuest {
         status = JobStatus.Published;
         worker = payable(0);
         emit JobDeclined();
-    }
-
-    /**
-     * @notice Worker process job
-     */
-    function processJob() external {
-        require(
-            msg.sender == worker && status == JobStatus.WaitJobStart,
-            errMsg
-        );
-        status = JobStatus.InProgress;
-        emit JobStarted();
     }
 
     /**
@@ -327,8 +337,8 @@ contract WorkQuest {
         );
         status = JobStatus.Finished;
         uint256 comission = (cost * fee) / 1e18;
-        employer.transfer(cost - comission);
-        feeReceiver.transfer(comission);
+        employer.sendValue(cost - comission);
+        feeReceiver.sendValue(comission);
         emit ArbitrationRejectWork();
     }
 
@@ -337,18 +347,18 @@ contract WorkQuest {
         uint256 comission = (newCost * fee) / 1e18;
         uint256 pensionFee = WQPensionFund(pensionFund).getFee(worker);
         uint256 pensionContribute = (newCost * pensionFee) / 1e18;
-        worker.transfer(newCost - comission - pensionContribute);
+        worker.sendValue(newCost - comission - pensionContribute);
         if (pensionFee > 0) {
             WQPensionFund(pensionFund).contribute{value: pensionContribute}(
                 worker
             );
         }
         if (forfeit > 0) {
-            employer.transfer(forfeit);
+            employer.sendValue(forfeit);
         }
         if (WQReferral(referal).hasAffiliat(msg.sender)) {
             WQReferral(referal).calcReferral(msg.sender);
         }
-        feeReceiver.transfer(comission);
+        feeReceiver.sendValue(comission);
     }
 }
