@@ -161,6 +161,14 @@ contract WQPensionFund is
         emit Claimed(msg.sender, reward, block.timestamp);
     }
 
+    function getRewards(address user) external view returns (uint256) {
+        return
+            ((wallets[user].amount * rewardsPerContributed) / 1e20) +
+            wallets[user].rewardAllowed -
+            wallets[user].rewardDistributed -
+            wallets[user].rewardDebt;
+    }
+
     /**
      * @notice Update fee of job cost
      * @param fee Fee of job cost

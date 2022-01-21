@@ -177,15 +177,18 @@ contract WorkQuest {
         if (_cost > cost) {
             uint256 comission = ((_cost - cost) * fee) / 1e18;
             require(
-                msg.value >= _cost - cost,
+                msg.value >= _cost - cost + comission,
                 'WorkQuest: Insufficient amount'
             );
-            if (msg.value > _cost - cost) {
-                payable(employer).sendValue(msg.value - cost - comission + _cost);
+            if (msg.value > _cost - cost + comission) {
+                payable(employer).sendValue(
+                    msg.value - (_cost - cost + comission)
+                );
             }
-            feeReceiver.sendValue(_cost - cost);
+            feeReceiver.sendValue(comission);
             emit Received(msg.value);
         } else if (_cost < cost) {
+            require(msg.value == 0, 'WorkQuest: Invalid value amount');
             payable(employer).sendValue(cost - _cost);
         }
         cost = _cost;
