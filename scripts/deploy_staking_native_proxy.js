@@ -11,7 +11,7 @@ async function main() {
 
     const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-    for (const k in envConfig) {process.env[k] = envConfig[k]}
+    for (const k in envConfig) { process.env[k] = envConfig[k] }
 
     if (!process.env.STAKING_NATIVE_REWARD_TOTAL) {
         throw new Error(`Please set your STAKING_NATIVE_REWARD_TOTAL in a .env-${network} file`);
@@ -34,22 +34,20 @@ async function main() {
     if (!process.env.STAKING_NATIVE_MAX_STAKE) {
         throw new Error(`Please set your STAKING_NATIVE_MAX_STAKE in a .env-${network} file`);
     }
-    if (!process.env.WQT_TOKEN) {
-        throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
-    }
-    
 
     console.log("Deploying...");
     const WQStaking = await ethers.getContractFactory("WQStakingNative");
     const staking = await upgrades.deployProxy(
         WQStaking,
-        [process.env.START_TIME,
-         process.env.REWARD_TOTAL,
-         process.env.DISTRIBUTION_TIME,
-         process.env.STAKE_PERIOD,
-         process.env.CLAIM_PERIOD,
-         process.env.MIN_STAKE_NATIVE,
-         process.env.MAX_STAKE_NATIVE],
+        [
+            process.env.STAKING_NATIVE_START_TIME,
+            process.env.STAKING_NATIVE_REWARD_TOTAL,
+            process.env.STAKING_NATIVE_DISTRIBUTION_TIME,
+            process.env.STAKING_NATIVE_STAKE_PERIOD,
+            process.env.STAKING_NATIVE_CLAIM_PERIOD,
+            process.env.STAKING_NATIVE_MIN_STAKE,
+            process.env.STAKING_NATIVE_MAX_STAKE
+        ],
         { initializer: 'initialize', kind: 'uups' }
     );
     console.log("Proxy of StakingNative has been deployed to:", staking.address);
