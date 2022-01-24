@@ -22,7 +22,7 @@ contract WQInsuranceFactory is
     uint256 constant mediumContribution = 2000e18;
     uint256 constant maximalContribution = 3000e18;
 
-    WQInsurance[] public insurances; // TO_ASK Is it needed?
+    address[] public insurances;
 
     enum PolicyType {
         Minimal,
@@ -99,11 +99,22 @@ contract WQInsuranceFactory is
             _contributionAmount = maximalContribution;
         }
         insurance = new WQInsurance(_contributionPeriod, _contributionAmount);
-        insurances.push(insurance);
+        insurances.push(address(insurance));
         emit InsuranceCreated(block.timestamp, address(insurance));
     }
 
-    function getInsurances() external view returns (WQInsurance[] memory) {
-        return insurances;
+    function getInsurances(uint256 offset, uint256 limit)
+        external
+        view
+        returns (address[] memory page)
+    {
+        if (limit > insurances.length - offset) {
+            limit = insurances.length - offset;
+        }
+        page = new address[](limit);
+        for (uint256 i = 0; i < limit; i++) {
+            page[i] = insurances[offset + i];
+        }
+        return page;
     }
 }
