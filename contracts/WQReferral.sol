@@ -37,14 +37,11 @@ contract WQReferral is
      */
     struct Account {
         address affiliat;
-        uint256 reward;
-        uint256 referredCount;
-        bool paid;
-    }
-
-    struct AffiliatInfo {
+        uint256 earnedAmount;
         uint256 rewardTotal;
         uint256 rewardPaid;
+        uint256 referredCount;
+        bool paid;
     }
 
     /// @notice reward token
@@ -55,13 +52,15 @@ contract WQReferral is
     WQPriceOracle public oracle;
     /// @notice address of workquest valid factory
     WorkQuestFactory public factory;
+    /// @notice Threshold of earned amount when reward paid
+    uint256 public earnedThreshold;
 
     mapping(address => Account) public referrals;
-    mapping(address => AffiliatInfo) public affiliats;
 
     event RegisteredAffiliat(address referral, address affiliat);
     event PaidReferral(address referral, address affiliat, uint256 amount);
     event RewardClaimed(address affiliat, uint256 amount);
+    event Received(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -70,7 +69,8 @@ contract WQReferral is
         address _token,
         address _oracle,
         address _service,
-        uint256 _referralBonus
+        uint256 _referralBonus,
+        uint256 _earnedThreshold
     ) public initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -86,6 +86,7 @@ contract WQReferral is
         token = IERC20Upgradeable(_token);
         oracle = WQPriceOracle(_oracle);
         referralBonus = _referralBonus;
+        earnedThreshold = _earnedThreshold;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -94,7 +95,8 @@ contract WQReferral is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    /** @dev
+    /**
+     * @dev Add affiliat address by service confirmed
      */
     function addAffiliat(
         uint8 v,
@@ -129,55 +131,45 @@ contract WQReferral is
         emit RegisteredAffiliat(msg.sender, _affiliat);
     }
 
-    /**
-     * @dev Utils function for check whether an address has the affiliat
-     */
-    function hasAffiliat(address _referral) external view returns (bool) {
-        return referrals[_referral].affiliat != address(0);
+    receive() external payable {
+        emit Received(msg.value);
     }
 
     /**
      * @dev calculate referal reward for affiliat at end of quest
      */
-    function calcReferral(address referral) external nonReentrant {
+    function calcReferral(address referral, uint256 earnedAmount)
+        external
+        nonReentrant
+    {
+        require(
+            factory.workquestValid(msg.sender),
+            'WQReferal: Sender is not WorkQuest contract'
+        );
         Account storage userAccount = referrals[referral];
-        require(!userAccount.paid, 'WQReferral: Bonus already paid');
-        require(
-            userAccount.affiliat != address(0),
-            'WQReferral: Address is not registered'
-        );
-        userAccount.paid = true;
-        require(
-            factory.workquestValid(msg.sender) == true,
-            'WQReferal: sender is not valid WorkQuest contract'
-        );
-        uint256 tokenPrice = oracle.getTokenPriceUSD('WQT');
-        require(
-            tokenPrice != 0,
-            'WQReferal: tokenPrice received from oracle is zero'
-        );
-        uint256 bonusAmount = (referralBonus * 1e18) / tokenPrice;
-        require(
-            token.balanceOf(address(this)) > bonusAmount,
-            'WQReferral: Balance on contract too low'
-        );
-        referrals[userAccount.affiliat].reward += bonusAmount;
-        affiliats[userAccount.affiliat].rewardTotal += bonusAmount;
-        emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
+        if (userAccount.affiliat != address(0) && !userAccount.paid) {
+            userAccount.earnedAmount += earnedAmount;
+            if (userAccount.earnedAmount >= earnedThreshold) {
+                userAccount.paid = true;
+                uint256 bonusAmount = (referralBonus * 1e18) /
+                    oracle.getTokenPriceUSD('WQT');
+                referrals[userAccount.affiliat].rewardTotal += bonusAmount;
+                emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
+            }
+        }
     }
 
     /** @dev function for affiliat reward claiming
      */
     function claim() external nonReentrant {
-        uint256 rewardAmount = affiliats[msg.sender].rewardTotal -
-            affiliats[msg.sender].rewardPaid;
+        uint256 rewardAmount = referrals[msg.sender].rewardTotal -
+            referrals[msg.sender].rewardPaid;
         require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
         require(
             token.balanceOf(address(this)) > rewardAmount,
             'WQReferral: Balance on contract too low'
         );
-        affiliats[msg.sender].rewardPaid = affiliats[msg.sender].rewardTotal;
-        affiliats[msg.sender].rewardPaid = rewardAmount;
+        referrals[msg.sender].rewardPaid = referrals[msg.sender].rewardTotal;
         token.safeTransfer(msg.sender, rewardAmount);
         emit RewardClaimed(msg.sender, rewardAmount);
     }
@@ -186,7 +178,7 @@ contract WQReferral is
      */
     function affiliatReward(address _affiliat) external view returns (uint256) {
         return
-            affiliats[_affiliat].rewardTotal - affiliats[_affiliat].rewardPaid;
+            referrals[_affiliat].rewardTotal - referrals[_affiliat].rewardPaid;
     }
 
     /** Admin Functions */
@@ -208,5 +200,16 @@ contract WQReferral is
      */
     function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
         oracle = WQPriceOracle(_oracle);
+    }
+
+    function setToken(address _token) external onlyRole(ADMIN_ROLE) {
+        token = IERC20Upgradeable(_token);
+    }
+
+    function setEarnedThreshold(uint256 _earnedThreshold)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        earnedThreshold = _earnedThreshold;
     }
 }

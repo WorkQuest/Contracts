@@ -77,6 +77,12 @@ contract WQPensionFund is
         uint256 timestamp
     );
 
+    event WalletUpdated(
+        address indexed user,
+        uint256 indexed newFee,
+        uint256 unlockDate
+    );
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
@@ -120,6 +126,7 @@ contract WQPensionFund is
             wallet.createdAt = block.timestamp;
             wallet.unlockDate = block.timestamp + lockTime;
             wallet.fee = defaultFee;
+            emit WalletUpdated(worker, wallet.fee, wallet.unlockDate);
         }
         wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
         wallet.amount += msg.value;
@@ -138,26 +145,18 @@ contract WQPensionFund is
             'WQPensionFund: Lock time is not over yet'
         );
         require(amount <= wallet.amount, 'WQPensionFund: Amount is invalid');
-        wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
-        wallet.amount -= amount;
-        contributed -= amount;
-        payable(msg.sender).sendValue(amount);
-        emit Withdrew(msg.sender, amount, block.timestamp);
-    }
-
-    function claim() external nonReentrant {
-        PensionWallet storage wallet = wallets[msg.sender];
-        require(
-            block.timestamp >= wallet.unlockDate,
-            'WQPensionFund: Lock time is not over yet'
-        );
         uint256 reward = ((wallet.amount * rewardsPerContributed) / 1e20) +
             wallet.rewardAllowed -
             wallet.rewardDistributed -
             wallet.rewardDebt;
         wallet.rewardDistributed += reward;
         rewardsDistributed += reward;
-        payable(msg.sender).sendValue(reward);
+
+        wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
+        wallet.amount -= amount;
+        contributed -= amount;
+        payable(msg.sender).sendValue(amount + reward);
+        emit Withdrew(msg.sender, amount, block.timestamp);
         emit Claimed(msg.sender, reward, block.timestamp);
     }
 
@@ -182,6 +181,7 @@ contract WQPensionFund is
             wallet.unlockDate = block.timestamp + lockTime;
         }
         wallet.fee = fee;
+        emit WalletUpdated(msg.sender, wallet.fee, wallet.unlockDate);
     }
 
     function extendLockTime() external {
@@ -241,5 +241,16 @@ contract WQPensionFund is
 
     function updateLockTime(uint256 _lockTime) external onlyRole(ADMIN_ROLE) {
         lockTime = _lockTime;
+    }
+
+    function updateWallet(
+        address user,
+        uint256 amount,
+        uint256 unlockDate,
+        uint256 createdAt
+    ) external onlyRole(ADMIN_ROLE) {
+        wallets[user].amount = amount;
+        wallets[user].unlockDate = unlockDate;
+        wallets[user].createdAt = createdAt;
     }
 }

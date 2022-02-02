@@ -29,6 +29,9 @@ async function main() {
     if (!process.env.REFERRAL_SERVICE) {
         throw new Error(`Plese set your REFERRAL_SERVICE in a .env-${network} file`)
     }
+    if (!process.env.REFERRAL_EARNED_THRESHOLD) {
+        throw new Error(`Plese set your REFERRAL_EARNED_THRESHOLD in a .env-${network} file`)
+    }
 
     console.log('Deploying...')
     const WQReferral = await hre.ethers.getContractFactory('WQReferral')
@@ -39,6 +42,7 @@ async function main() {
             process.env.PRICE_ORACLE,
             process.env.REFERRAL_SERVICE,
             process.env.REFERRAL_REWARD,
+            process.env.REFERRAL_EARNED_THRESHOLD
         ],
         { initializer: 'initialize' }
     );

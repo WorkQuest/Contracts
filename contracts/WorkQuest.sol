@@ -23,18 +23,19 @@ contract WorkQuest {
         Finished
     }
 
-    /// @notice Fee coefficient of workquest
-    uint256 public fee;
-    /// @notice Fee receiver address
-    address payable public feeReceiver;
     /// @notice Pension wallet factory contract address
-    address payable public pensionFund;
+    WQPensionFund public immutable pensionFund;
+    /// @notice Address of referal contract
+    WQReferral public immutable referal;
+
+    /// @notice Fee coefficient of workquest
+    uint256 public immutable fee;
+    /// @notice Fee receiver address
+    address payable public immutable feeReceiver;
     /// @notice Address of employer
-    address payable public employer;
+    address payable public immutable employer;
     /// @notice Address of arbiter
     address payable public immutable arbiter;
-    /// @notice Address of referal contract
-    address payable public immutable referal;
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
@@ -111,7 +112,7 @@ contract WorkQuest {
         uint256 _cost,
         uint256 _deadline,
         address payable _feeReceiver,
-        address payable _pensionFund,
+        address _pensionFund,
         address payable _employer,
         address payable _arbiter,
         address payable _referal
@@ -121,10 +122,10 @@ contract WorkQuest {
         cost = _cost;
         deadline = _deadline;
         feeReceiver = _feeReceiver;
-        pensionFund = _pensionFund;
+        pensionFund = WQPensionFund(_pensionFund);
         employer = _employer;
         arbiter = _arbiter;
-        referal = _referal;
+        referal = WQReferral(_referal);
         emit WorkQuestCreated(jobHash);
     }
 
@@ -156,6 +157,24 @@ contract WorkQuest {
             status,
             deadline
         );
+    }
+
+    /**
+     * @notice Employer publish job by transfer funds to contract
+     */
+    receive() external payable {
+        require(status == JobStatus.New, errMsg);
+        uint256 comission = (cost * fee) / 1e18;
+        require(
+            msg.value >= cost + comission,
+            'WorkQuest: Insufficient amount'
+        );
+        status = JobStatus.Published;
+        if (msg.value > cost + comission) {
+            payable(employer).sendValue(msg.value - cost - comission);
+        }
+        feeReceiver.sendValue(comission);
+        emit Received(cost);
     }
 
     function cancelJob() external {
@@ -193,23 +212,6 @@ contract WorkQuest {
         }
         cost = _cost;
         emit JobEdited(_jobHash, _cost);
-    }
-
-    /**
-     * @notice Employer publish job by transfer funds to contract
-     */
-    receive() external payable {
-        uint256 comission = (cost * fee) / 1e18;
-        require(
-            msg.value >= cost + comission,
-            'WorkQuest: Insufficient amount'
-        );
-        status = JobStatus.Published;
-        if (msg.value > cost + comission) {
-            payable(employer).sendValue(msg.value - cost - comission);
-        }
-        feeReceiver.sendValue(comission);
-        emit Received(cost);
     }
 
     /**
@@ -348,20 +350,17 @@ contract WorkQuest {
     function _transferFunds() internal {
         uint256 newCost = cost - forfeit;
         uint256 comission = (newCost * fee) / 1e18;
-        uint256 pensionFee = WQPensionFund(pensionFund).getFee(worker);
-        uint256 pensionContribute = (newCost * pensionFee) / 1e18;
+        uint256 pensionContribute = (newCost * pensionFund.getFee(worker)) /
+            1e18;
         worker.sendValue(newCost - comission - pensionContribute);
-        if (pensionFee > 0) {
-            WQPensionFund(pensionFund).contribute{value: pensionContribute}(
-                worker
-            );
+        if (pensionContribute > 0) {
+            pensionFund.contribute{value: pensionContribute}(worker);
         }
         if (forfeit > 0) {
             employer.sendValue(forfeit);
         }
-        if (WQReferral(referal).hasAffiliat(msg.sender)) {
-            WQReferral(referal).calcReferral(msg.sender);
-        }
+        referal.calcReferral(worker, newCost - comission);
+
         feeReceiver.sendValue(comission);
     }
 }
