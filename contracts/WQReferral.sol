@@ -96,39 +96,41 @@ contract WQReferral is
     {}
 
     /**
-     * @dev Add affiliat address by service confirmed
+     * @dev Add addresses of referral by affiliat
      */
-    function addAffiliat(
+    function addReferrals(
         uint8 v,
         bytes32 r,
         bytes32 s,
-        address _affiliat
+        address[] calldata referral
     ) external {
-        require(
-            _affiliat != address(0),
-            'WQReferral: affiliat cannot be zero address'
-        );
-        require(
-            _affiliat != msg.sender,
-            'WQReferral: affiliat cannot be sender address'
-        );
-        require(
-            referrals[msg.sender].affiliat == address(0),
-            'WQReferral: Address is already registered'
-        );
         require(
             hasRole(
                 SERVICE_ROLE,
-                keccak256(abi.encodePacked(_affiliat, msg.sender))
+                keccak256(abi.encodePacked(msg.sender, referral))
                     .toEthSignedMessageHash()
                     .recover(v, r, s)
             ),
             'WQReferal: validator is not a service'
         );
-        referrals[msg.sender].affiliat = _affiliat;
-        referrals[_affiliat].referredCount++;
 
-        emit RegisteredAffiliat(msg.sender, _affiliat);
+        for (uint256 i = 0; i < referral.length; i++) {
+            require(
+                referral[i] != address(0),
+                'WQReferral: affiliat cannot be zero address'
+            );
+            require(
+                referral[i] != msg.sender,
+                'WQReferral: affiliat cannot be sender address'
+            );
+            require(
+                referrals[referral[i]].affiliat == address(0),
+                'WQReferral: Address is already registered'
+            );
+            referrals[referral[i]].affiliat = msg.sender;
+            referrals[msg.sender].referredCount++;
+            emit RegisteredAffiliat(referral[i], msg.sender);
+        }
     }
 
     receive() external payable {
@@ -176,12 +178,13 @@ contract WQReferral is
 
     /** @dev returns availible reward for claim
      */
-    function affiliatReward(address _affiliat) external view returns (uint256) {
-        return
-            referrals[_affiliat].rewardTotal - referrals[_affiliat].rewardPaid;
+    function getRewards(address user) external view returns (uint256) {
+        return referrals[user].rewardTotal - referrals[user].rewardPaid;
     }
 
-    /** Admin Functions */
+    /**
+     * Admin Functions
+     */
 
     function setFactory(address _factory) external onlyRole(ADMIN_ROLE) {
         factory = WorkQuestFactory(_factory);
