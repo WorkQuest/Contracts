@@ -19,11 +19,14 @@ async function main() {
     if (!process.env.BRIDGE_POOL) {
         throw new Error(`Please set your BRIDGE_POOL in a .env-${network} file`);
     }
+    if (!process.env.BRIDGE_VALIDATOR) {
+        throw new Error(`Please set your BRIDGE_VALIDATOR in a .env-${network} file`);
+    }
 
     console.log("Deploying...");
 
     const Bridge = await hre.ethers.getContractFactory("WQBridge");
-    const bridge = await upgrades.deployProxy(Bridge, [process.env.CHAIN_ID, process.env.BRIDGE_POOL], { initializer: 'initialize' });
+    const bridge = await upgrades.deployProxy(Bridge, [process.env.CHAIN_ID, process.env.BRIDGE_POOL, process.env.BRIDGE_VALIDATOR], { initializer: 'initialize' });
     console.log("WorkQuest Bridge has been deployed to:", bridge.address);
 
     envConfig["BRIDGE"] = bridge.address;

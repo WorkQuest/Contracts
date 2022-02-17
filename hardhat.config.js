@@ -57,20 +57,20 @@ function createNetworkConfig(network) {
 }
 
 module.exports = {
-  defaultNetwork: "hardhat",
+  defaultNetwork: "dev",
   networks: {
-    development: {
-      url: "http://127.0.0.1:8545/",
-      // accounts: { mnemonic: "" },
-      // chainId: 7305,
-      // gas: "auto",
-      // gasPrice: 6000000000000
+    hardhat: {
+      mining: {
+        auto: false,
+        interval: 5000
+      }
+    },
+    dev: {
+      url: "http://127.0.0.1:8545/"
     },
     wqdevnet: {
       url: "https://dev-node-nyc3.workquest.co/",
-      // url: "http://127.0.0.1:8545/",
       accounts: { mnemonic: mnemonic },
-      // gasPrice: 10000000000,
       chainId: 20220112
     },
     bsctestnet: {
