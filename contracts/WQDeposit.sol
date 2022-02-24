@@ -34,6 +34,8 @@ contract WQDeposit is
     uint256 public rewardsProduced;
     uint256 public rewardsDistributed;
     uint256 public borrowed;
+    uint256 fixedRate;
+    uint256 annualInterestRate;
 
     /// @notice Lock time valid values in days
     uint256[] public lockTimes;

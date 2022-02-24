@@ -60,7 +60,6 @@ contract WQReferral is
     event RegisteredAffiliat(address referral, address affiliat);
     event PaidReferral(address referral, address affiliat, uint256 amount);
     event RewardClaimed(address affiliat, uint256 amount);
-    event Received(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -131,10 +130,6 @@ contract WQReferral is
             referrals[msg.sender].referredCount++;
             emit RegisteredAffiliat(referral[i], msg.sender);
         }
-    }
-
-    receive() external payable {
-        emit Received(msg.value);
     }
 
     /**

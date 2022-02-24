@@ -67,9 +67,6 @@ contract WorkQuest {
     /// @notice Event emitted when employer assign worker to job
     event Assigned(address worker);
 
-    /// @notice Event emitted when worker declined job
-    event JobDeclined();
-
     /// @notice Event emitted when worker set job status InProcess
     event JobStarted();
 
@@ -220,7 +217,9 @@ contract WorkQuest {
      */
     function assignJob(address payable _worker) external {
         require(
-            msg.sender == employer && status == JobStatus.Published,
+            msg.sender == employer &&
+                (status == JobStatus.Published ||
+                    status == JobStatus.WaitWorker),
             errMsg
         );
         require(_worker != address(0), 'WorkQuest: Invalid address');
@@ -236,16 +235,6 @@ contract WorkQuest {
         require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
         status = JobStatus.InProgress;
         emit JobStarted();
-    }
-
-    /**
-     * @notice Worker decline job
-     */
-    function declineJob() external {
-        require(msg.sender == worker && status == JobStatus.WaitWorker, errMsg);
-        status = JobStatus.Published;
-        worker = payable(0);
-        emit JobDeclined();
     }
 
     /**
