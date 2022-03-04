@@ -35,14 +35,15 @@ contract WQBorrowing is
         WQFundInterface fund;
     }
 
-    struct FundInfo {
+    struct ApyInfo {
         uint256 apy;
-        WQFundInterface fund;
+        uint256 duration;
     }
 
     WQPriceOracle oracle;
 
-    FundInfo[] public funds;
+    ApyInfo[] public apys;
+    WQFundInterface[] public funds;
 
     mapping(IERC20Upgradeable => bool) public enabledTokens;
 
@@ -105,10 +106,10 @@ contract WQBorrowing is
         loan.price = price;
         loan.credit = (collateralAmount * price * 2) / 3e18;
         require(
-            loan.credit <= funds[index].fund.balanceOf(),
+            loan.credit <= funds[index].balanceOf(),
             'WQBorrowing: Insufficient amount in fund'
         );
-        loan.apy = funds[index].apy;
+        loan.apy = apys[index].apy;
 
         // Take tokens
         loan.token.safeTransferFrom(
@@ -117,7 +118,7 @@ contract WQBorrowing is
             collateralAmount
         );
         // Get coins from fund
-        funds[index].fund.borrow(loan.credit);
+        funds[index].borrow(loan.credit);
         // Send native coins
         payable(msg.sender).sendValue(loan.credit);
         emit Borrowed(collateralAmount, token, price, loan.credit, msg.sender);
@@ -154,8 +155,12 @@ contract WQBorrowing is
         emit Refunded(msg.sender, msg.value);
     }
 
-    function getFunds() external view returns (FundInfo[] memory funds_) {
-        funds_ = new FundInfo[](funds.length);
+    function getFunds()
+        external
+        view
+        returns (WQFundInterface[] memory funds_)
+    {
+        funds_ = new WQFundInterface[](funds.length);
         for (uint256 i = 0; i < funds.length; i++) {
             funds_[i] = funds[i];
         }
@@ -164,11 +169,10 @@ contract WQBorrowing is
 
     /**
      * @notice Add address of fund
-     * @param apy Annual per year
      * @param fund Address of fund
      */
-    function addFund(uint256 apy, address fund) external onlyRole(ADMIN_ROLE) {
-        funds.push(FundInfo({apy: apy, fund: WQFundInterface(fund)}));
+    function addFund(WQFundInterface fund) external onlyRole(ADMIN_ROLE) {
+        funds.push(fund);
     }
 
     /**
@@ -176,12 +180,11 @@ contract WQBorrowing is
      * @param index index of funds
      * @param fund Address of fund
      */
-    function updateFund(
-        uint256 index,
-        uint256 apy,
-        address fund
-    ) external onlyRole(ADMIN_ROLE) {
-        funds[index] = FundInfo({apy: apy, fund: WQFundInterface(fund)});
+    function updateFund(uint256 index, WQFundInterface fund)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        funds[index] = fund;
     }
 
     /**
