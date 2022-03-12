@@ -34,8 +34,7 @@ contract WQDeposit is
     uint256 public rewardsProduced;
     uint256 public rewardsDistributed;
     uint256 public borrowed;
-    uint256 fixedRate;
-    uint256 annualInterestRate;
+    uint256 apy;
 
     /// @notice Lock time valid values in days
     uint256[] public lockTimes;
@@ -152,6 +151,7 @@ contract WQDeposit is
         nonReentrant
         onlyRole(BORROWER_ROLE)
     {
+        require((rewards * 1e18) / msg.value >= apy, 'WQPension: ');
         borrowed -= (msg.value - rewards);
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;

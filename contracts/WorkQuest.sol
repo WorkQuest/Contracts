@@ -184,6 +184,10 @@ contract WorkQuest {
         emit Received(cost);
     }
 
+    function promote(PaidTariff tariff) external payable {
+        // ololo();
+    }
+
     function cancelJob() external {
         require(
             status == JobStatus.Published && msg.sender == employer,

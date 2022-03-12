@@ -26,11 +26,11 @@ contract WQReferral is
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant SERVICE_ROLE = keccak256('SERVICE_ROLE');
 
-    /// @notice referral - someone who done job and paid to affiliat
-    /// @notice affiliat - person who get reward from referrals
+    /// @notice referral - someone who done job and paid to affiliate
+    /// @notice affiliate - person who get reward from referrals
     /**
      * @dev The struct of account information
-     * @param affiliat The affiliat addresss
+     * @param affiliat The affiliate addresss
      * @param reward The total referral reward of an address
      * @param referredCount The total referral amount of an address
      * @param lastActiveTimestamp The last active timestamp of an address
@@ -57,9 +57,9 @@ contract WQReferral is
 
     mapping(address => Account) public referrals;
 
-    event RegisteredAffiliat(address referral, address affiliat);
-    event PaidReferral(address referral, address affiliat, uint256 amount);
-    event RewardClaimed(address affiliat, uint256 amount);
+    event RegisteredAffiliat(address referral, address affiliate);
+    event PaidReferral(address referral, address affiliate, uint256 amount);
+    event RewardClaimed(address affiliate, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -95,7 +95,7 @@ contract WQReferral is
     {}
 
     /**
-     * @dev Add addresses of referral by affiliat
+     * @dev Add addresses of referral by affiliate
      */
     function addReferrals(
         uint8 v,
@@ -116,11 +116,11 @@ contract WQReferral is
         for (uint256 i = 0; i < referral.length; i++) {
             require(
                 referral[i] != address(0),
-                'WQReferral: affiliat cannot be zero address'
+                'WQReferral: affiliate cannot be zero address'
             );
             require(
                 referral[i] != msg.sender,
-                'WQReferral: affiliat cannot be sender address'
+                'WQReferral: affiliate cannot be sender address'
             );
             require(
                 referrals[referral[i]].affiliat == address(0),
@@ -133,7 +133,7 @@ contract WQReferral is
     }
 
     /**
-     * @dev calculate referal reward for affiliat at end of quest
+     * @dev calculate referal reward for affiliate at end of quest
      */
     function calcReferral(address referral, uint256 earnedAmount)
         external
@@ -156,7 +156,7 @@ contract WQReferral is
         }
     }
 
-    /** @dev function for affiliat reward claiming
+    /** @dev function for affiliate reward claiming
      */
     function claim() external nonReentrant {
         uint256 rewardAmount = referrals[msg.sender].rewardTotal -
