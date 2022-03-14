@@ -398,10 +398,28 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     /**
      * @notice Gets the current votes balance for `account`
      */
-    function getVotes(address account) public view returns (uint256) {
-        uint256 pos = _checkpoints[account].length;
-        return pos == 0 ? 0 : _checkpoints[account][pos - 1].votes;
+    function getVotes(address[] calldata accounts)
+        public
+        view
+        returns (uint256[] memory _delegatee)
+    {
+        _delegatee = new uint256[](accounts.length);
+        for (uint256 i = 0; i < accounts.length; i++) {
+            uint256 pos = _checkpoints[accounts[i]].length;
+            _delegatee[i] = pos == 0
+                ? 0
+                : _checkpoints[accounts[i]][pos - 1].votes;
+        }
+        return _delegatee;
     }
+
+    /**
+     * @notice Gets the current votes balance for `account`
+     */
+    // function getVotes(address account) public view returns (uint256) {
+    //     uint256 pos = _checkpoints[account].length;
+    //     return pos == 0 ? 0 : _checkpoints[account][pos - 1].votes;
+    // }
 
     /**
      * @notice Retrieve the number of votes for `account` at the end of `blockNumber`.
