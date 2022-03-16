@@ -9,7 +9,7 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
-import './WQPriceOracle.sol';
+import './WQPriceOracleInterface.sol';
 import './WQFundInterface.sol';
 
 contract WQBorrowing is
@@ -26,35 +26,34 @@ contract WQBorrowing is
 
     struct BorrowInfo {
         uint256 collateral;
-        uint256 price;
         uint256 credit;
         uint256 borrowedAt;
-        uint256 apy;
-        bool borrowed;
-        IERC20Upgradeable token;
-        WQFundInterface fund;
-    }
-
-    struct ApyInfo {
-        uint256 apy;
         uint256 duration;
+        uint256 apy;
+        WQFundInterface fund;
+        string symbol;
     }
 
-    WQPriceOracle oracle;
+    WQPriceOracleInterface public oracle;
 
-    ApyInfo[] public apys;
-    WQFundInterface[] public funds;
+    uint256 public fixedRate;
 
-    mapping(IERC20Upgradeable => bool) public enabledTokens;
+    /// @notice Mapping of duration to APY coefficient
+    mapping(uint256 => uint256) public apys;
 
+    mapping(string => IERC20Upgradeable) public tokens;
+
+    /// @notice Borrowing info
     mapping(address => BorrowInfo) public borrowers;
 
+    /// @notice List of addresses of funds
+    WQFundInterface[] public funds;
+
     event Borrowed(
+        address user,
         uint256 collateral,
-        IERC20Upgradeable token,
-        uint256 price,
-        uint256 loan,
-        address borrower
+        uint256 credit,
+        string symbol
     );
     event Refunded(address to, uint256 amount);
 
@@ -69,7 +68,7 @@ contract WQBorrowing is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        oracle = WQPriceOracle(_oracle);
+        oracle = WQPriceOracleInterface(_oracle);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -81,76 +80,84 @@ contract WQBorrowing is
     /**
      * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
      * @param collateralAmount Amount of collateral token
-     * @param token Collateral token address
-     * @param index Index of fund
+     * @param fundIndex Index of fund
+     * @param duration Borrowing period
+     * @param symbol Symbol of collateral token
      */
     function borrow(
         uint256 collateralAmount,
-        IERC20Upgradeable token,
-        uint256 index
+        uint256 fundIndex,
+        uint256 duration,
+        string calldata symbol
     ) external nonReentrant {
         require(
-            enabledTokens[token],
+            tokens[symbol] != IERC20Upgradeable(address(0)),
             'WQBorrowing: This token is disabled to collateral'
         );
+        require(apys[duration] > 0, 'WQBorrowing: Invalid duration');
         BorrowInfo storage loan = borrowers[msg.sender];
-        require(!loan.borrowed, 'WQBorrowing: You are not refunded loan');
-        loan.borrowed = true;
-        loan.collateral = collateralAmount;
-        loan.token = token;
-        loan.borrowedAt = block.timestamp;
-
-        uint256 price = oracle.getTokenPriceUSD(
-            IERC20MetadataUpgradeable(address(token)).symbol()
-        );
-        loan.price = price;
-        loan.credit = (collateralAmount * price * 2) / 3e18;
         require(
-            loan.credit <= funds[index].balanceOf(),
+            loan.collateral == 0,
+            'WQBorrowing: You are not refunded credit'
+        );
+        loan.symbol = symbol;
+        loan.collateral = collateralAmount;
+        loan.borrowedAt = block.timestamp;
+        loan.apy = apys[duration];
+        loan.credit =
+            (collateralAmount * oracle.getTokenPriceUSD(symbol) * 2) /
+            3e18;
+        require(
+            loan.credit <= funds[fundIndex].balanceOf(),
             'WQBorrowing: Insufficient amount in fund'
         );
-        loan.apy = apys[index].apy;
 
         // Take tokens
-        loan.token.safeTransferFrom(
+        tokens[symbol].safeTransferFrom(
             msg.sender,
             address(this),
             collateralAmount
         );
         // Get coins from fund
-        funds[index].borrow(loan.credit);
+        funds[fundIndex].borrow(loan.credit);
         // Send native coins
         payable(msg.sender).sendValue(loan.credit);
-        emit Borrowed(collateralAmount, token, price, loan.credit, msg.sender);
+        emit Borrowed(msg.sender, collateralAmount, loan.credit, symbol);
     }
 
     /**
      * @notice Refund loan
      */
-    function refund() external payable nonReentrant {
+    function refund(uint256 returnAmount) external payable nonReentrant {
         BorrowInfo storage loan = borrowers[msg.sender];
-        require(loan.borrowed, 'WQBorrowing: You a not loaned moneys');
-        require(enabledTokens[loan.token], 'WQBorrowing: Token is disabled');
-        uint256 fee = ((block.timestamp - loan.borrowedAt) *
-            loan.credit *
-            loan.apy) /
-            YEAR /
+        require(loan.collateral > 0, 'WQBorrowing: You a not loaned moneys');
+        require(
+            tokens[loan.symbol] != IERC20Upgradeable(address(0)),
+            'WQBorrowing: Token is disabled'
+        );
+        uint256 fee = (returnAmount *
+            (fixedRate +
+                ((loan.apy * (block.timestamp - loan.borrowedAt)) / YEAR))) /
             1e18;
+        uint256 returnCollateral = (loan.collateral * returnAmount) /
+            loan.credit;
         // Take native coins
         require(
-            msg.value >= loan.credit + fee,
+            msg.value >= returnAmount + fee,
             'WQBorrowing: Invalid refund amount'
         );
-        loan.borrowed = false;
-        loan.credit = 0;
+        loan.credit -= returnAmount;
         // and send back to fund
-        loan.fund.refund{value: loan.credit + fee}(fee);
+        loan.fund.refund{value: returnAmount + fee}(
+            returnAmount,
+            loan.duration
+        );
         //Send tokens
-        loan.token.safeTransfer(msg.sender, loan.collateral);
-        loan.collateral = 0;
+        tokens[loan.symbol].safeTransfer(msg.sender, returnCollateral);
+        loan.collateral -= returnCollateral;
         // Return change
-        if (msg.value > loan.credit + fee) {
-            payable(msg.sender).sendValue(msg.value - loan.credit - fee);
+        if (msg.value > returnAmount + fee) {
+            payable(msg.sender).sendValue(msg.value - returnAmount - fee);
         }
         emit Refunded(msg.sender, msg.value);
     }
@@ -194,5 +201,23 @@ contract WQBorrowing is
     function removeFund(uint256 index) external onlyRole(ADMIN_ROLE) {
         funds[index] = funds[funds.length - 1];
         funds.pop();
+    }
+
+    function setApy(uint256 duration, uint256 apy)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        apys[duration] = apy;
+    }
+
+    function setFixedRate(uint256 _fixedRate) external onlyRole(ADMIN_ROLE) {
+        fixedRate = _fixedRate;
+    }
+
+    function setToken(IERC20Upgradeable token, string calldata symbol)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        tokens[symbol] = token;
     }
 }

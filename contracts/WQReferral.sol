@@ -10,7 +10,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 
 import './WQTInterface.sol';
-import './WQPriceOracle.sol';
+import './WQPriceOracleInterface.sol';
 import './WorkQuestFactory.sol';
 
 contract WQReferral is
@@ -49,7 +49,7 @@ contract WQReferral is
     /// @notice referral bonus amount in USD
     uint256 public referralBonus;
     /// @notice address of price oracle
-    WQPriceOracle public oracle;
+    WQPriceOracleInterface public oracle;
     /// @notice address of workquest valid factory
     WorkQuestFactory public factory;
     /// @notice Threshold of earned amount when reward paid
@@ -83,7 +83,7 @@ contract WQReferral is
         _setRoleAdmin(SERVICE_ROLE, ADMIN_ROLE);
 
         token = IERC20Upgradeable(_token);
-        oracle = WQPriceOracle(_oracle);
+        oracle = WQPriceOracleInterface(_oracle);
         referralBonus = _referralBonus;
         earnedThreshold = _earnedThreshold;
     }
@@ -197,7 +197,7 @@ contract WQReferral is
      * @param _oracle Address of price oracle
      */
     function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
-        oracle = WQPriceOracle(_oracle);
+        oracle = WQPriceOracleInterface(_oracle);
     }
 
     function setToken(address _token) external onlyRole(ADMIN_ROLE) {

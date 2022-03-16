@@ -6,6 +6,6 @@ interface WQFundInterface {
     function balanceOf() external view returns (uint256);
 
     function borrow(uint256 amount) external;
-    
-    function refund(uint256 rewards) external payable;
+
+    function refund(uint256 amount, uint256 duration) external payable;
 }

@@ -16,6 +16,13 @@ contract WorkQuestFactory is
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
+    enum PaidTariff {
+        Free,
+        Silver,
+        Gold,
+        Platinum
+    }
+
     struct ArbiterInfo {
         uint256 idx;
         bool status;
@@ -130,7 +137,13 @@ contract WorkQuestFactory is
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
         payable(workquest).sendValue(msg.value);
-        emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp, nonce);
+        emit WorkQuestCreated(
+            jobHash,
+            msg.sender,
+            workquest,
+            block.timestamp,
+            nonce
+        );
     }
 
     /**

@@ -8,7 +8,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WQFundInterface.sol';
 
-contract WQDeposit is
+contract WQSavingProduct is
     WQFundInterface,
     Initializable,
     AccessControlUpgradeable,
@@ -34,10 +34,9 @@ contract WQDeposit is
     uint256 public rewardsProduced;
     uint256 public rewardsDistributed;
     uint256 public borrowed;
-    uint256 apy;
 
-    /// @notice Lock time valid values in days
-    uint256[] public lockTimes;
+    /// @notice Mapping lock time to APY values
+    mapping(uint256 => uint256) public apys;
 
     /// @notice Deposit wallet info of user
     mapping(address => DepositWallet) public wallets;
@@ -80,14 +79,7 @@ contract WQDeposit is
      * @notice Contribute native coins to contract
      */
     function deposit(uint256 lockTime) external payable nonReentrant {
-        bool checked;
-        for (uint256 i = 0; i < lockTimes.length; i++) {
-            if (lockTime == lockTimes[i]) {
-                checked = true;
-                break;
-            }
-        }
-        require(checked, 'WQDeposit: lockTime is invalid');
+        require(apys[lockTime] != 0, 'WQDeposit: lockTime is invalid');
         DepositWallet storage wallet = wallets[msg.sender];
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
@@ -137,53 +129,32 @@ contract WQDeposit is
     {
         require(
             amount <= contributed - borrowed,
-            'WQPension: Insufficient amount'
+            'WQSavingProduct: Insufficient amount'
         );
         borrowed += amount;
         payable(msg.sender).sendValue(amount);
         emit Borrowed(msg.sender, amount);
     }
 
-    function refund(uint256 rewards)
+    function refund(uint256 amount, uint256 duration)
         external
         payable
         override
         nonReentrant
         onlyRole(BORROWER_ROLE)
     {
-        require((rewards * 1e18) / msg.value >= apy, 'WQPension: ');
-        borrowed -= (msg.value - rewards);
-        rewardsProduced += rewards;
-        rewardsPerContributed += (rewards * 1e20) / contributed;
-        emit Refunded(msg.sender, msg.value);
+        require(apys[duration] > 0, 'WQSavingProduct: invalid duration');
+        // require((rewards * 1e18) / msg.value >= apys[], 'WQSavingProduct: Insufficient rewards');
+        // borrowed -= (msg.value - rewards);
+        // rewardsProduced += rewards;
+        // rewardsPerContributed += (rewards * 1e20) / contributed;
+        // emit Refunded(msg.sender, msg.value);
     }
 
-    /**
-     * @notice Add value to lockTimes
-     * @param lockTime Value in days
-     */
-    function addLockTime(uint256 lockTime) external onlyRole(ADMIN_ROLE) {
-        lockTimes.push(lockTime);
-    }
-
-    /**
-     * @notice Update value in lockTimes
-     * @param index index of lockTimes
-     * @param lockTime Value in days
-     */
-    function updateLockTime(uint256 index, uint256 lockTime)
+    function setApy(uint256 duration, uint256 apy)
         external
         onlyRole(ADMIN_ROLE)
     {
-        lockTimes[index] = lockTime;
-    }
-
-    /**
-     * @notice Remove value from lockTimes
-     * @param index index of lockTimes
-     */
-    function removeLockTime(uint256 index) external onlyRole(ADMIN_ROLE) {
-        lockTimes[index] = lockTimes[lockTimes.length - 1];
-        lockTimes.pop();
+        apys[duration] = apy;
     }
 }

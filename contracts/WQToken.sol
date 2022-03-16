@@ -85,7 +85,8 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
      * @notice Emitted when a token transfer or delegate change results in changes to an account's voting power.
      */
     event DelegateVotesChanged(
-        address indexed delegate,
+        address indexed delegator,
+        address indexed delegatee,
         uint256 previousBalance,
         uint256 newBalance
     );
@@ -500,7 +501,12 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                     _subtract,
                     amount
                 );
-                emit DelegateVotesChanged(src, oldWeight, newWeight);
+                emit DelegateVotesChanged(
+                    msg.sender,
+                    src,
+                    oldWeight,
+                    newWeight
+                );
             }
 
             if (dst != address(0)) {
@@ -509,7 +515,12 @@ contract WQToken is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
                     _add,
                     amount
                 );
-                emit DelegateVotesChanged(dst, oldWeight, newWeight);
+                emit DelegateVotesChanged(
+                    msg.sender,
+                    dst,
+                    oldWeight,
+                    newWeight
+                );
             }
         }
     }

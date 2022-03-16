@@ -20,7 +20,8 @@ task("bridge_swap", "Swap token on bridge")
         console.log("Swap on bridge:", process.env.BRIDGE);
         const bridge = await hre.ethers.getContractAt("WQBridge", process.env.BRIDGE);
         const wqt = await hre.ethers.getContractAt("WQBridgeToken", process.env.WQT_TOKEN);
-        await wqt.approve(process.env.BRIDGE, "1000000000000000000");
-        await bridge.swap(1, 2, "1000000000000000000", "0xB2e4bdBf8EceC7486C9CAd1510d9529e03D1dc45", "WQT", {gasLimit: 500000});
+        // await wqt.approve(process.env.BRIDGE, "1000000000000000000");
+        // nonce, chainTo, amount, recipient, symbol
+        await bridge.swap(1, 1, "100000000000000", "0xB2e4bdBf8EceC7486C9CAd1510d9529e03D1dc45", "WQT");
         console.log("Done");
     });

@@ -172,7 +172,8 @@ contract WQDAOVoting is
         returns (uint256)
     {
         require(
-            token.getVotes(msg.sender) >= proposalThreshold,
+            token.getPastVotes(msg.sender, block.number - 1) >=
+                proposalThreshold,
             'Proposer votes below proposal threshold'
         );
 

@@ -225,6 +225,7 @@ contract WQPensionFund is
         nonReentrant
         onlyRole(BORROWER_ROLE)
     {
+        // require((rewards * 1e18) / msg.value >= apy, 'WQPension: Insufficient rewards');
         borrowed -= (msg.value - rewards);
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
