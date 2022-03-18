@@ -148,8 +148,11 @@ contract WQBorrowing is
         );
         loan.credit -= returnAmount;
         // and send back to fund
-        loan.fund.refund{value: returnAmount + fee}(
+        uint256 fee2 = (returnAmount *
+            ((loan.fund.apys(loan.duration) * (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
+        loan.fund.refund{value: returnAmount + fee2}(
             returnAmount,
+            block.timestamp - loan.borrowedAt,
             loan.duration
         );
         //Send tokens

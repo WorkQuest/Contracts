@@ -8,7 +8,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WQFundInterface.sol';
 
-contract WQDeposit is
+contract WQLending is
     WQFundInterface,
     Initializable,
     AccessControlUpgradeable,
@@ -20,13 +20,13 @@ contract WQDeposit is
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+    uint256 public constant YEAR = 31536000;
 
     struct DepositWallet {
         uint256 amount;
         uint256 rewardAllowed;
         uint256 rewardDebt;
         uint256 rewardDistributed;
-        uint256 unlockDate;
     }
 
     uint256 public contributed;
@@ -60,7 +60,7 @@ contract WQDeposit is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize() external initializer {
+    function initialize(uint256 _apy) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -68,6 +68,7 @@ contract WQDeposit is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
+        apy = _apy;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -79,19 +80,8 @@ contract WQDeposit is
     /**
      * @notice Contribute native coins to contract
      */
-    function deposit(uint256 lockTime) external payable nonReentrant {
-        bool checked;
-        for (uint256 i = 0; i < lockTimes.length; i++) {
-            if (lockTime == lockTimes[i]) {
-                checked = true;
-                break;
-            }
-        }
-        require(checked, 'WQDeposit: lockTime is invalid');
+    function deposit() external payable nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
-        if (wallet.unlockDate == 0) {
-            wallet.unlockDate = block.timestamp + lockTime * 1 days;
-        }
         wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
         wallet.amount += msg.value;
         contributed += msg.value;
@@ -100,10 +90,6 @@ contract WQDeposit is
 
     function withdraw(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
-        require(
-            block.timestamp >= wallet.unlockDate,
-            'WQDeposit: Lock time is not over yet'
-        );
         require(amount <= wallet.amount, 'WQDeposit: Amount is invalid');
         wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
@@ -114,7 +100,6 @@ contract WQDeposit is
 
     function claim() external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
-        require(block.timestamp >= wallet.unlockDate);
         uint256 reward = ((wallet.amount * rewardsPerContributed) / 1e20) +
             wallet.rewardAllowed -
             wallet.rewardDistributed -
@@ -129,6 +114,10 @@ contract WQDeposit is
         return contributed - borrowed;
     }
 
+    function apys(uint256) external view override returns (uint256) {
+        return apy;
+    }
+
     function borrow(uint256 amount)
         external
         override
@@ -137,21 +126,22 @@ contract WQDeposit is
     {
         require(
             amount <= contributed - borrowed,
-            'WQPension: Insufficient amount'
+            'WQLending: Insufficient amount'
         );
         borrowed += amount;
         payable(msg.sender).sendValue(amount);
         emit Borrowed(msg.sender, amount);
     }
 
-    function refund(uint256 rewards)
-        external
-        payable
-        override
-        nonReentrant
-        onlyRole(BORROWER_ROLE)
-    {
-        require((rewards * 1e18) / msg.value >= apy, 'WQLending: Insufficient rewards');
+    function refund(
+        uint256 rewards,
+        uint256 elapsedTime,
+        uint256
+    ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
+        require(
+            (rewards * 1e18) / msg.value >= (apy * elapsedTime) / YEAR,
+            'WQLending: Insufficient rewards'
+        );
         borrowed -= (msg.value - rewards);
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;

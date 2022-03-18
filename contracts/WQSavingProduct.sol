@@ -20,6 +20,7 @@ contract WQSavingProduct is
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+    uint256 public constant YEAR = 31536000;
 
     struct DepositWallet {
         uint256 amount;
@@ -36,7 +37,7 @@ contract WQSavingProduct is
     uint256 public borrowed;
 
     /// @notice Mapping lock time to APY values
-    mapping(uint256 => uint256) public apys;
+    mapping(uint256 => uint256) public override apys;
 
     /// @notice Deposit wallet info of user
     mapping(address => DepositWallet) public wallets;
@@ -136,7 +137,7 @@ contract WQSavingProduct is
         emit Borrowed(msg.sender, amount);
     }
 
-    function refund(uint256 amount, uint256 duration)
+    function refund(uint256 amount, uint256 elapsedTime, uint256 duration)
         external
         payable
         override
@@ -144,11 +145,14 @@ contract WQSavingProduct is
         onlyRole(BORROWER_ROLE)
     {
         require(apys[duration] > 0, 'WQSavingProduct: invalid duration');
-        // require((rewards * 1e18) / msg.value >= apys[], 'WQSavingProduct: Insufficient rewards');
-        // borrowed -= (msg.value - rewards);
-        // rewardsProduced += rewards;
-        // rewardsPerContributed += (rewards * 1e20) / contributed;
-        // emit Refunded(msg.sender, msg.value);
+        require(
+            ((msg.value - amount) * 1e18) / msg.value >= apys[duration] * elapsedTime / YEAR,
+            'WQSavingProduct: Insufficient rewards'
+        );
+        borrowed -= amount;
+        rewardsProduced += msg.value - amount;
+        rewardsPerContributed += ((msg.value - amount) * 1e20) / contributed;
+        emit Refunded(msg.sender, amount);
     }
 
     function setApy(uint256 duration, uint256 apy)

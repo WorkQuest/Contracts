@@ -20,6 +20,7 @@ contract WQPensionFund is
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+    uint256 public constant YEAR = 31536000;
 
     struct PensionWallet {
         uint256 amount;
@@ -38,6 +39,7 @@ contract WQPensionFund is
     uint256 public rewardsProduced;
     uint256 public rewardsDistributed;
     uint256 public borrowed;
+    uint256 internal apy;
 
     /// @notice Pension wallet info of worker
     mapping(address => PensionWallet) public wallets;
@@ -203,6 +205,10 @@ contract WQPensionFund is
         return contributed - borrowed;
     }
 
+    function apys(uint256) external view override returns (uint256) {
+        return apy;
+    }
+
     function borrow(uint256 amount)
         external
         override
@@ -218,18 +224,20 @@ contract WQPensionFund is
         emit Borrowed(msg.sender, amount, block.timestamp);
     }
 
-    function refund(uint256 rewards)
-        external
-        payable
-        override
-        nonReentrant
-        onlyRole(BORROWER_ROLE)
-    {
-        // require((rewards * 1e18) / msg.value >= apy, 'WQPension: Insufficient rewards');
-        borrowed -= (msg.value - rewards);
-        rewardsProduced += rewards;
-        rewardsPerContributed += (rewards * 1e20) / contributed;
-        emit Refunded(msg.sender, msg.value, block.timestamp);
+    function refund(
+        uint256 amount,
+        uint256 elapsedTime,
+        uint256
+    ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
+        require(
+            ((msg.value - amount) * 1e18) / msg.value >=
+                (apy * elapsedTime) / YEAR,
+            'WQPension: Insufficient rewards'
+        );
+        borrowed -= amount;
+        rewardsProduced += (msg.value - amount);
+        rewardsPerContributed += ((msg.value - amount) * 1e20) / contributed;
+        emit Refunded(msg.sender, amount, block.timestamp);
     }
 
     /** Admin functions */
