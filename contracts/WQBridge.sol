@@ -339,7 +339,7 @@ contract WQBridge is
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
-            recipient.transfer(amount);
+            recipient.sendValue(amount);
         }
         emit Transferred(token, recipient, amount);
     }
