@@ -34,10 +34,7 @@ contract WQLending is
     uint256 public rewardsProduced;
     uint256 public rewardsDistributed;
     uint256 public borrowed;
-    uint256 apy;
-
-    /// @notice Lock time valid values in days
-    uint256[] public lockTimes;
+    uint256 internal apy;
 
     /// @notice Deposit wallet info of user
     mapping(address => DepositWallet) public wallets;
@@ -134,46 +131,18 @@ contract WQLending is
     }
 
     function refund(
-        uint256 rewards,
+        uint256 amount,
         uint256 elapsedTime,
         uint256
     ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
+        uint256 rewards = msg.value - amount;
         require(
             (rewards * 1e18) / msg.value >= (apy * elapsedTime) / YEAR,
             'WQLending: Insufficient rewards'
         );
-        borrowed -= (msg.value - rewards);
+        borrowed -= amount;
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
-        emit Refunded(msg.sender, msg.value);
-    }
-
-    /**
-     * @notice Add value to lockTimes
-     * @param lockTime Value in days
-     */
-    function addLockTime(uint256 lockTime) external onlyRole(ADMIN_ROLE) {
-        lockTimes.push(lockTime);
-    }
-
-    /**
-     * @notice Update value in lockTimes
-     * @param index index of lockTimes
-     * @param lockTime Value in days
-     */
-    function updateLockTime(uint256 index, uint256 lockTime)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        lockTimes[index] = lockTime;
-    }
-
-    /**
-     * @notice Remove value from lockTimes
-     * @param index index of lockTimes
-     */
-    function removeLockTime(uint256 index) external onlyRole(ADMIN_ROLE) {
-        lockTimes[index] = lockTimes[lockTimes.length - 1];
-        lockTimes.pop();
+        emit Refunded(msg.sender, amount);
     }
 }

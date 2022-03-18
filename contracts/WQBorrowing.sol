@@ -60,7 +60,10 @@ contract WQBorrowing is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address _oracle) external initializer {
+    function initialize(address _oracle, uint256 _fixedRate)
+        external
+        initializer
+    {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -69,6 +72,7 @@ contract WQBorrowing is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         oracle = WQPriceOracleInterface(_oracle);
+        fixedRate = _fixedRate;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -149,7 +153,8 @@ contract WQBorrowing is
         loan.credit -= returnAmount;
         // and send back to fund
         uint256 fee2 = (returnAmount *
-            ((loan.fund.apys(loan.duration) * (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
+            ((loan.fund.apys(loan.duration) *
+                (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
         loan.fund.refund{value: returnAmount + fee2}(
             returnAmount,
             block.timestamp - loan.borrowedAt,
@@ -162,7 +167,7 @@ contract WQBorrowing is
         if (msg.value > returnAmount + fee) {
             payable(msg.sender).sendValue(msg.value - returnAmount - fee);
         }
-        emit Refunded(msg.sender, msg.value);
+        emit Refunded(msg.sender, returnAmount);
     }
 
     function getFunds()

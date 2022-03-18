@@ -137,21 +137,21 @@ contract WQSavingProduct is
         emit Borrowed(msg.sender, amount);
     }
 
-    function refund(uint256 amount, uint256 elapsedTime, uint256 duration)
-        external
-        payable
-        override
-        nonReentrant
-        onlyRole(BORROWER_ROLE)
-    {
+    function refund(
+        uint256 amount,
+        uint256 elapsedTime,
+        uint256 duration
+    ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
         require(apys[duration] > 0, 'WQSavingProduct: invalid duration');
+        uint256 rewards = msg.value - amount;
         require(
-            ((msg.value - amount) * 1e18) / msg.value >= apys[duration] * elapsedTime / YEAR,
+            (rewards * 1e18) / msg.value >=
+                (apys[duration] * elapsedTime) / YEAR,
             'WQSavingProduct: Insufficient rewards'
         );
         borrowed -= amount;
-        rewardsProduced += msg.value - amount;
-        rewardsPerContributed += ((msg.value - amount) * 1e20) / contributed;
+        rewardsProduced += rewards;
+        rewardsPerContributed += (rewards * 1e20) / contributed;
         emit Refunded(msg.sender, amount);
     }
 
