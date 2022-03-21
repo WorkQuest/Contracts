@@ -23,13 +23,6 @@ contract WorkQuest {
         Finished
     }
 
-    enum PaidTariff {
-        Free,
-        Silver,
-        Gold,
-        Platinum
-    }
-
     /// @notice Pension wallet factory contract address
     WQPensionFund public immutable pensionFund;
     /// @notice Address of referal contract
@@ -58,9 +51,6 @@ contract WorkQuest {
     uint256 public deadline;
     /// @notice Done timestamp of job
     uint256 public timeDone;
-
-    PaidTariff public paidTariff;
-    uint256 public paidEndTime;
 
     /// @notice Event emitted when job created
     event WorkQuestCreated(bytes32 jobHash);
@@ -182,10 +172,6 @@ contract WorkQuest {
         }
         feeReceiver.sendValue(comission);
         emit Received(cost);
-    }
-
-    function promote(PaidTariff tariff) external payable {
-        // ololo();
     }
 
     function cancelJob() external {
