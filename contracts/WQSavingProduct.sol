@@ -145,7 +145,7 @@ contract WQSavingProduct is
         require(apys[duration] > 0, 'WQSavingProduct: invalid duration');
         uint256 rewards = msg.value - amount;
         require(
-            (rewards * 1e18) / msg.value >=
+            (rewards * 1e18) / amount >=
                 (apys[duration] * elapsedTime) / YEAR,
             'WQSavingProduct: Insufficient rewards'
         );

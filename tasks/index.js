@@ -19,3 +19,4 @@ require('./get_workquests.js');
 require('./add_chairperson_to_voting.js');
 require('./set_voting_rules.js');
 require('./set_factory_to_referral.js');
+require('./add_refs.js');

@@ -268,7 +268,7 @@ contract WorkQuest {
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
                 (msg.sender == worker &&
                     status == JobStatus.WaitJobVerify &&
-                    block.timestamp > timeDone + 3 days),
+                    block.timestamp > timeDone + 1 minutes), //3 days),
             errMsg
         );
         status = JobStatus.Arbitration;

@@ -210,4 +210,14 @@ contract WQReferral is
     {
         earnedThreshold = _earnedThreshold;
     }
+
+    function delAffiliate(address referral) external onlyRole(ADMIN_ROLE) {
+        Account storage userAccount = referrals[referral];
+        userAccount.affiliat = address(0);
+        userAccount.earnedAmount = 0;
+        userAccount.rewardTotal = 0;
+        userAccount.rewardPaid = 0;
+        userAccount.referredCount = 0;
+        userAccount.paid = false;
+    }
 }

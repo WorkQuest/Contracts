@@ -231,7 +231,7 @@ contract WQPensionFund is
     ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
         uint256 rewards = (msg.value - amount);
         require(
-            (rewards * 1e18) / msg.value >= (apy * elapsedTime) / YEAR,
+            (rewards * 1e18) / amount >= (apy * elapsedTime) / YEAR,
             'WQPension: Insufficient rewards'
         );
         borrowed -= amount;
