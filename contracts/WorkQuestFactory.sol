@@ -148,20 +148,28 @@ contract WorkQuestFactory is
         );
     }
 
-    function promote(address workquest, PaidTariff tariff) external payable {
+    function promote(
+        address workquest,
+        PaidTariff tariff,
+        uint256 period
+    ) external payable {
         require(
             workquestValid[workquest],
             'WorkQuestFactory: Invalid contract'
         );
         require(
-            msg.value == getTariffCost(tariff),
+            msg.value == getTariffCost(tariff, period),
             'WorkQuestFactory: Invalid cost'
         );
         feeReceiver.sendValue(msg.value);
         emit Promoted(workquest, tariff, block.timestamp);
     }
 
-    function getTariffCost(PaidTariff tariff) internal pure returns (uint256) {
+    function getTariffCost(PaidTariff tariff, uint256 period)
+        public
+        pure
+        returns (uint256)
+    {
         if (tariff == PaidTariff.Free) {
             return 0;
         } else if (tariff == PaidTariff.Silver) {

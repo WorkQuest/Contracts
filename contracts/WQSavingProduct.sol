@@ -80,7 +80,7 @@ contract WQSavingProduct is
      * @notice Contribute native coins to contract
      */
     function deposit(uint256 lockTime) external payable nonReentrant {
-        require(apys[lockTime] != 0, 'WQDeposit: lockTime is invalid');
+        require(apys[lockTime] != 0, 'WQSavingProduct: lockTime is invalid');
         DepositWallet storage wallet = wallets[msg.sender];
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
@@ -95,9 +95,9 @@ contract WQSavingProduct is
         DepositWallet storage wallet = wallets[msg.sender];
         require(
             block.timestamp >= wallet.unlockDate,
-            'WQDeposit: Lock time is not over yet'
+            'WQSavingProduct: Lock time is not over yet'
         );
-        require(amount <= wallet.amount, 'WQDeposit: Amount is invalid');
+        require(amount <= wallet.amount, 'WQSavingProduct: Amount is invalid');
         wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
         contributed -= amount;
@@ -145,8 +145,7 @@ contract WQSavingProduct is
         require(apys[duration] > 0, 'WQSavingProduct: invalid duration');
         uint256 rewards = msg.value - amount;
         require(
-            (rewards * 1e18) / amount >=
-                (apys[duration] * elapsedTime) / YEAR,
+            (rewards * 1e18) / amount >= (apys[duration] * elapsedTime) / YEAR,
             'WQSavingProduct: Insufficient rewards'
         );
         borrowed -= amount;

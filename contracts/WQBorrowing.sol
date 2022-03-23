@@ -50,12 +50,13 @@ contract WQBorrowing is
     WQFundInterface[] public funds;
 
     event Borrowed(
+        uint256 nonce,
         address user,
         uint256 collateral,
         uint256 credit,
         string symbol
     );
-    event Refunded(address to, uint256 amount);
+    event Refunded(uint256 nonce, address user, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -89,6 +90,7 @@ contract WQBorrowing is
      * @param symbol Symbol of collateral token
      */
     function borrow(
+        uint256 nonce,
         uint256 collateralAmount,
         uint256 fundIndex,
         uint256 duration,
@@ -126,13 +128,17 @@ contract WQBorrowing is
         funds[fundIndex].borrow(loan.credit);
         // Send native coins
         payable(msg.sender).sendValue(loan.credit);
-        emit Borrowed(msg.sender, collateralAmount, loan.credit, symbol);
+        emit Borrowed(nonce, msg.sender, collateralAmount, loan.credit, symbol);
     }
 
     /**
      * @notice Refund loan
      */
-    function refund(uint256 returnAmount) external payable nonReentrant {
+    function refund(uint256 nonce, uint256 returnAmount)
+        external
+        payable
+        nonReentrant
+    {
         BorrowInfo storage loan = borrowers[msg.sender];
         require(loan.collateral > 0, 'WQBorrowing: You a not loaned moneys');
         require(
@@ -167,7 +173,7 @@ contract WQBorrowing is
         if (msg.value > returnAmount + fee) {
             payable(msg.sender).sendValue(msg.value - returnAmount - fee);
         }
-        emit Refunded(msg.sender, returnAmount);
+        emit Refunded(nonce, msg.sender, returnAmount);
     }
 
     function getFunds()
