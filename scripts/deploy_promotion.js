@@ -20,7 +20,7 @@ async function main() {
     }
     console.log("Deploying...");
     const Promotion = await hre.ethers.getContractFactory("WQPromotion");
-    const promotion = await upgrades.deployProxy(Promotion, [process.env.PROMOTION_FEE_RECEIVER], { initializer: 'initialize', kind: 'uups' })
+    const promotion = await upgrades.deployProxy(Promotion, [process.env.PROMOTION_FEE_RECEIVER, process.env.WORK_QUEST_FACTORY], { initializer: 'initialize', kind: 'uups' })
     console.log("Promotion has been deployed to:", promotion.address);
 
     envConfig["PROMOTION"] = promotion.address;

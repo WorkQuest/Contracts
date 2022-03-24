@@ -6,6 +6,7 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import './WorkQuestFactory.sol';
 
 contract WQPromotion is
     Initializable,
@@ -27,15 +28,19 @@ contract WQPromotion is
 
     /// @notice Address of the fee receiver
     address payable public feeReceiver;
-    mapping(PaidTariff => mapping(uint256 => uint256)) questTariff;
-    mapping(PaidTariff => mapping(uint256 => uint256)) usersTariff;
+    WorkQuestFactory public factory;
+    mapping(PaidTariff => mapping(uint256 => uint256)) public questTariff;
+    mapping(PaidTariff => mapping(uint256 => uint256)) public usersTariff;
 
     event Promoted(address user, PaidTariff tariff, uint256 promotedAt);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address payable _feeReceiver) external initializer {
+    function initialize(address payable _feeReceiver, address _factory)
+        external
+        initializer
+    {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -44,6 +49,7 @@ contract WQPromotion is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         feeReceiver = _feeReceiver;
+        factory = WorkQuestFactory(_factory);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -52,18 +58,22 @@ contract WQPromotion is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    function promote(PaidTariff tariff, uint256 period)
-        external
-        payable
-        nonReentrant
-    {
+    function promote(
+        address quest,
+        PaidTariff tariff,
+        uint256 period
+    ) external payable nonReentrant {
+        require(
+            factory.workquestValid(quest),
+            'WQPromotion: Quest is not WorkQuest contract'
+        );
         require(questTariff[tariff][period] > 0, 'WQPromotion: Invalid tariff');
         require(
             msg.value == questTariff[tariff][period],
             'WQPromotion: Invalid cost'
         );
         feeReceiver.sendValue(msg.value);
-        emit Promoted(msg.sender, tariff, block.timestamp);
+        emit Promoted(quest, tariff, block.timestamp);
     }
 
     function promoteUser(PaidTariff tariff, uint256 period)
@@ -81,6 +91,14 @@ contract WQPromotion is
     }
 
     /**
+     * Admin Functions
+     */
+
+    function setFactory(address _factory) external onlyRole(ADMIN_ROLE) {
+        factory = WorkQuestFactory(_factory);
+    }
+
+    /**
      * @notice Set user tariff
      * @param tariff Tariff number
      * @param period Period
@@ -95,7 +113,7 @@ contract WQPromotion is
     }
 
     /**
-     * @notice Set user tariff
+     * @notice Set quest tariff
      * @param tariff Tariff number
      * @param period Period
      * @param cost Cost of promotion
