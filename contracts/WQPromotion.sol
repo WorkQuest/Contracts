@@ -32,7 +32,12 @@ contract WQPromotion is
     mapping(PaidTariff => mapping(uint256 => uint256)) public questTariff;
     mapping(PaidTariff => mapping(uint256 => uint256)) public usersTariff;
 
-    event Promoted(address user, PaidTariff tariff, uint256 promotedAt);
+    event Promoted(
+        address user,
+        PaidTariff tariff,
+        uint256 period,
+        uint256 promotedAt
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -73,7 +78,7 @@ contract WQPromotion is
             'WQPromotion: Invalid cost'
         );
         feeReceiver.sendValue(msg.value);
-        emit Promoted(quest, tariff, block.timestamp);
+        emit Promoted(quest, tariff, period, block.timestamp);
     }
 
     function promoteUser(PaidTariff tariff, uint256 period)
@@ -87,7 +92,7 @@ contract WQPromotion is
             'WQPromotion: Invalid cost'
         );
         feeReceiver.sendValue(msg.value);
-        emit Promoted(msg.sender, tariff, block.timestamp);
+        emit Promoted(msg.sender, tariff, period, block.timestamp);
     }
 
     /**
