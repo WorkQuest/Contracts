@@ -3,6 +3,7 @@ const hre = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
+const { parseEther } = require("ethers/lib/utils");
 
 async function main() {
     dotenv.config();
@@ -17,10 +18,18 @@ async function main() {
     console.log("Deploying...");
     const SavingProduct = await hre.ethers.getContractFactory("WQSavingProduct");
     const saving = await upgrades.deployProxy(SavingProduct, [], { initializer: 'initialize' })
-    console.log("PensionFund has been deployed to:", saving.address);
+    // const saving = await SavingProduct.attach(process.env.SAVING_PRODUCT);
+    console.log("Saving Product has been deployed to:", saving.address);
 
     envConfig["SAVING_PRODUCT"] = saving.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
+
+    await saving.setApy(7, parseEther("0.0531"));
+    await saving.setApy(14, parseEther("0.0548"));
+    await saving.setApy(30, parseEther("0.0566"));
+    await saving.setApy(90, parseEther("0.06"));
+    await saving.setApy(180, parseEther("0.065"));
+    console.log("APY setting complete");
 }
 
 main()

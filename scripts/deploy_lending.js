@@ -20,7 +20,7 @@ async function main() {
     console.log("Deploying...");
     const Lending = await hre.ethers.getContractFactory("WQLending");
     const lending = await upgrades.deployProxy(Lending, [process.env.LENDING_APY], { initializer: 'initialize' })
-    console.log("PensionFund has been deployed to:", lending.address);
+    console.log("Lending has been deployed to:", lending.address);
 
     envConfig["LENDING"] = lending.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));

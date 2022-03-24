@@ -13,7 +13,7 @@ const YEAR = 31536000;
 async function getTimestamp() {
     let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
     let txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blockNumber, false]);
-    return parseInt(new BigNumber(txBlockNumber.timestamp).toString())
+    return parseInt(new BigNumber(txBlockNumber.timestamp).toString());
 }
 
 describe("Saving Product test", () => {
