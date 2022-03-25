@@ -180,16 +180,12 @@ contract WQReferral is
     /**
      * Admin Functions
      */
-
+    /**
+     * @dev Set address of workquest factory
+     * @param _factory Address of token
+     */
     function setFactory(address _factory) external onlyRole(ADMIN_ROLE) {
         factory = WorkQuestFactory(_factory);
-    }
-
-    function setReferralBonus(uint256 _referralBonus)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        referralBonus = _referralBonus;
     }
 
     /**
@@ -200,10 +196,29 @@ contract WQReferral is
         oracle = WQPriceOracleInterface(_oracle);
     }
 
+    /**
+     * @dev Set token  address
+     * @param _token Address of token
+     */
     function setToken(address _token) external onlyRole(ADMIN_ROLE) {
         token = IERC20Upgradeable(_token);
     }
 
+    /**
+     * @dev Set reward value for each referral
+     * @param _referralBonus Referral bonus value
+     */
+    function setReferralBonus(uint256 _referralBonus)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        referralBonus = _referralBonus;
+    }
+
+    /**
+     * @dev Set threshold of earned funds, when rewards payed
+     * @param _earnedThreshold Threshold value
+     */
     function setEarnedThreshold(uint256 _earnedThreshold)
         external
         onlyRole(ADMIN_ROLE)
@@ -221,9 +236,4 @@ contract WQReferral is
         userAccount.paid = false;
     }
 
-    function setEarned(address referral) external onlyRole(ADMIN_ROLE) {
-        referrals[referral].earnedAmount = 1000000000000000000000;
-        referrals[referral].paid = true;
-        referrals[referrals[referral].affiliat].rewardTotal += referralBonus;
-    }
 }

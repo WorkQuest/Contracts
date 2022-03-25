@@ -18,9 +18,18 @@ async function main() {
     if (!process.env.PROMOTION_FEE_RECEIVER) {
         throw new Error(`Please set your PROMOTION_FEE_RECEIVER in a .env-${network} file`);
     }
+    if (!process.env.WORK_QUEST_FACTORY) {
+        throw new Error(`Plese set your WORK_QUEST_FACTORY in a .env-${network} file`)
+    }
+    if (!process.env.WQT_TOKEN) {
+        throw new Error(`Plese set your WQT_TOKEN in a .env-${network} file`)
+    }
+    if (!process.env.PRICE_ORACLE) {
+        throw new Error(`Plese set your PRICE_ORACLE in a .env-${network} file`)
+    }
     console.log("Deploying...");
     const Promotion = await hre.ethers.getContractFactory("WQPromotion");
-    const promotion = await upgrades.deployProxy(Promotion, [process.env.PROMOTION_FEE_RECEIVER, process.env.WORK_QUEST_FACTORY], { initializer: 'initialize', kind: 'uups' })
+    const promotion = await upgrades.deployProxy(Promotion, [process.env.PROMOTION_FEE_RECEIVER, process.env.WORK_QUEST_FACTORY, process.env.WQT_TOKEN, process.env.PRICE_ORACLE], { initializer: 'initialize', kind: 'uups' })
     console.log("Promotion has been deployed to:", promotion.address);
 
     envConfig["PROMOTION"] = promotion.address;

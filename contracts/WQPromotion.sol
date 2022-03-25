@@ -2,10 +2,13 @@
 pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import './WQPriceOracleInterface.sol';
 import './WorkQuestFactory.sol';
 
 contract WQPromotion is
@@ -15,6 +18,7 @@ contract WQPromotion is
     UUPSUpgradeable
 {
     using AddressUpgradeable for address payable;
+    using SafeERC20Upgradeable for IERC20MetadataUpgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
@@ -29,6 +33,8 @@ contract WQPromotion is
     /// @notice Address of the fee receiver
     address payable public feeReceiver;
     WorkQuestFactory public factory;
+    IERC20MetadataUpgradeable public token;
+    WQPriceOracleInterface public oracle;
     mapping(PaidTariff => mapping(uint256 => uint256)) public questTariff;
     mapping(PaidTariff => mapping(uint256 => uint256)) public usersTariff;
 
@@ -42,10 +48,12 @@ contract WQPromotion is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address payable _feeReceiver, address _factory)
-        external
-        initializer
-    {
+    function initialize(
+        address payable _feeReceiver,
+        address _factory,
+        address _token,
+        address _oracle
+    ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -55,6 +63,8 @@ contract WQPromotion is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         feeReceiver = _feeReceiver;
         factory = WorkQuestFactory(_factory);
+        token = IERC20MetadataUpgradeable(_token);
+        oracle = WQPriceOracleInterface(_oracle);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -99,8 +109,28 @@ contract WQPromotion is
      * Admin Functions
      */
 
+    /**
+     * @dev Set address of workquest factory
+     * @param _factory Address of token
+     */
     function setFactory(address _factory) external onlyRole(ADMIN_ROLE) {
         factory = WorkQuestFactory(_factory);
+    }
+
+    /**
+     * @dev Set price oracle address
+     * @param _oracle Address of price oracle
+     */
+    function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
+        oracle = WQPriceOracleInterface(_oracle);
+    }
+
+    /**
+     * @dev Set token address
+     * @param _token Address of token
+     */
+    function setToken(address _token) external onlyRole(ADMIN_ROLE) {
+        token = IERC20Upgradeable(_token);
     }
 
     /**
