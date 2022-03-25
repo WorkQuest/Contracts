@@ -106,16 +106,21 @@ contract WQSavingProduct is
     }
 
     function claim() external nonReentrant {
-        DepositWallet storage wallet = wallets[msg.sender];
-        require(block.timestamp >= wallet.unlockDate);
-        uint256 reward = ((wallet.amount * rewardsPerContributed) / 1e20) +
-            wallet.rewardAllowed -
-            wallet.rewardDistributed -
-            wallet.rewardDebt;
-        wallet.rewardDistributed += reward;
+        require(block.timestamp >= wallets[msg.sender].unlockDate);
+        uint256 reward = getRewards(msg.sender);
+        wallets[msg.sender].rewardDistributed += reward;
         rewardsDistributed += reward;
         payable(msg.sender).sendValue(reward);
         emit Claimed(msg.sender, reward);
+    }
+
+    function getRewards(address user) public view returns (uint256) {
+        DepositWallet storage wallet = wallets[user];
+        return
+            ((wallet.amount * rewardsPerContributed) / 1e20) +
+            wallet.rewardAllowed -
+            wallet.rewardDistributed -
+            wallet.rewardDebt;
     }
 
     function balanceOf() external view override returns (uint256) {

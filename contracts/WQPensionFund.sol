@@ -147,10 +147,7 @@ contract WQPensionFund is
             'WQPensionFund: Lock time is not over yet'
         );
         require(amount <= wallet.amount, 'WQPensionFund: Amount is invalid');
-        uint256 reward = ((wallet.amount * rewardsPerContributed) / 1e20) +
-            wallet.rewardAllowed -
-            wallet.rewardDistributed -
-            wallet.rewardDebt;
+        uint256 reward = getRewards(msg.sender);
         wallet.rewardDistributed += reward;
         rewardsDistributed += reward;
 
@@ -162,12 +159,13 @@ contract WQPensionFund is
         emit Claimed(msg.sender, reward, block.timestamp);
     }
 
-    function getRewards(address user) external view returns (uint256) {
+    function getRewards(address user) public view returns (uint256) {
+        PensionWallet storage wallet = wallets[user];
         return
-            ((wallets[user].amount * rewardsPerContributed) / 1e20) +
-            wallets[user].rewardAllowed -
-            wallets[user].rewardDistributed -
-            wallets[user].rewardDebt;
+            ((wallet.amount * rewardsPerContributed) / 1e20) +
+            wallet.rewardAllowed -
+            wallet.rewardDistributed -
+            wallet.rewardDebt;
     }
 
     /**
@@ -192,7 +190,7 @@ contract WQPensionFund is
             block.timestamp >= wallet.unlockDate,
             'WQPensionFund: Lock time is not over yet'
         );
-        wallet.unlockDate = block.timestamp + 31536000;
+        wallet.unlockDate = block.timestamp + YEAR;
     }
 
     function getFee(address user) external view returns (uint256) {

@@ -130,7 +130,7 @@ contract WQPromotion is
      * @param _token Address of token
      */
     function setToken(address _token) external onlyRole(ADMIN_ROLE) {
-        token = IERC20Upgradeable(_token);
+        token = IERC20MetadataUpgradeable(_token);
     }
 
     /**

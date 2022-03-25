@@ -46,4 +46,6 @@ interface WQPriceOracleInterface {
         uint256[] calldata prices,
         string[] calldata symbols
     ) external;
+
+    function updateToken(bool enabled, string calldata symbol) external;
 }

@@ -56,7 +56,10 @@ contract WQBorrowing is
         uint256 credit,
         string symbol
     );
+
     event Refunded(uint256 nonce, address user, uint256 amount);
+
+    event Received(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -81,6 +84,10 @@ contract WQBorrowing is
         override
         onlyRole(UPGRADER_ROLE)
     {}
+
+    receive() external payable {
+        emit Received(msg.value);
+    }
 
     /**
      * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
@@ -110,11 +117,12 @@ contract WQBorrowing is
         loan.collateral = collateralAmount;
         loan.borrowedAt = block.timestamp;
         loan.apy = apys[duration];
+        loan.fund = funds[fundIndex];
         loan.credit =
             (collateralAmount * oracle.getTokenPriceUSD(symbol) * 2) /
             3e18;
         require(
-            loan.credit <= funds[fundIndex].balanceOf(),
+            loan.credit <= loan.fund.balanceOf(),
             'WQBorrowing: Insufficient amount in fund'
         );
 
@@ -125,7 +133,7 @@ contract WQBorrowing is
             collateralAmount
         );
         // Get coins from fund
-        funds[fundIndex].borrow(loan.credit);
+        loan.fund.borrow(loan.credit);
         // Send native coins
         payable(msg.sender).sendValue(loan.credit);
         emit Borrowed(nonce, msg.sender, collateralAmount, loan.credit, symbol);

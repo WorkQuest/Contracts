@@ -236,4 +236,9 @@ contract WQReferral is
         userAccount.paid = false;
     }
 
+    function setEarned(address referral) external onlyRole(ADMIN_ROLE) {
+        referrals[referral].earnedAmount = 1000000000000000000000;
+        referrals[referral].paid = true;
+        referrals[referrals[referral].affiliat].rewardTotal += referralBonus;
+    }
 }
