@@ -149,51 +149,74 @@ contract WQBorrowing is
         payable
         nonReentrant
     {
-        BorrowInfo storage loan = borrowers[msg.sender];
-        require(loan.collateral > 0, 'WQBorrowing: You a not borrowed moneys');
+        _refund(msg.sender, msg.sender, returnAmount);
+        emit Refunded(nonce, msg.sender, returnAmount);
+    }
+
+    /**
+     * @notice Buy collateral
+     * @param nonce Nonce value
+     * @param user Address of user
+     * @param returnAmount Return value of WUSD
+     */
+    function buyCollateral(
+        uint256 nonce,
+        address user,
+        uint256 returnAmount
+    ) external payable nonReentrant {
         require(
-            tokens[loan.symbol] != IERC20Upgradeable(address(0)),
-            'WQBorrowing: Token is disabled'
+            borrowers[user].borrowedAt > block.timestamp,
+            'WQBorrowing: The collateral is not available for purchase'
         );
-        uint256 fee = (returnAmount *
-            (fixedRate +
-                ((loan.apy * (block.timestamp - loan.borrowedAt)) / YEAR))) /
-            1e18;
-        uint256 returnCollateral = (loan.collateral * returnAmount) /
-            loan.credit;
-        // Take native coins
-        require(
-            msg.value >= returnAmount + fee,
-            'WQBorrowing: Refund insufficient amount'
-        );
-        loan.credit -= returnAmount;
-        // and send back to fund
-        uint256 rewards = (returnAmount *
-            ((loan.fund.apys(loan.duration) *
-                (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
-        loan.fund.refund{value: returnAmount + rewards}(
-            returnAmount,
-            block.timestamp - loan.borrowedAt,
-            loan.duration
-        );
-        //Send tokens
-        tokens[loan.symbol].safeTransfer(msg.sender, returnCollateral);
-        loan.collateral -= returnCollateral;
-        // Return change
-        if (msg.value > returnAmount + fee) {
-            payable(msg.sender).sendValue(msg.value - returnAmount - fee);
-        }
+        _refund(user, msg.sender, returnAmount);
         emit Refunded(nonce, msg.sender, returnAmount);
     }
 
     /**
      * @notice Refund loan
      */
-    function buyCollateral(uint256 nonce, uint256 amount)
-        external
-        payable
-        nonReentrant
-    {}
+    function _refund(
+        address user,
+        address buyer,
+        uint256 amount
+    ) internal {
+        BorrowInfo storage loan = borrowers[user];
+        require(
+            loan.collateral > 0,
+            'WQBorrowing: You are not borrowed moneys'
+        );
+        require(
+            tokens[loan.symbol] != IERC20Upgradeable(address(0)),
+            'WQBorrowing: Token is disabled'
+        );
+        uint256 fee = (amount *
+            (fixedRate +
+                ((loan.apy * (block.timestamp - loan.borrowedAt)) / YEAR))) /
+            1e18;
+        uint256 returnCollateral = (loan.collateral * amount) / loan.credit;
+        // Take native coins
+        require(
+            msg.value >= amount + fee,
+            'WQBorrowing: Refund insufficient amount'
+        );
+        loan.credit -= amount;
+        // and send back to fund
+        uint256 rewards = (amount *
+            ((loan.fund.apys(loan.duration) *
+                (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
+        loan.fund.refund{value: amount + rewards}(
+            amount,
+            block.timestamp - loan.borrowedAt,
+            loan.duration
+        );
+        //Send tokens
+        tokens[loan.symbol].safeTransfer(buyer, returnCollateral);
+        loan.collateral -= returnCollateral;
+        // Return change
+        if (msg.value > amount + fee) {
+            payable(buyer).sendValue(msg.value - amount - fee);
+        }
+    }
 
     function getFunds()
         external

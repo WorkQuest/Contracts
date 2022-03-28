@@ -20,6 +20,15 @@ async function main() {
     if (!process.env.BORROWING_FIXED_RATE) {
         throw new Error(`Please set your BORROWING_FIXED_RATE in a .env-${network} file`);
     }
+    if (!process.env.ETH_TOKEN) {
+        throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
+    }
+    if (!process.env.BNB_TOKEN) {
+        throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
+    }
+    if (!process.env.EWQT_TOKEN) {
+        throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
+    }
 
     console.log("Deploying...");
     const Borrowing = await hre.ethers.getContractFactory("WQBorrowing");

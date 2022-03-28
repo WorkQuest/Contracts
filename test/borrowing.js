@@ -167,7 +167,7 @@ describe("Borrowing test", () => {
         it('STEP 1: Refund when not borrowed moneys', async () => {
             await expect(
                 borrowing.connect(borrower).refund(1, parseEther("300"), { value: parseEther("300") })
-            ).revertedWith("WQBorrowing: You a not borrowed moneys");
+            ).revertedWith("WQBorrowing: You are not borrowed moneys");
         });
 
         it('STEP 2: Refund when token disabled', async () => {
