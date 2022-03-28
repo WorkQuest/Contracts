@@ -141,6 +141,8 @@ contract WQBorrowing is
 
     /**
      * @notice Refund loan
+     * @param nonce Nonce value
+     * @param returnAmount Return value of WUSD
      */
     function refund(uint256 nonce, uint256 returnAmount)
         external
@@ -148,7 +150,7 @@ contract WQBorrowing is
         nonReentrant
     {
         BorrowInfo storage loan = borrowers[msg.sender];
-        require(loan.collateral > 0, 'WQBorrowing: You a not loaned moneys');
+        require(loan.collateral > 0, 'WQBorrowing: You a not borrowed moneys');
         require(
             tokens[loan.symbol] != IERC20Upgradeable(address(0)),
             'WQBorrowing: Token is disabled'
@@ -162,7 +164,7 @@ contract WQBorrowing is
         // Take native coins
         require(
             msg.value >= returnAmount + fee,
-            'WQBorrowing: Invalid refund amount'
+            'WQBorrowing: Refund insufficient amount'
         );
         loan.credit -= returnAmount;
         // and send back to fund
@@ -183,6 +185,15 @@ contract WQBorrowing is
         }
         emit Refunded(nonce, msg.sender, returnAmount);
     }
+
+    /**
+     * @notice Refund loan
+     */
+    function buyCollateral(uint256 nonce, uint256 amount)
+        external
+        payable
+        nonReentrant
+    {}
 
     function getFunds()
         external

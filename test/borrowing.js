@@ -95,6 +95,11 @@ describe("Borrowing test", () => {
         await pension.grantRole(await pension.BORROWER_ROLE(), borrowing.address);
         await lending.grantRole(await lending.BORROWER_ROLE(), borrowing.address);
         await saving.grantRole(await saving.BORROWER_ROLE(), borrowing.address);
+
+        await eth_token.connect(borrower).approve(borrowing.address, parseEther("1"));
+        await oracleSetPrice(parseEther("300"), "ETH");
+        await pension.connect(depositor).contribute(depositor.address, { value: parseEther("300") });
+
     });
 
     describe('Borrowing: deploy', () => {
@@ -109,42 +114,76 @@ describe("Borrowing test", () => {
 
     describe('Borrowing: success execution', () => {
         it('STEP 1: Borrow', async () => {
-            await eth_token.connect(borrower).approve(borrowing.address, parseEther("1"));
-            await oracleSetPrice(parseEther("300"), "ETH");
-
-            await pension.connect(depositor).contribute(depositor.address, { value: parseEther("300") });
-
             let balanceBefore = await web3.eth.getBalance(borrower.address);
             let balanceEthBefore = await eth_token.balanceOf(borrower.address);
             await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
             let balanceAfter = await web3.eth.getBalance(borrower.address);
             let balanceEthAfter = await eth_token.balanceOf(borrower.address);
-
             expect(((balanceEthBefore - balanceEthAfter) / 1e18).toFixed(2)).equal('1.00');
             expect(((balanceAfter - balanceBefore) / 1e18).toFixed(2)).equal('200.00');
         });
 
         it('STEP 2: Refund', async () => {
-            await eth_token.connect(borrower).approve(borrowing.address, parseEther("1"));
-            await oracleSetPrice(parseEther("300"), "ETH");
-            await pension.connect(depositor).contribute(depositor.address, { value: parseEther("300") });
             await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
-
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
-
             let balanceBefore = await web3.eth.getBalance(borrower.address);
             let balanceEthBefore = await eth_token.balanceOf(borrower.address);
             await borrowing.connect(borrower).refund(1, parseEther("200"), { value: parseEther("211.62") });
             let balanceAfter = await web3.eth.getBalance(borrower.address);
             let balanceEthAfter = await eth_token.balanceOf(borrower.address);
-
             expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('1.00');
             expect(((balanceBefore - balanceAfter) / 1e18).toFixed(2)).equal('211.62');
         });
     });
 
-    describe('Borrowing: failed execution', () => {
-        it('STEP 1: Borrow', async () => {
+    describe('Borrow: failed execution', () => {
+        it('STEP 1: Borrow for disabled token', async () => {
+            await expect(
+                borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "LOL")
+            ).revertedWith("WQBorrowing: This token is disabled to collateral");
+        });
+
+        it('STEP 2: Borrow with invalid duration', async () => {
+            await expect(
+                borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 6, "ETH")
+            ).revertedWith("WQBorrowing: Invalid duration");
+        });
+
+        it('STEP 3: borrow when previously credit not refunded', async () => {
+            await borrowing.connect(borrower).borrow(1, parseEther("0.5"), 0, 7, "ETH");
+            await expect(
+                borrowing.connect(borrower).borrow(1, parseEther("0.5"), 0, 7, "ETH")
+            ).revertedWith("WQBorrowing: You are not refunded credit");
+        });
+
+        it('STEP 4: borrow when insufficient amount in fund', async () => {
+            await expect(
+                borrowing.connect(borrower).borrow(1, parseEther("2"), 0, 7, "ETH")
+            ).revertedWith("WQBorrowing: Insufficient amount in fund");
+        });
+    });
+
+    describe('Refund: failed execution', () => {
+        it('STEP 1: Refund when not borrowed moneys', async () => {
+            await expect(
+                borrowing.connect(borrower).refund(1, parseEther("300"), { value: parseEther("300") })
+            ).revertedWith("WQBorrowing: You a not borrowed moneys");
+        });
+
+        it('STEP 2: Refund when token disabled', async () => {
+            await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
+            await borrowing.setToken("0x0000000000000000000000000000000000000000", "ETH");
+            await expect(
+                borrowing.connect(borrower).refund(1, parseEther("200"), { value: parseEther("211.62") })
+            ).revertedWith("WQBorrowing: Token is disabled");
+        });
+
+        it('STEP 3: Refund insufficient amount', async () => {
+            await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
+            await expect(
+                borrowing.connect(borrower).refund(1, parseEther("200"), { value: parseEther("200") })
+            ).revertedWith("WQBorrowing: Refund insufficient amount");
         });
     });
 });

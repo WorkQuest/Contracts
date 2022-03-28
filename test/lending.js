@@ -112,7 +112,7 @@ describe("Lending test", () => {
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [currrent + YEAR]);
             await expect(
                 lending.connect(accounts[2]).refund(parseEther('1'), YEAR, 0, { value: parseEther('1.043') })
-            ).revertedWith("WQLending: Insufficient rewards");;
+            ).revertedWith("WQLending: Insufficient rewards");
         });
     });
 });
