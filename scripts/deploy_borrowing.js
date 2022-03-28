@@ -24,10 +24,19 @@ async function main() {
         throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
     }
     if (!process.env.BNB_TOKEN) {
-        throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
+        throw new Error(`Please set your BNB_TOKEN in a .env-${network} file`);
     }
-    if (!process.env.EWQT_TOKEN) {
-        throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
+    if (!process.env.WQT_TOKEN) {
+        throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
+    }
+    if (!process.env.PENSION_FUND) {
+        throw new Error(`Please set your PENSION_FUND in a .env-${network} file`);
+    }
+    if (!process.env.LENDING) {
+        throw new Error(`Please set your LENDING in a .env-${network} file`);
+    }
+    if (!process.env.SAVING_PRODUCT) {
+        throw new Error(`Please set your SAVING_PRODUCT in a .env-${network} file`);
     }
 
     console.log("Deploying...");
