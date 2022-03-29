@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import "./WQPriceOracle.sol";
-import "./WQRouterInterface.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import './WQPriceOracle.sol';
+import './WQRouterInterface.sol';
 
 contract WQCollateralAuction is
     Initializable,
@@ -21,8 +21,8 @@ contract WQCollateralAuction is
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address payable;
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     uint256 constant YEAR = 31536000;
 
     enum LotStatus {
@@ -117,7 +117,7 @@ contract WQCollateralAuction is
     modifier onlyRouter() {
         require(
             msg.sender == address(router),
-            "WQAuction: Sender is not router"
+            'WQAuction: Sender is not router'
         );
         _;
     }
@@ -356,12 +356,11 @@ contract WQCollateralAuction is
      */
     function getLiquidatedCollaterallAmount() public view returns (uint256) {
         string memory symbol = token.symbol();
-        uint256 price = oracle.getTokenPriceUSD(symbol);
-        uint256 totalCollateral = router.tokens(symbol).totalCollateral;
-        if (liquidateThreshold * router.totalDebt() > totalCollateral * price) {
+        uint256 totalCollateral = router.totalCollateral();
+        if (liquidateThreshold * router.totalDebt() > totalCollateral) {
             return
-                (3e18 * router.totalDebt() - 2 * totalCollateral * price) /
-                price;
+                (3e18 * router.totalDebt() - 2 * totalCollateral) /
+                oracle.getTokenPriceUSD(symbol);
         }
         return 0;
     }
@@ -381,17 +380,18 @@ contract WQCollateralAuction is
         totalAuctioned += amount;
         require(
             totalAuctioned <= getLiquidatedCollaterallAmount(),
-            "WQAuction: Amount of tokens purchased is greater than the amount liquidated"
+            'WQAuction: Amount of tokens purchased is greater than the amount liquidated'
         );
         LotInfo storage lot = lots[priceIndex][index];
-        require(lot.status == LotStatus.New, "WQAuction: Status is not New");
+        require(lot.status == LotStatus.New, 'WQAuction: Status is not New');
+        uint256 collateralRatio = (price * lot.ratio) / lot.price;
         require(
-            (price * lot.ratio) / lot.price <= liquidateThreshold,
-            "WQAuction: This lot is not available for sale"
+            collateralRatio < liquidateThreshold && collateralRatio >= 1e18,
+            'WQAuction: This lot is not available for sale'
         );
         require(
             amount <= lot.amount,
-            "WQAuction: Amount of tokens purchased is greater than lot amount"
+            'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
         lot.saleAmount = amount;
         lot.endCost = (price * amount) / 1e18;
@@ -413,11 +413,11 @@ contract WQCollateralAuction is
         LotInfo storage lot = lots[priceIndex][index];
         require(
             lot.status == LotStatus.Auctioned,
-            "WQAuction: Lot is not auctioned"
+            'WQAuction: Lot is not auctioned'
         );
         require(
             block.timestamp <= lot.endTime,
-            "WQAuction: Auction time is over"
+            'WQAuction: Auction time is over'
         );
         uint256 cost = _getCurrentLotCost(lot);
         uint256 fee = (cost *
@@ -425,7 +425,7 @@ contract WQCollateralAuction is
                 (router.annualInterestRate() *
                     (block.timestamp - lot.created)) /
                 YEAR)) / 1e18;
-        require(msg.value >= cost + fee, "WQAuction: Insufficient amount");
+        require(msg.value >= cost + fee, 'WQAuction: Insufficient amount');
         totalAuctioned -= lot.saleAmount;
         lot.buyer = payable(msg.sender);
         lot.amount -= lot.saleAmount;
@@ -462,7 +462,7 @@ contract WQCollateralAuction is
         LotInfo storage lot = lots[priceIndex][index];
         require(
             lot.status == LotStatus.Auctioned,
-            "WQAuction: This lot is not auctioned"
+            'WQAuction: This lot is not auctioned'
         );
         return _getCurrentLotCost(lot);
     }
@@ -491,11 +491,11 @@ contract WQCollateralAuction is
         LotInfo storage lot = lots[priceIndex][index];
         require(
             lot.status == LotStatus.Auctioned,
-            "WQAuction: Lot is not auctioned"
+            'WQAuction: Lot is not auctioned'
         );
         require(
             block.timestamp > lot.endTime,
-            "WQAuction: Auction time is not over yet"
+            'WQAuction: Auction time is not over yet'
         );
         totalAuctioned -= lot.saleAmount;
         lot.saleAmount = 0;

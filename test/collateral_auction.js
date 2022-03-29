@@ -64,7 +64,7 @@ describe('Collateral auction test', () => {
         [owner, user1, user2, service, likeRouter] = await ethers.getSigners();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
-        priceOracle = await upgrades.deployProxy(PriceOracle, [service.address, VALID_TIME]);
+        priceOracle = await upgrades.deployProxy(PriceOracle, [service.address, VALID_TIME], { kind: 'transparent' });
         await priceOracle.deployed();
         await priceOracle.updateToken(1, SYMBOL);
         await priceOracle.updateToken(1, "WQT");
@@ -77,7 +77,7 @@ describe('Collateral auction test', () => {
         await weth.transfer(user2.address, parseEther("1000").toString());
 
         const Router = await ethers.getContractFactory('WQRouter');
-        router = await upgrades.deployProxy(Router, [priceOracle.address, NULL_ADDRESS, STABILITY_FEE, ANNUAL_INTEREST_RATE]);
+        router = await upgrades.deployProxy(Router, [priceOracle.address, NULL_ADDRESS, STABILITY_FEE, ANNUAL_INTEREST_RATE], { kind: 'transparent' });
 
         const Auction = await ethers.getContractFactory('WQCollateralAuction');
         auction = await upgrades.deployProxy(
@@ -91,7 +91,8 @@ describe('Collateral auction test', () => {
                 parseEther("1"),
                 COLLATERAL_AUCTION_DURATION,
                 PRICE_INDEX_STEP
-            ]
+            ],
+            { kind: 'transparent' }
         );
         await router.addToken(weth.address, auction.address, SYMBOL);
 
@@ -484,7 +485,8 @@ describe('Collateral auction test', () => {
                 auction.connect(user2).startAuction(ETH_PRICE, 1, parseEther("0.500000000000000001"))
             ).revertedWith("WQAuction: Amount of tokens purchased is greater than the amount liquidated");
         });
-        it("STEP2: Start auction when priceIndex greater than 3/2 of price", async () => {
+        it("STEP2: Start auction when price:(oldPrice/ratio) less than liquidationThreshold", async () => {
+            await oracleSetPrice(parseEther("19"), SYMBOL);
             await expect(
                 auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"))
             ).revertedWith("WQAuction: This lot is not available for sale");
