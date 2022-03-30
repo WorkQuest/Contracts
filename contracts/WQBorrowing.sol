@@ -113,11 +113,13 @@ contract WQBorrowing is
             loan.collateral == 0,
             'WQBorrowing: You are not refunded credit'
         );
-        loan.symbol = symbol;
+
         loan.collateral = collateralAmount;
         loan.borrowedAt = block.timestamp;
+        loan.duration = duration;
         loan.apy = apys[duration];
         loan.fund = funds[fundIndex];
+        loan.symbol = symbol;
         loan.credit =
             (collateralAmount * oracle.getTokenPriceUSD(symbol) * 2) /
             3e18;
