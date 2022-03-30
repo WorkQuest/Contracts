@@ -5,14 +5,15 @@ require('@nomiclabs/hardhat-waffle')
 const { parseEther } = require('ethers/lib/utils')
 
 const STABILITY_FEE = parseEther("0.1"); //10%
-const VALID_TIME = 1000;
+const ANNUAL_INTEREST_RATE = parseEther("0.0");
+const VALID_TIME = 600;
 const SYMBOL = "ETH";
 const ETH_PRICE = parseEther("30"); // 1 wETH token = 30 WUSD
 const WQT_PRICE = parseEther("0.3");
 const LOWER_ETH_PRICE = parseEther("20");
 const LIQUIDATE_TRESHOLD = parseEther("1.2"); // 120%
 const START_PRICE_FACTOR = parseEther("1.2");
-const AUCTION_DURATION = "300"; // 5 min
+const AUCTION_DURATION = "1800";
 const PRICE_INDEX_STEP = parseEther("1"); // 1 WUSD
 const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
 const UPPER_BOUND_FACTOR = parseEther("1.05");
@@ -40,7 +41,14 @@ describe('Debt auction test', () => {
     let user2;
     let service;
 
+    async function getCurrentTimestamp() {
+        let block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+        return block.timestamp;
+    }
+
     async function oracleSetPrice(price, symbol) {
+        await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getCurrentTimestamp() + VALID_TIME / 2]);
+        await hre.ethers.provider.send("evm_mine", []);
         nonce += 1;
         let message = web3.utils.soliditySha3(
             { t: 'uint256', v: nonce },
@@ -50,19 +58,18 @@ describe('Debt auction test', () => {
         let signature = await web3.eth.sign(message, service.address);
         let sig = ethers.utils.splitSignature(signature);
         await priceOracle.setTokenPriceUSD(nonce, price, sig.v, sig.r, sig.s, symbol);
-        await hre.ethers.provider.send("evm_mine", []);
-    }
-
-    async function getCurrentTimestamp() {
-        let block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
-        return block.timestamp;
     }
 
     beforeEach(async () => {
         [owner, user1, user2, service] = await ethers.getSigners();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
-        priceOracle = await upgrades.deployProxy(PriceOracle, [service.address, VALID_TIME]);
+        priceOracle = await upgrades.deployProxy(PriceOracle,
+            [
+                service.address,
+                VALID_TIME
+            ],
+            { kind: 'transparent' });
         await priceOracle.deployed();
         await priceOracle.updateToken(1, SYMBOL);
         await priceOracle.updateToken(1, "WQT");
@@ -79,7 +86,14 @@ describe('Debt auction test', () => {
         wqt = await WQT.deploy();
 
         const Router = await ethers.getContractFactory('WQRouter');
-        router = await upgrades.deployProxy(Router, [priceOracle.address, wqt.address, STABILITY_FEE]);
+        router = await upgrades.deployProxy(Router,
+            [
+                priceOracle.address,
+                wqt.address,
+                STABILITY_FEE,
+                ANNUAL_INTEREST_RATE
+            ],
+            { kind: 'transparent' });
         // Transfer wqt tokens
         await wqt.transfer(router.address, parseEther("10000"));
 
@@ -95,14 +109,10 @@ describe('Debt auction test', () => {
                 parseEther("1"),
                 AUCTION_DURATION,
                 PRICE_INDEX_STEP
-            ]);
-        await collateralAuction.setLiquidateTreshold(LIQUIDATE_TRESHOLD);
-        await collateralAuction.setUpperBoundCost(START_PRICE_FACTOR);
-        await collateralAuction.setLowerBoundCost(parseEther("1"));
-        await collateralAuction.setAuctionDuration(AUCTION_DURATION);
-        await collateralAuction.setPriceIndexStep(PRICE_INDEX_STEP);
+            ],
+            { kind: 'transparent' });
 
-        await router.addToken(weth.address, collateralAuction.address);
+        await router.addToken(weth.address, collateralAuction.address, SYMBOL);
 
         const DebtAuction = await ethers.getContractFactory('WQDebtAuction');
         debtAuction = await upgrades.deployProxy(
@@ -115,7 +125,8 @@ describe('Debt auction test', () => {
                 UPPER_BOUND_FACTOR,
                 LOWER_BOUND_FACTOR,
                 MAX_LOT_AMOUNT_FACTOR
-            ]);
+            ],
+            { kind: 'transparent' });
         await router.setDebtAuction(debtAuction.address);
     });
 
@@ -154,7 +165,7 @@ describe('Debt auction test', () => {
                 }
             );
             await weth.connect(user1).approve(router.address, parseEther("1"));
-            await router.connect(user1).produceWUSD(weth.address, parseEther("1"));
+            await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
         });
         it('STEP1: Start auction: success', async () => {
@@ -200,7 +211,7 @@ describe('Debt auction test', () => {
                 }
             );
             await weth.connect(user1).approve(router.address, parseEther("1"));
-            await router.connect(user1).produceWUSD(weth.address, parseEther("1"));
+            await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
         });
         it('STEP1: Buy lot: success', async () => {
@@ -209,7 +220,9 @@ describe('Debt auction test', () => {
             expect(lot.status).equal(LotStatus.Auctioned);
             expect(await debtAuction.amounts(0)).equal(parseEther("6"));
 
-            await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot.endTime)]);
+            await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot.endTime) - 601]);
+            await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
+            await oracleSetPrice(WQT_PRICE, "WQT");
 
             let balanceWUSDBefore = await ethers.provider.getBalance(user2.address);
             let balanceWQTBefore = await wqt.balanceOf(user2.address);
@@ -218,7 +231,7 @@ describe('Debt auction test', () => {
             let balanceWQTAfter = await wqt.balanceOf(user2.address);
 
             expect(((balanceWUSDBefore - balanceWUSDAfter) / 1e18).toFixed(2)).equal("6.00");
-            expect(((balanceWQTAfter - balanceWQTBefore) / 1e18).toFixed(2)).equal("21.00");
+            expect(((balanceWQTAfter - balanceWQTBefore) / 1e18).toFixed(2)).equal("17.68");
             await expect(
                 debtAuction.getCurrentLotCost(parseEther("6"))
             ).revertedWith("WQAuction: This lot is not auctioned");
@@ -271,7 +284,7 @@ describe('Debt auction test', () => {
                 }
             );
             await weth.connect(user1).approve(router.address, parseEther("1"));
-            await router.connect(user1).produceWUSD(weth.address, parseEther("1"));
+            await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
         });
         it('STEP1: Cancel lot: success', async () => {

@@ -47,7 +47,7 @@ describe('Surplus auction test', () => {
     }
 
     async function oracleSetPrice(price, symbol) {
-        await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getCurrentTimestamp() + VALID_TIME]);
+        await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getCurrentTimestamp() + VALID_TIME / 2]);
         await hre.ethers.provider.send("evm_mine", []);
         nonce += 1;
         let message = web3.utils.soliditySha3(
@@ -224,11 +224,11 @@ describe('Surplus auction test', () => {
             expect(lot.status).equal(LotStatus.Auctioned);
             expect(await surplusAuction.amounts(0)).equal(parseEther("6"));
 
-            await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot.endTime - 601)]);
+            await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot.endTime - 901)]);
             await ethers.provider.send("evm_mine", []);
-            
+
             await oracleSetPrice(UPPER_ETH_PRICE, SYMBOL);
-            await oracleSetPrice(UPPER_ETH_PRICE, "WQT");
+            await oracleSetPrice(WQT_PRICE, "WQT");
 
             let balanceWUSDBefore = await ethers.provider.getBalance(user2.address);
             let balanceWQTBefore = await wqt.balanceOf(user2.address);
@@ -237,7 +237,7 @@ describe('Surplus auction test', () => {
             let balanceWQTAfter = await wqt.balanceOf(user2.address);
 
             expect(((balanceWUSDAfter - balanceWUSDBefore) / 1e18).toFixed(2)).equal("6.00");
-            expect(((balanceWQTBefore - balanceWQTAfter) / 1e18).toFixed(2)).equal("19.00");
+            expect(((balanceWQTBefore - balanceWQTAfter) / 1e18).toFixed(2)).equal("19.83");
             await expect(
                 surplusAuction.getCurrentLotCost(parseEther("6"))
             ).revertedWith("WQAuction: This lot is not auctioned");
@@ -268,8 +268,8 @@ describe('Surplus auction test', () => {
             ).revertedWith("WQAuction: Auction of this lot is temporarily suspended");
         });
         it('STEP5: Buy lot when cost is greater that maximum: fail', async () => {
-            await oracleSetPrice(UPPER_ETH_PRICE, "WQT");
             await surplusAuction.startAuction(parseEther("6"));
+            await oracleSetPrice(WQT_PRICE, "WQT");
             await expect(
                 surplusAuction.connect(user2).buyLot(parseEther("6"), parseEther("18"))
             ).revertedWith("WQAuction: Current cost is greater maximum");
