@@ -21,7 +21,7 @@ describe("Lending test", () => {
     beforeEach(async () => {
         accounts = await ethers.getSigners();
         const Lending = await hre.ethers.getContractFactory("WQLending");
-        lending = await upgrades.deployProxy(Lending, [LENDING_APY], { initializer: 'initialize', kind: 'uups' });
+        lending = await upgrades.deployProxy(Lending, [LENDING_APY], { initializer: 'initialize', kind: 'transparent' });
         await lending.grantRole(await lending.BORROWER_ROLE(), accounts[2].address);
     });
 

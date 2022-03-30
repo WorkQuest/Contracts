@@ -22,7 +22,7 @@ describe('Price Oracle Test', () => {
         [owner, service, user, not_service] = await ethers.getSigners();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
-        price_oracle = await upgrades.deployProxy(PriceOracle, [service.address, VALID_TIME]);
+        price_oracle = await upgrades.deployProxy(PriceOracle, [service.address, VALID_TIME], { kind: 'transparent' });
         await price_oracle.deployed();
         await price_oracle.updateToken(1, SYMBOL);
     });

@@ -259,6 +259,7 @@ describe('Router test', () => {
             ).to.be.revertedWith("WQRouter: Insufficient value");
         });
         it('STEP3: Should reverted when lot is auctioned', async () => {
+            await oracleSetPrice(parseEther("21"), SYMBOL);
             await auction.startAuction(ETH_PRICE, 0, parseEther("0.1"));
             await hre.ethers.provider.send("evm_mine", []);
             await expect(
