@@ -43,7 +43,7 @@ describe("1. Staking tests", () => {
     const redeploy = async () => {
         accounts = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory('WQToken');
-        token = await upgrades.deployProxy(WQToken, [parseEther("100000000000000")], { initializer: 'initialize' });
+        token = await upgrades.deployProxy(WQToken, [parseEther("100000000000000")], { initializer: 'initialize', kind: 'transparent' });
         let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
         await token.transfer(accounts[1].address, parseEther("500000"));
         await token.transfer(accounts[2].address, parseEther("500000"));
@@ -52,12 +52,24 @@ describe("1. Staking tests", () => {
         validStartTime = getValidStakingTimestamp(await getTimestamp());
         await hre.ethers.provider.send("evm_setNextBlockTimestamp", [validStartTime]);
 
-        staking = await upgrades.deployProxy(Staking, [validStartTime, rewardTotal, distributionTime, stakePeriod, claimPeriod, minStake, maxStake, token.address, token.address], { initializer: 'initialize' });
+        staking = await upgrades.deployProxy(Staking,
+            [
+                validStartTime,
+                rewardTotal,
+                distributionTime,
+                stakePeriod,
+                claimPeriod,
+                minStake,
+                maxStake,
+                token.address,
+                token.address
+            ],
+            { initializer: 'initialize', kind: 'transparent' });
         await token.transfer(staking.address, parseEther("40000000000000"));
     }
 
     beforeEach(async () => {
-      await redeploy()
+        await redeploy()
     });
 
     describe("Staking deploy", () => {

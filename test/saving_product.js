@@ -21,7 +21,7 @@ describe("Saving Product test", () => {
     beforeEach(async () => {
         accounts = await ethers.getSigners();
         const Saving = await hre.ethers.getContractFactory("WQSavingProduct");
-        saving = await upgrades.deployProxy(Saving, [], { initializer: 'initialize', kind: 'uups' });
+        saving = await upgrades.deployProxy(Saving, [], { initializer: 'initialize', kind: 'transparent' });
         await saving.grantRole(await saving.BORROWER_ROLE(), accounts[2].address);
         await saving.setApy(7, parseEther("0.0531"));
         await saving.setApy(14, parseEther("0.0548"));

@@ -39,7 +39,7 @@ describe('Governance token test', () => {
         [owner, userOne, userTwo, userThree, userFour] = await ethers.getSigners();
 
         const WQToken = await ethers.getContractFactory('WQToken');
-        token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], { initializer: 'initialize' });
+        token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], { initializer: 'initialize', kind: 'transparent' });
 
         const DAOBallot = await ethers.getContractFactory('WQDAOVoting');
         vote = await upgrades.deployProxy(DAOBallot,
@@ -49,7 +49,7 @@ describe('Governance token test', () => {
                 minimumQuorum,
                 votingPeriod
             ],
-            { initializer: 'initialize' });
+            { initializer: 'initialize', kind: 'transparent' });
         await vote.deployed();
 
         await token.transfer(userOne.address, proposalThreshold);

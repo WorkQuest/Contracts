@@ -45,12 +45,12 @@ describe("2. Staking NATIVE coin tests", () => {
     const redeploy = async () => {
         accounts = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory('WQToken');
-        token = await upgrades.deployProxy(WQToken, [parseEther("25000000000000")], { initializer: 'initialize' });
+        token = await upgrades.deployProxy(WQToken, [parseEther("25000000000000")], { initializer: 'initialize', kind: 'transparent' });
         // let bl_num = await hre.ethers.provider.send("eth_blockNumber", []);
         const Staking = await ethers.getContractFactory("WQStakingNative");
         validStartTime = getValidStakingTimestamp(await getTimestamp());
         await hre.ethers.provider.send("evm_setNextBlockTimestamp", [validStartTime]);
-        staking = await upgrades.deployProxy(Staking, [validStartTime, rewardTotal, distributionTime, stakePeriod, claimPeriod, minStake, maxStake], { initializer: 'initialize' });
+        staking = await upgrades.deployProxy(Staking, [validStartTime, rewardTotal, distributionTime, stakePeriod, claimPeriod, minStake, maxStake], { initializer: 'initialize', kind: 'transparent' });
         await token.transfer(staking.address, parseEther("2500000000000"));
     }
 
