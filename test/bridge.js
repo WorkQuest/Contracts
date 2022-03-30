@@ -52,9 +52,8 @@ describe("Bridge test", () => {
         await bridge_pool.deployed();
 
         const Bridge = await ethers.getContractFactory("WQBridge");
-        bridge = await upgrades.deployProxy(Bridge, [chainWQ, bridge_pool.address], { initializer: 'initialize', kind: 'transparent' });
+        bridge = await upgrades.deployProxy(Bridge, [chainWQ, bridge_pool.address, validator.address], { initializer: 'initialize', kind: 'transparent' });
         await bridge.deployed();
-        await bridge.grantRole(await bridge.VALIDATOR_ROLE(), validator.address);
         await bridge.updateChain(chainETH, true);
         await bridge.updateToken(token.address, true, false, false, symbol);
         await bridge.updateToken(lockable_token.address, true, false, true, lockable_symbol);
