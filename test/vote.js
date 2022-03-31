@@ -82,7 +82,7 @@ describe('Governance token test', () => {
                 )
             })
             it('votePowerOf', async () => {
-                expect(await token.getVotes(owner.address)).to.equal(0)
+                expect((await token.getVotes([owner.address]))[0]).to.equal(0)
             })
         })
         describe('Allowance', () => {
@@ -156,7 +156,7 @@ describe('Governance token test', () => {
         describe('Delegate', () => {
             it('Delegate to user', async () => {
                 await token.delegate(userFour.address, tenMln)
-                expect(await token.getVotes(userFour.address)).to.equal(
+                expect((await token.getVotes([userFour.address]))[0]).to.equal(
                     tenMln
                 )
                 expect(await token.delegates(owner.address)).to.equal(
@@ -169,7 +169,7 @@ describe('Governance token test', () => {
                 await token.delegate(userTwo.address, tenMln);
                 await token.undelegate();
                 let votePowerOfUserTwo = tenMln.sub(oneMln);
-                expect(await token.getVotes(userTwo.address)).to.equal(0);
+                expect((await token.getVotes([userTwo.address]))[0]).to.equal(0);
                 expect(await token.freezed(owner.address)).to.equal(0);
             });
             it('Should properly change votepower and balance after redelegating', async () => {
@@ -180,8 +180,8 @@ describe('Governance token test', () => {
                 await token.delegate(userTwo.address, tenMln);
                 expect(await token.delegates(owner.address)).to.equal(userTwo.address);
                 expect(await token.freezed(owner.address)).to.equal(tenMln);
-                expect(await token.getVotes(userThree.address)).to.equal(0);
-                expect(await token.getVotes(userTwo.address)).to.equal(tenMln);
+                expect((await token.getVotes([userThree.address]))[0]).to.equal(0);
+                expect((await token.getVotes([userTwo.address]))[0]).to.equal(tenMln);
             });
             it('Checkpoints', async () => {
                 await token.delegate(userOne.address, tenMln);
