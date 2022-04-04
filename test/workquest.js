@@ -21,7 +21,7 @@ const acces_denied_err = 'WorkQuest: Access denied or invalid status';
 const WORKQUEST_FEE = '10000000000000000';
 const PENSION_LOCK_TIME = '60';
 const PENSION_DEFAULT_FEE = '10000000000000000';
-const PRICE_ORACLE_VALID_BLOCKS = "100";
+const VALID_TIME = "600";
 const PRICE = parseEther("228");
 const SYMBOL = "WQT";
 const twentyBucksInWQT = (20 / 228).toFixed(18); // TODO 228 is fixed value that oracle returns now
@@ -83,11 +83,11 @@ describe('Work Quest test', () => {
         ] = await ethers.getSigners();
 
         const PensionFund = await hre.ethers.getContractFactory('WQPensionFund');
-        const pension_fund = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE], { initializer: 'initialize', kind: 'uups' });
+        const pension_fund = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE], { initializer: 'initialize', kind: 'transparent' });
         await pension_fund.deployed();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
-        priceOracle = await upgrades.deployProxy(PriceOracle, [validator.address, PRICE_ORACLE_VALID_BLOCKS], { initializer: 'initialize', kind: 'uups' });
+        priceOracle = await upgrades.deployProxy(PriceOracle, [validator.address, VALID_TIME], { initializer: 'initialize', kind: 'transparent' });
         await priceOracle.deployed();
         await priceOracle.updateToken(1, SYMBOL);
         let nonce = "1";
@@ -101,15 +101,15 @@ describe('Work Quest test', () => {
         await priceOracle.connect(worker).setTokenPriceUSD(nonce, PRICE, sig.v, sig.r, sig.s, SYMBOL);
 
         const WQToken = await ethers.getContractFactory('WQToken');
-        token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], { initializer: 'initialize', kind: 'uups' });
+        token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], { initializer: 'initialize', kind: 'transparent' });
         // token = await WQToken.deploy();
         await token.deployed();
 
         const WQReferralContract = await hre.ethers.getContractFactory('WQReferral');
         WQReferral = await upgrades.deployProxy(
             WQReferralContract,
-            [token.address, priceOracle.address, validator.address, twentyWQT],
-            { initializer: 'initialize', kind: 'uups' }
+            [token.address, priceOracle.address, validator.address, twentyWQT, parseEther("1000")],
+            { initializer: 'initialize', kind: 'transparent' }
         )
         await WQReferral.deployed();
         await WQReferral.grantRole(await WQReferral.SERVICE_ROLE(), validator.address);
@@ -123,12 +123,12 @@ describe('Work Quest test', () => {
                 feeReceiver.address,
                 pension_fund.address,
                 WQReferral.address,
-            ], { initializer: 'initialize', kind: 'uups' })
+            ], { initializer: 'initialize', kind: 'transparent' });
         await work_quest_factory.deployed();
 
         await work_quest_factory.updateArbiter(arbiter.address, true);
 
-        await work_quest_factory.connect(employer).newWorkQuest(job_hash, cost, deadline);
+        await work_quest_factory.connect(employer).newWorkQuest(job_hash, cost, deadline, 1, { value: cost_comission });
 
         let work_quest_address = (await work_quest_factory.getWorkQuests(employer.address))[0];
         work_quest = await hre.ethers.getContractAt('WorkQuest', work_quest_address);
@@ -193,29 +193,29 @@ describe('Work Quest test', () => {
             expect(info[3]).to.be.equal(employer.address)
             expect(info[4]).to.be.equal(nullstr)
             expect(info[5]).to.be.equal(arbiter.address)
-            expect(info[6]).to.be.equal(JobStatus.New)
+            expect(info[6]).to.be.equal(JobStatus.Published)
             expect(info[7]).to.be.equal(deadline)
         })
     })
 
     describe('Publish job', () => {
         it('Publish job: success', async () => {
-            await employer.sendTransaction({
-                to: work_quest.address,
-                value: cost_comission,
-            })
+            // await employer.sendTransaction({
+            //     to: work_quest.address,
+            //     value: cost_comission,
+            // })
 
             let info = await work_quest.connect(employer).getInfo()
             expect(info[6]).to.be.equal(JobStatus.Published)
         });
 
         it('Publish job from other statuses: fail', async () => {
-            await employer.sendTransaction({
-                to: work_quest.address,
-                value: cost_comission,
-            });
+            // await employer.sendTransaction({
+            //     to: work_quest.address,
+            //     value: cost_comission,
+            // });
             for (let val of call_flow.slice(setStatus.WaitWorker, setStatus.Finished + 1)) {
-                await val.func(...val.args)
+                await (val.func)(...val.args);
                 await expect(
                     employer.sendTransaction({
                         to: work_quest.address,
@@ -229,12 +229,14 @@ describe('Work Quest test', () => {
     describe('Assign worker to job', () => {
         it('Assigning job: success', async () => {
             //Assign job
-            for (let val of call_flow.slice(
-                setStatus.Published,
-                setStatus.WaitWorker + 1
-            )) {
-                await val.func(...val.args)
-            }
+            // for (let val of call_flow.slice(
+            //     setStatus.Published,
+            //     setStatus.WaitWorker + 1
+            // )) {
+            //     await val.func(...val.args)
+            // }
+
+            await call_flow[setStatus.WaitWorker].func(...call_flow[setStatus.WaitWorker].args);
 
             let info = await work_quest.connect(employer).getInfo()
             expect(info[0]).to.be.equal(job_hash)
@@ -247,9 +249,9 @@ describe('Work Quest test', () => {
 
         it('Assigning worker to job from not employer: fail', async () => {
             //Publish job
-            await call_flow[setStatus.Published].func(
-                ...call_flow[setStatus.Published].args
-            )
+            // await call_flow[setStatus.Published].func(
+            //     ...call_flow[setStatus.Published].args
+            // )
             try {
                 await work_quest
                     .connect(worker)
@@ -262,9 +264,9 @@ describe('Work Quest test', () => {
 
         it('Assigning invalid worker: fail', async () => {
             //Publish job
-            await call_flow[setStatus.Published].func(
-                ...call_flow[setStatus.Published].args
-            )
+            // await call_flow[setStatus.Published].func(
+            //     ...call_flow[setStatus.Published].args
+            // )
             try {
                 await work_quest.connect(employer).assignJob(nullstr)
                 throw new Error('Not reverted')
@@ -274,26 +276,26 @@ describe('Work Quest test', () => {
         })
 
         it('Assign job from non Public statuses: fail', async () => {
-            try {
-                await work_quest
-                    .connect(employer)
-                    .assignJob(...call_flow[setStatus.WaitWorker].args)
-                throw new Error('Not reverted')
-            } catch (e) {
-                await expect(e.message).to.include(acces_denied_err)
-            }
+            // try {
+            //     await work_quest
+            //         .connect(employer)
+            //         .assignJob(...call_flow[setStatus.WaitWorker].args);
+            //     throw new Error('Not reverted');
+            // } catch (e) {
+            //     await expect(e.message).to.include(acces_denied_err)
+            // }
 
-            await call_flow[setStatus.Published].func(
-                ...call_flow[setStatus.Published].args
-            )
+            // await call_flow[setStatus.Published].func(
+            //     ...call_flow[setStatus.Published].args
+            // )
 
-            for (let val of call_flow.slice(setStatus.WaitWorker)) {
-                await val.func(...val.args)
+            await work_quest.connect(employer).assignJob(...call_flow[setStatus.WaitWorker].args);
+
+            for (let val of call_flow.slice(setStatus.WaitJobStart)) {
+                await val.func(...val.args);
                 try {
-                    await work_quest
-                        .connect(employer)
-                        .assignJob(...call_flow[setStatus.WaitWorker].args)
-                    throw new Error('Not reverted')
+                    await work_quest.connect(employer).assignJob(...call_flow[setStatus.WaitWorker].args);
+                    throw new Error('Not reverted');
                 } catch (e) {
                     await expect(e.message).to.include(acces_denied_err)
                 }
@@ -304,7 +306,7 @@ describe('Work Quest test', () => {
     describe('Worker accepted job', () => {
         it('Worker accepted job from status WaitWorker: success', async () => {
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobStart + 1
             )) {
                 await val.func(...val.args)
@@ -320,17 +322,17 @@ describe('Work Quest test', () => {
 
         it('Worker accepted job from not WaitWorker status: fail', async () => {
             // New status
-            try {
-                await work_quest.connect(worker).acceptJob()
-                throw new Error('Not reverted')
-            } catch (e) {
-                await expect(e.message).to.include(acces_denied_err)
-            }
+            // try {
+            //     await work_quest.connect(worker).acceptJob()
+            //     throw new Error('Not reverted')
+            // } catch (e) {
+            //     await expect(e.message).to.include(acces_denied_err)
+            // }
 
-            // Published
-            await call_flow[setStatus.Published].func(
-                ...call_flow[setStatus.Published].args
-            )
+            // // Published
+            // await call_flow[setStatus.Published].func(
+            //     ...call_flow[setStatus.Published].args
+            // )
             try {
                 await work_quest.connect(worker).acceptJob()
                 throw new Error('Not reverted')
@@ -341,15 +343,15 @@ describe('Work Quest test', () => {
             await call_flow[setStatus.WaitWorker].func(
                 ...call_flow[setStatus.WaitWorker].args
             )
-            await work_quest.connect(worker).acceptJob()
+            await work_quest.connect(worker).acceptJob();
 
             for (let val of call_flow.slice(setStatus.InProgress)) {
                 await val.func(...val.args)
                 try {
-                    await work_quest.connect(worker).acceptJob()
-                    throw new Error('Not reverted')
+                    await work_quest.connect(worker).acceptJob();
+                    throw new Error('Not reverted');
                 } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
+                    await expect(e.message).to.include(acces_denied_err);
                 }
             }
         })
@@ -359,7 +361,7 @@ describe('Work Quest test', () => {
         it('Job status set InProgress from WaitJobStart: success', async () => {
             //Set InProgress job
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.InProgress + 1
             )) {
                 await val.func(...val.args)
@@ -377,26 +379,18 @@ describe('Work Quest test', () => {
 
         it('Job status set InProgress by not worker: fail', async () => {
             //Assign job
-            for (let val of call_flow.slice(
-                setStatus.Published,
-                setStatus.WaitJobStart + 1
-            )) {
-                await val.func(...val.args)
+            for (let val of call_flow.slice(setStatus.WaitWorker, setStatus.WaitJobStart + 1)) {
+                await (val.func)(...val.args);
             }
             try {
-                await work_quest
-                    .connect(employer)
-                    .processJob(...call_flow[setStatus.InProgress].args)
-                throw new Error('Not reverted')
+                await work_quest.connect(employer).processJob(...call_flow[setStatus.InProgress].args);
+                throw new Error('Not reverted');
             } catch (e) {
                 await expect(e.message).to.include(acces_denied_err)
             }
         })
 
         it('Job status set InProgress from non WaitWorker: fail', async () => {
-            await call_flow[setStatus.Published].func(
-                ...call_flow[setStatus.Published].args
-            )
             try {
                 await call_flow[setStatus.InProgress].func(
                     ...call_flow[setStatus.InProgress].args
@@ -430,7 +424,7 @@ describe('Work Quest test', () => {
     describe('WaitJobVerify job', () => {
         it('Set verification status: success', async () => {
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobVerify + 1
             )) {
                 await val.func(...val.args)
@@ -449,7 +443,7 @@ describe('Work Quest test', () => {
         it('Job status set Verificatiion by not worker: fail', async () => {
             //Process job
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.InProgress + 1
             )) {
                 await val.func(...val.args)
@@ -465,7 +459,7 @@ describe('Work Quest test', () => {
         it('Job status set Verificatiion from non InProgress status: fail', async () => {
             //Assign job
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobStart + 1
             )) {
                 await val.func(...val.args)
@@ -494,7 +488,7 @@ describe('Work Quest test', () => {
     describe('Arbitration job', () => {
         it('Set job to arbitration: success', async () => {
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.Arbitration + 1
             )) {
                 await val.func(...val.args)
@@ -513,7 +507,7 @@ describe('Work Quest test', () => {
         it('Set job to arbitration from not WaitJobVerify status by employer: fail', async () => {
             //from Publish to Process
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.InProgress + 1
             )) {
                 await val.func(...val.args)
@@ -542,7 +536,7 @@ describe('Work Quest test', () => {
     describe('Rework job', () => {
         it('Set job to rework: success', async () => {
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.Arbitration + 1
             )) {
                 await val.func(...val.args)
@@ -562,7 +556,7 @@ describe('Work Quest test', () => {
         it('Rework from not Arbitration status: fail', async () => {
             //from Publish to InProgress
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobVerify + 1
             )) {
                 await val.func(...val.args)
@@ -588,7 +582,7 @@ describe('Work Quest test', () => {
         it('Decrease cost of job: success', async () => {
             //Decrease cost job
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.Arbitration + 1
             )) {
                 await val.func(...val.args)
@@ -608,7 +602,7 @@ describe('Work Quest test', () => {
 
         it('Decrease cost from not Arbitration status: fail', async () => {
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.Arbitration
             )) {
                 await val.func(...val.args)
@@ -642,7 +636,7 @@ describe('Work Quest test', () => {
         it('Accept job by employer: success', async () => {
             //to WaitJobVerify
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobVerify + 1
             )) {
                 await val.func(...val.args)
@@ -679,7 +673,7 @@ describe('Work Quest test', () => {
             let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address);
 
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.Finished + 1
             )) {
                 await val.func(...val.args)
@@ -704,7 +698,7 @@ describe('Work Quest test', () => {
         it('Accept job result from not WaitJobVerify status by employer: fail', async () => {
             //from Publish to InProgress
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.InProgress + 1
             )) {
                 await val.func(...val.args)
@@ -731,7 +725,7 @@ describe('Work Quest test', () => {
 
         it('Accept job from not Arbitration status by arbiter: fail', async () => {
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobVerify + 1
             )) {
                 await val.func(...val.args)
@@ -758,7 +752,7 @@ describe('Work Quest test', () => {
         it('Reject job by arbiter: success', async () => {
             //set WaitJobVerify
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobVerify + 1
             )) {
                 await val.func(...val.args)
@@ -790,7 +784,7 @@ describe('Work Quest test', () => {
         it('Reject work from non Arbitration status: fail', async () => {
             //from Publish to DecreasedCost
             for (let val of call_flow.slice(
-                setStatus.Published,
+                setStatus.WaitWorker,
                 setStatus.WaitJobVerify + 1
             )) {
                 await val.func(...val.args)
@@ -814,82 +808,82 @@ describe('Work Quest test', () => {
         })
     })
 
-    describe('Testing referal contract', () => {
-        let sig;
-        beforeEach(async () => {
-            message = await web3.utils.soliditySha3(
-                { t: 'address', v: affiliat.address },
-                { t: 'address', v: worker.address });
-            let signature = await web3.eth.sign(message, validator.address);
-            sig = ethers.utils.splitSignature(signature)
-        });
-        it('TEST 1: Add affiliat for worker, revert 1: if affiliat is zero', async () => {
-            await expect(
-                WQReferral.addAffiliat(sig.v, sig.r, sig.s, nullstr)
-            ).to.be.revertedWith(
-                'WQReferral: affiliat cannot be zero address'
-            )
-        });
+    // describe('Testing referal contract', () => {
+    // let sig;
+    // beforeEach(async () => {
+    //     message = await web3.utils.soliditySha3(
+    //         { t: 'address', v: affiliat.address },
+    //         { t: 'address', v: worker.address });
+    //     let signature = await web3.eth.sign(message, validator.address);
+    //     sig = ethers.utils.splitSignature(signature)
+    // });
+    // it('TEST 1: Add affiliat for worker, revert 1: if affiliat is zero', async () => {
+    //     await expect(
+    //         WQReferral.addAffiliat(sig.v, sig.r, sig.s, nullstr)
+    //     ).to.be.revertedWith(
+    //         'WQReferral: affiliat cannot be zero address'
+    //     )
+    // });
 
-        it('TEST 2: Add affiliat for worker, revert 2: if affiliat is msg.sender', async () => {
-            await expect(
-                WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, worker.address)
-            ).to.be.revertedWith(
-                'WQReferral: affiliat cannot be sender address'
-            )
-        });
+    // it('TEST 2: Add affiliat for worker, revert 2: if affiliat is msg.sender', async () => {
+    //     await expect(
+    //         WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, worker.address)
+    //     ).to.be.revertedWith(
+    //         'WQReferral: affiliat cannot be sender address'
+    //     )
+    // });
 
-        it('TEST 3: Add affiliat for worker, revert 3: if referal has got affiliat yet', async () => {
-            WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
-            await expect(
-                WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
-            ).to.be.revertedWith('WQReferral: Address is already registered')
-        });
+    // it('TEST 3: Add affiliat for worker, revert 3: if referal has got affiliat yet', async () => {
+    //     WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+    //     await expect(
+    //         WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+    //     ).to.be.revertedWith('WQReferral: Address is already registered')
+    // });
 
-        it('TEST 4: Add affiliat for worker, normal operation', async () => {
-            // TODO
-            await WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
-            expect(
-                await WQReferral.connect(worker).hasAffiliat(worker.address)
-            ).to.be.equals(true);
-            // expect( referal[0]).to.be.equal(affiliat.address);
-        });
+    // it('TEST 4: Add affiliat for worker, normal operation', async () => {
+    //     // TODO
+    //     await WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+    //     expect(
+    //         await WQReferral.connect(worker).hasAffiliat(worker.address)
+    //     ).to.be.equals(true);
+    //     // expect( referal[0]).to.be.equal(affiliat.address);
+    // });
 
-        // it('TEST 5: PayRefferal, revert 1: if Balance on contract is too low', async () => {
-        //     await expect(
-        //         WQReferral.connect(employer).payReferral(worker.address)
-        //     ).to.be.revertedWith('WQReferral: Balance on contract too low')
-        // });
+    // it('TEST 5: PayRefferal, revert 1: if Balance on contract is too low', async () => {
+    //     await expect(
+    //         WQReferral.connect(employer).payReferral(worker.address)
+    //     ).to.be.revertedWith('WQReferral: Balance on contract too low')
+    // });
 
-        // it('TEST 6: PayRefferal, revert 2: if Bonus is alresdy paid', async () => {
-        //     await token
-        //         .connect(work_quest_owner)
-        //         .transfer(WQReferral.address, oneK)
-        //     await WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
-        //     await WQReferral.connect(employer).payReferral(worker.address)
-        //     await expect(
-        //         WQReferral.connect(employer).payReferral(worker.address)
-        //     ).to.be.revertedWith('WQReferral: Bonus already paid')
-        // });
+    // it('TEST 6: PayRefferal, revert 2: if Bonus is alresdy paid', async () => {
+    //     await token
+    //         .connect(work_quest_owner)
+    //         .transfer(WQReferral.address, oneK)
+    //     await WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+    //     await WQReferral.connect(employer).payReferral(worker.address)
+    //     await expect(
+    //         WQReferral.connect(employer).payReferral(worker.address)
+    //     ).to.be.revertedWith('WQReferral: Bonus already paid')
+    // });
 
-        // it("TEST 7: PayRefferal, revert 3: if refferal hasn't got affiliat", async () => {
-        //     await token.connect(work_quest_owner).transfer(WQReferral.address, oneK)
-        //     await expect(
-        //         WQReferral.connect(employer).payReferral(worker.address)
-        //     ).to.be.revertedWith('WQReferral: Address is not registered')
-        // });
+    // it("TEST 7: PayRefferal, revert 3: if refferal hasn't got affiliat", async () => {
+    //     await token.connect(work_quest_owner).transfer(WQReferral.address, oneK)
+    //     await expect(
+    //         WQReferral.connect(employer).payReferral(worker.address)
+    //     ).to.be.revertedWith('WQReferral: Address is not registered')
+    // });
 
-        // it('TEST 8: PayRefferal, normal operation', async () => {
-        //     // TODO
-        //     let balanceOfRefferal = await token.balanceOf(WQReferral.address)
-        //     let balanceOfAffiliat = await token.balanceOf(affiliat.address)
-        //     // console.log(`balance of refferal is ${balanceOfRefferal}`)
-        //     // console.log(`balance of affiliat is ${balanceOfAffiliat}`)
+    // it('TEST 8: PayRefferal, normal operation', async () => {
+    //     // TODO
+    //     let balanceOfRefferal = await token.balanceOf(WQReferral.address)
+    //     let balanceOfAffiliat = await token.balanceOf(affiliat.address)
+    //     // console.log(`balance of refferal is ${balanceOfRefferal}`)
+    //     // console.log(`balance of affiliat is ${balanceOfAffiliat}`)
 
-        //     WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
-        //     expect(WQReferral.connect(employer).payReferral(worker.address))
-        //         .to.emit(WQReferral, 'PaidReferral')
-        //         .withArgs(worker.address, affiliat.address, referalBonus)
-        // });
-    })
+    //     WQReferral.connect(worker).addAffiliat(sig.v, sig.r, sig.s, affiliat.address)
+    //     expect(WQReferral.connect(employer).payReferral(worker.address))
+    //         .to.emit(WQReferral, 'PaidReferral')
+    //         .withArgs(worker.address, affiliat.address, referalBonus)
+    // });
+    // });
 })

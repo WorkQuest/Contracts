@@ -209,10 +209,7 @@ contract WQBorrowing is
             tokens[loan.symbol] != IERC20Upgradeable(address(0)),
             'WQBorrowing: Token is disabled'
         );
-        uint256 fee = (debtAmount *
-            (fixedRate +
-                ((loan.apy * (block.timestamp - loan.borrowedAt)) / YEAR))) /
-            1e18;
+        uint256 fee = _getCurrentFee(debtAmount, loan.apy, loan.borrowedAt);
 
         // Take native coins
         require(
@@ -222,10 +219,11 @@ contract WQBorrowing is
         loan.credit -= debtAmount;
         loan.collateral -= returnCollateral;
         // and send back to fund
-        uint256 rewards = (debtAmount *
-            ((loan.fund.apys(loan.duration) *
-                (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
-
+        uint256 rewards = _getCurrentFee(
+            debtAmount,
+            loan.fund.apys(loan.duration),
+            loan.borrowedAt
+        );
         loan.fund.refund{value: debtAmount + rewards}(
             debtAmount,
             block.timestamp - loan.borrowedAt,
@@ -237,6 +235,22 @@ contract WQBorrowing is
         if (msg.value > debtAmount + fee) {
             payable(buyer).sendValue(msg.value - debtAmount - fee);
         }
+    }
+
+    function getCurrentFee(address user) public view returns (uint256) {
+        BorrowInfo storage loan = borrowers[user];
+        return _getCurrentFee(loan.credit, loan.apy, loan.borrowedAt);
+    }
+
+    function _getCurrentFee(
+        uint256 amount,
+        uint256 apy,
+        uint256 borrowedAt
+    ) internal view returns (uint256) {
+        return
+            (amount *
+                (fixedRate + ((apy * (block.timestamp - borrowedAt)) / YEAR))) /
+            1e18;
     }
 
     function getFunds()

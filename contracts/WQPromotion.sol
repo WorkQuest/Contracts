@@ -33,8 +33,8 @@ contract WQPromotion is
     /// @notice Address of the fee receiver
     address payable public feeReceiver;
     WorkQuestFactory public factory;
-    IERC20MetadataUpgradeable public token;
-    WQPriceOracleInterface public oracle;
+    // IERC20MetadataUpgradeable public token;
+    // WQPriceOracleInterface public oracle;
     mapping(PaidTariff => mapping(uint256 => uint256)) public questTariff;
     mapping(PaidTariff => mapping(uint256 => uint256)) public usersTariff;
 
@@ -50,9 +50,9 @@ contract WQPromotion is
 
     function initialize(
         address payable _feeReceiver,
-        address _factory,
-        address _token,
-        address _oracle
+        address _factory
+        // address _token,
+        // address _oracle
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -63,8 +63,8 @@ contract WQPromotion is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         feeReceiver = _feeReceiver;
         factory = WorkQuestFactory(_factory);
-        token = IERC20MetadataUpgradeable(_token);
-        oracle = WQPriceOracleInterface(_oracle);
+        // token = IERC20MetadataUpgradeable(_token);
+        // oracle = WQPriceOracleInterface(_oracle);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -73,7 +73,7 @@ contract WQPromotion is
         onlyRole(UPGRADER_ROLE)
     {}
 
-    function promote(
+    function promoteQuest(
         address quest,
         PaidTariff tariff,
         uint256 period
@@ -121,17 +121,17 @@ contract WQPromotion is
      * @dev Set price oracle address
      * @param _oracle Address of price oracle
      */
-    function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
-        oracle = WQPriceOracleInterface(_oracle);
-    }
+    // function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
+    //     oracle = WQPriceOracleInterface(_oracle);
+    // }
 
     /**
      * @dev Set token address
      * @param _token Address of token
      */
-    function setToken(address _token) external onlyRole(ADMIN_ROLE) {
-        token = IERC20MetadataUpgradeable(_token);
-    }
+    // function setToken(address _token) external onlyRole(ADMIN_ROLE) {
+    //     token = IERC20MetadataUpgradeable(_token);
+    // }
 
     /**
      * @notice Set user tariff

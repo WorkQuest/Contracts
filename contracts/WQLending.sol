@@ -75,7 +75,7 @@ contract WQLending is
     {}
 
     /**
-     * @notice Contribute native coins to contract
+     * @notice Deposit native coins to contract
      */
     function deposit() external payable nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
@@ -85,6 +85,10 @@ contract WQLending is
         emit Received(msg.sender, msg.value);
     }
 
+    /**
+     * @notice Withraw coins from contract
+     * @param amount Amount of withrawal coins
+     */
     function withdraw(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
         require(amount <= wallet.amount, 'WQDeposit: Amount is invalid');
@@ -95,6 +99,10 @@ contract WQLending is
         emit Withdrew(msg.sender, amount);
     }
 
+    /**
+     * @notice
+     */
+
     function claim() external nonReentrant {
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
@@ -103,6 +111,9 @@ contract WQLending is
         emit Claimed(msg.sender, reward);
     }
 
+    /**
+     * @notice
+     */
     function getRewards(address user) public view returns (uint256) {
         DepositWallet storage wallet = wallets[user];
         return
@@ -112,14 +123,23 @@ contract WQLending is
             wallet.rewardDebt;
     }
 
+    /**
+     * @notice
+     */
     function balanceOf() external view override returns (uint256) {
         return contributed - borrowed;
     }
 
+    /**
+     * @notice
+     */
     function apys(uint256) external view override returns (uint256) {
         return apy;
     }
 
+    /**
+     * @notice
+     */
     function borrow(uint256 amount)
         external
         override
@@ -135,6 +155,9 @@ contract WQLending is
         emit Borrowed(msg.sender, amount);
     }
 
+    /**
+     * @notice
+     */
     function refund(
         uint256 amount,
         uint256 elapsedTime,
