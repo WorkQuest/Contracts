@@ -100,9 +100,8 @@ contract WQLending is
     }
 
     /**
-     * @notice
+     * @notice Claim rewards
      */
-
     function claim() external nonReentrant {
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
@@ -112,7 +111,8 @@ contract WQLending is
     }
 
     /**
-     * @notice
+     * @notice Get rewards amount of user
+     * @param user Address of user
      */
     function getRewards(address user) public view returns (uint256) {
         DepositWallet storage wallet = wallets[user];
@@ -124,21 +124,22 @@ contract WQLending is
     }
 
     /**
-     * @notice
+     * @notice Balance of funds on contract
      */
     function balanceOf() external view override returns (uint256) {
         return contributed - borrowed;
     }
 
     /**
-     * @notice
+     * @notice Get apy value
      */
     function apys(uint256) external view override returns (uint256) {
         return apy;
     }
 
     /**
-     * @notice
+     * @notice Borrow funds from contract. Service function.
+     * @param amount Amount of coins
      */
     function borrow(uint256 amount)
         external
@@ -156,7 +157,9 @@ contract WQLending is
     }
 
     /**
-     * @notice
+     * @notice Borrow funds to contract. Service function.
+     * @param amount Amount of coins
+     * @param elapsedTime Time elapsed since the beginning of the borrowing
      */
     function refund(
         uint256 amount,
@@ -172,5 +175,13 @@ contract WQLending is
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
         emit Refunded(msg.sender, amount);
+    }
+
+    /**
+     * @notice Set APY value
+     * @param _apy APY value
+     */
+    function setApy(uint256 _apy) external onlyRole(ADMIN_ROLE) {
+        apy = _apy;
     }
 }

@@ -49,7 +49,7 @@ describe("Borrowing test", () => {
     }
 
     beforeEach(async () => {
-        [deployer, depositor, borrower, validator] = await ethers.getSigners();
+        [deployer, depositor, borrower, validator, buyer] = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory("WQToken");
         wqt_token = await upgrades.deployProxy(WQToken, [WQT_SUPPLY], { initializer: 'initialize', kind: 'transparent' });
         await wqt_token.deployed();
@@ -131,6 +131,19 @@ describe("Borrowing test", () => {
             await borrowing.connect(borrower).refund(1, parseEther("200"), { value: parseEther("211.62") });
             let balanceAfter = await web3.eth.getBalance(borrower.address);
             let balanceEthAfter = await eth_token.balanceOf(borrower.address);
+            expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('1.00');
+            expect(((balanceBefore - balanceAfter) / 1e18).toFixed(2)).equal('211.62');
+        });
+
+        it('STEP 3: Buy collateral', async () => {
+            await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
+            let balanceBefore = await web3.eth.getBalance(buyer.address);
+            let balanceEthBefore = await eth_token.balanceOf(buyer.address);
+            await oracleSetPrice(parseEther("200"), "ETH");
+            await borrowing.connect(buyer).buyCollateral(1, borrower.address, parseEther("200"), { value: parseEther("211.63") });
+            let balanceAfter = await web3.eth.getBalance(buyer.address);
+            let balanceEthAfter = await eth_token.balanceOf(buyer.address);
             expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('1.00');
             expect(((balanceBefore - balanceAfter) / 1e18).toFixed(2)).equal('211.62');
         });

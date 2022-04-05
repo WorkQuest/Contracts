@@ -38,7 +38,14 @@ contract WQPromotion is
     mapping(PaidTariff => mapping(uint256 => uint256)) public questTariff;
     mapping(PaidTariff => mapping(uint256 => uint256)) public usersTariff;
 
-    event Promoted(
+    event PromotedQuest(
+        address user,
+        PaidTariff tariff,
+        uint256 period,
+        uint256 promotedAt
+    );
+
+    event PromotedUser(
         address user,
         PaidTariff tariff,
         uint256 period,
@@ -48,12 +55,12 @@ contract WQPromotion is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(
-        address payable _feeReceiver,
-        address _factory
+    function initialize(address payable _feeReceiver, address _factory)
+        external
         // address _token,
         // address _oracle
-    ) external initializer {
+        initializer
+    {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -88,7 +95,7 @@ contract WQPromotion is
             'WQPromotion: Invalid cost'
         );
         feeReceiver.sendValue(msg.value);
-        emit Promoted(quest, tariff, period, block.timestamp);
+        emit PromotedQuest(quest, tariff, period, block.timestamp);
     }
 
     function promoteUser(PaidTariff tariff, uint256 period)
@@ -102,7 +109,7 @@ contract WQPromotion is
             'WQPromotion: Invalid cost'
         );
         feeReceiver.sendValue(msg.value);
-        emit Promoted(msg.sender, tariff, period, block.timestamp);
+        emit PromotedUser(msg.sender, tariff, period, block.timestamp);
     }
 
     /**

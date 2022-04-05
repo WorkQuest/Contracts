@@ -152,10 +152,7 @@ contract WQBorrowing is
         nonReentrant
     {
         BorrowInfo storage loan = borrowers[msg.sender];
-        require(
-            loan.collateral > 0,
-            'WQBorrowing: You are not borrowed moneys'
-        );
+        require(loan.credit > 0, 'WQBorrowing: You are not borrowed moneys');
         uint256 tokenAmount = (loan.collateral * returnAmount) / loan.credit;
         _refund(msg.sender, msg.sender, returnAmount, tokenAmount);
         emit Refunded(nonce, msg.sender, returnAmount);
@@ -178,7 +175,7 @@ contract WQBorrowing is
             'WQBorrowing: You are not borrowed moneys'
         );
         require(
-            loan.borrowedAt > block.timestamp,
+            loan.borrowedAt + loan.duration * 1 days < block.timestamp,
             'WQBorrowing: The collateral is not available for purchase'
         );
         uint256 currentPrice = oracle.getTokenPriceUSD(loan.symbol);
@@ -310,5 +307,11 @@ contract WQBorrowing is
         onlyRole(ADMIN_ROLE)
     {
         tokens[symbol] = token;
+    }
+
+    function cleanBorrow(address user) external onlyRole(ADMIN_ROLE) {
+        BorrowInfo storage loan = borrowers[user];
+        loan.credit = 0;
+        loan.collateral = 0;
     }
 }

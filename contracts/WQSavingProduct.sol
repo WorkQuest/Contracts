@@ -78,6 +78,7 @@ contract WQSavingProduct is
 
     /**
      * @notice Contribute native coins to contract
+     * @param lockTime Lock time in days
      */
     function deposit(uint256 lockTime) external payable nonReentrant {
         require(apys[lockTime] != 0, 'WQSavingProduct: lockTime is invalid');
@@ -91,6 +92,10 @@ contract WQSavingProduct is
         emit Received(msg.sender, msg.value);
     }
 
+    /**
+     * @notice Withdraw funds from contract after lockTime days
+     * @param amount Amount of withdrawing funds
+     */
     function withdraw(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
         require(
@@ -105,6 +110,9 @@ contract WQSavingProduct is
         emit Withdrew(msg.sender, amount);
     }
 
+    /**
+     * @notice Claim rewards
+     */
     function claim() external nonReentrant {
         require(block.timestamp >= wallets[msg.sender].unlockDate);
         uint256 reward = getRewards(msg.sender);
@@ -114,6 +122,10 @@ contract WQSavingProduct is
         emit Claimed(msg.sender, reward);
     }
 
+    /**
+     * @notice Get rewards amount of user
+     * @param user Address of user
+     */
     function getRewards(address user) public view returns (uint256) {
         DepositWallet storage wallet = wallets[user];
         return
@@ -123,10 +135,17 @@ contract WQSavingProduct is
             wallet.rewardDebt;
     }
 
+    /**
+     * @notice Balance of funds on contract
+     */
     function balanceOf() external view override returns (uint256) {
         return contributed - borrowed;
     }
 
+    /**
+     * @notice Borrow funds from contract. Service function.
+     * @param amount Amount of coins
+     */
     function borrow(uint256 amount)
         external
         override
@@ -142,6 +161,12 @@ contract WQSavingProduct is
         emit Borrowed(msg.sender, amount);
     }
 
+    /**
+     * @notice Borrow funds to contract. Service function.
+     * @param amount Amount of coins
+     * @param elapsedTime Time elapsed since the beginning of the borrowing
+     * @param duration Duration of lock time
+     */
     function refund(
         uint256 amount,
         uint256 elapsedTime,
@@ -159,6 +184,11 @@ contract WQSavingProduct is
         emit Refunded(msg.sender, amount);
     }
 
+    /**
+     * @notice Set APY value
+     * @param duration Duration of lock time
+     * @param apy APY value
+     */
     function setApy(uint256 duration, uint256 apy)
         external
         onlyRole(ADMIN_ROLE)

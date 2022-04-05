@@ -57,36 +57,69 @@ async function main() {
         throw new Error(`Please set your BNB_AUCTION_PRICE_INDEX_STEP in a .env-${network} file`);
     }
 
+    if (!process.env.WQT_TOKEN) {
+        throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
+    }
+    if (!process.env.WQT_AUCTION_LIQUIDATE_TRESHOLD) {
+        throw new Error(`Please set your WQT_AUCTION_LIQUIDATE_TRESHOLD in a .env-${network} file`);
+    }
+    if (!process.env.WQT_AUCTION_UPPER_BOUND_COST) {
+        throw new Error(`Please set your WQT_AUCTION_UPPER_BOUND_COST in a .env-${network} file`);
+    }
+    if (!process.env.WQT_AUCTION_LOWER_BOUND_COST) {
+        throw new Error(`Please set your WQT_AUCTION_LOWER_BOUND_COST in a .env-${network} file`);
+    }
+    if (!process.env.WQT_AUCTION_DURATION) {
+        throw new Error(`Please set your WQT_AUCTION_DURATION in a .env-${network} file`);
+    }
+    if (!process.env.WQT_AUCTION_PRICE_INDEX_STEP) {
+        throw new Error(`Please set your WQT_AUCTION_PRICE_INDEX_STEP in a .env-${network} file`);
+    }
+
     const Auction = await hre.ethers.getContractFactory("WQCollateralAuction");
     console.log("Deploying...");
-    const eth_auction = await upgrades.deployProxy(Auction,
-        [
-            process.env.ETH_TOKEN,
-            process.env.PRICE_ORACLE,
-            process.env.ROUTER,
-            process.env.ETH_AUCTION_LIQUIDATE_TRESHOLD,
-            process.env.ETH_AUCTION_UPPER_BOUND_COST,
-            process.env.ETH_AUCTION_LOWER_BOUND_COST,
-            process.env.ETH_AUCTION_DURATION,
-            process.env.ETH_AUCTION_PRICE_INDEX_STEP
-        ], { initializer: 'initialize' });
-    console.log("ETH collateral auction has been deployed to:", eth_auction.address);
-    envConfig["ETH_AUCTION"] = eth_auction.address;
+    // const eth_auction = await upgrades.deployProxy(Auction,
+    //     [
+    //         process.env.ETH_TOKEN,
+    //         process.env.PRICE_ORACLE,
+    //         process.env.ROUTER,
+    //         process.env.ETH_AUCTION_LIQUIDATE_TRESHOLD,
+    //         process.env.ETH_AUCTION_UPPER_BOUND_COST,
+    //         process.env.ETH_AUCTION_LOWER_BOUND_COST,
+    //         process.env.ETH_AUCTION_DURATION,
+    //         process.env.ETH_AUCTION_PRICE_INDEX_STEP
+    //     ], { initializer: 'initialize' });
+    // console.log("ETH collateral auction has been deployed to:", eth_auction.address);
+    // envConfig["ETH_AUCTION"] = eth_auction.address;
 
 
-    const bnb_auction = await upgrades.deployProxy(Auction,
+    // const bnb_auction = await upgrades.deployProxy(Auction,
+    //     [
+    //         process.env.BNB_TOKEN,
+    //         process.env.PRICE_ORACLE,
+    //         process.env.ROUTER,
+    //         process.env.BNB_AUCTION_LIQUIDATE_TRESHOLD,
+    //         process.env.BNB_AUCTION_UPPER_BOUND_COST,
+    //         process.env.BNB_AUCTION_LOWER_BOUND_COST,
+    //         process.env.BNB_AUCTION_DURATION,
+    //         process.env.BNB_AUCTION_PRICE_INDEX_STEP
+    //     ], { initializer: 'initialize' });
+    // console.log("BNB collateral auction has been deployed to:", bnb_auction.address);
+    // envConfig["BNB_AUCTION"] = bnb_auction.address;
+
+    const wqt_auction = await upgrades.deployProxy(Auction,
         [
-            process.env.BNB_TOKEN,
+            process.env.WQT_TOKEN,
             process.env.PRICE_ORACLE,
             process.env.ROUTER,
-            process.env.BNB_AUCTION_LIQUIDATE_TRESHOLD,
-            process.env.BNB_AUCTION_UPPER_BOUND_COST,
-            process.env.BNB_AUCTION_LOWER_BOUND_COST,
-            process.env.BNB_AUCTION_DURATION,
-            process.env.BNB_AUCTION_PRICE_INDEX_STEP
+            process.env.WQT_AUCTION_LIQUIDATE_TRESHOLD,
+            process.env.WQT_AUCTION_UPPER_BOUND_COST,
+            process.env.WQT_AUCTION_LOWER_BOUND_COST,
+            process.env.WQT_AUCTION_DURATION,
+            process.env.WQT_AUCTION_PRICE_INDEX_STEP
         ], { initializer: 'initialize' });
-    console.log("BNB collateral auction has been deployed to:", bnb_auction.address);
-    envConfig["BNB_AUCTION"] = bnb_auction.address;
+    console.log("WQT collateral auction has been deployed to:", wqt_auction.address);
+    envConfig["WQT_AUCTION"] = wqt_auction.address;
 
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
