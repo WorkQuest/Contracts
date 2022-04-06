@@ -39,7 +39,7 @@ contract WQPromotion is
     mapping(PaidTariff => mapping(uint256 => uint256)) public usersTariff;
 
     event PromotedQuest(
-        address user,
+        address quest,
         PaidTariff tariff,
         uint256 period,
         uint256 promotedAt

@@ -105,6 +105,9 @@ contract WQSavingProduct is
         require(amount <= wallet.amount, 'WQSavingProduct: Amount is invalid');
         wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
+        if (wallet.amount == 0) {
+            wallet.unlockDate = 0;
+        }
         contributed -= amount;
         payable(msg.sender).sendValue(amount);
         emit Withdrew(msg.sender, amount);

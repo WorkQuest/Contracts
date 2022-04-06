@@ -1,4 +1,4 @@
-const { ethers, upgrades} = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const hre = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -18,14 +18,17 @@ async function main() {
   if (!process.env.PENSION_LOCK_TIME) {
     throw new Error(`Please set your PENSION_LOCK_TIME in a .env-${network} file`);
   }
-
   if (!process.env.PENSION_DEFAULT_FEE) {
     throw new Error(`Please set your PENSION_DEFAULT_FEE in a .env-${network} file`);
   }
+  if (!process.env.PENSION_APY) {
+    throw new Error(`Please set your PENSION_APY in a .env-${network} file`);
+  }
+
 
   console.log("Deploying...");
   const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
-  const pension_fund = await upgrades.deployProxy(PensionFund, [process.env.PENSION_LOCK_TIME, process.env.PENSION_DEFAULT_FEE], { initializer: 'initialize'}) 
+  const pension_fund = await upgrades.deployProxy(PensionFund, [process.env.PENSION_LOCK_TIME, process.env.PENSION_DEFAULT_FEE, process.env.PENSION_APY], { initializer: 'initialize' })
   console.log("PensionFund has been deployed to:", pension_fund.address);
 
   envConfig["PENSION_FUND"] = pension_fund.address;

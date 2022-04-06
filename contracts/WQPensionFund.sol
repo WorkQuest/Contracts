@@ -91,10 +91,11 @@ contract WQPensionFund is
     /**
      * @notice initialize the contract
      */
-    function initialize(uint256 _lockTime, uint256 _defaultFee)
-        public
-        initializer
-    {
+    function initialize(
+        uint256 _lockTime,
+        uint256 _defaultFee,
+        uint256 _apy
+    ) public initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -107,6 +108,7 @@ contract WQPensionFund is
 
         lockTime = _lockTime;
         defaultFee = _defaultFee;
+        apy = _apy;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -248,6 +250,14 @@ contract WQPensionFund is
 
     function updateLockTime(uint256 _lockTime) external onlyRole(ADMIN_ROLE) {
         lockTime = _lockTime;
+    }
+
+    /**
+     * @notice Set APY value
+     * @param _apy APY value
+     */
+    function setApy(uint256 _apy) external onlyRole(ADMIN_ROLE) {
+        apy = _apy;
     }
 
     function updateWallet(
