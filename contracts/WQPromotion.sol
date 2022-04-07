@@ -23,11 +23,10 @@ contract WQPromotion is
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     enum PaidTariff {
-        Free,
-        Bronze,
-        Silver,
+        GoldPlus,
         Gold,
-        GoldPlus
+        Silver,
+        Bronze
     }
 
     /// @notice Address of the fee receiver
