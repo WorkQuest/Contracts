@@ -39,3 +39,4 @@ require('./start_auction.js');
 require('./buy_lot.js');
 require('./set_prices.js');
 require('./config_promotion.js');
+require('./check_borrow.js');

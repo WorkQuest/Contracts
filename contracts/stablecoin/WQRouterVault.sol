@@ -11,7 +11,6 @@ contract WQRouterVault {
 
     address public router;
     address public owner;
-    uint256 public amount;
 
     event Transferred(address token, address recipient, uint256 amount);
 
@@ -25,16 +24,11 @@ contract WQRouterVault {
         owner = _owner;
     }
 
-    function addAmount(uint256 _amount) external onlyRouter {
-        amount += _amount;
-    }
-
     function transfer(
         address payable recipient,
         uint256 _amount,
         address token
     ) external onlyRouter {
-        amount -= _amount;
         if (token != address(0)) {
             IERC20(token).safeTransfer(recipient, _amount);
         } else {

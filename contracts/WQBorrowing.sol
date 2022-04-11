@@ -238,6 +238,16 @@ contract WQBorrowing is
         return _getCurrentFee(loan.credit, loan.apy, loan.borrowedAt);
     }
 
+    function getRewards(address user) external view returns (uint256) {
+        BorrowInfo storage loan = borrowers[user];
+        return
+            _getRewards(
+                loan.credit,
+                loan.fund.apys(loan.duration),
+                loan.borrowedAt
+            );
+    }
+
     function _getCurrentFee(
         uint256 amount,
         uint256 apy,
@@ -247,6 +257,15 @@ contract WQBorrowing is
             (amount *
                 (fixedRate + ((apy * (block.timestamp - borrowedAt)) / YEAR))) /
             1e18;
+    }
+
+    function _getRewards(
+        uint256 amount,
+        uint256 apy,
+        uint256 borrowedAt
+    ) internal view returns (uint256) {
+        return
+            (amount * ((apy * (block.timestamp - borrowedAt)) / YEAR)) / 1e18;
     }
 
     function getFunds()

@@ -14,14 +14,8 @@ contract WorkQuestFactory is
 {
     using AddressUpgradeable for address payable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant ARBITER_ROLE = keccak256('ARBITER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
-
-    enum PaidTariff {
-        Free,
-        Silver,
-        Gold,
-        Platinum
-    }
 
     struct ArbiterInfo {
         uint256 idx;
@@ -90,6 +84,8 @@ contract WorkQuestFactory is
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(ARBITER_ROLE, ADMIN_ROLE);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -127,10 +123,9 @@ contract WorkQuestFactory is
                 fee,
                 cost,
                 deadline,
+                payable(msg.sender),
                 feeReceiver,
                 pensionFund,
-                payable(msg.sender),
-                getArbiter(),
                 referral
             )
         );
@@ -144,27 +139,6 @@ contract WorkQuestFactory is
             block.timestamp,
             nonce
         );
-    }
-
-    /**
-     * @notice Enable or disable address of arbiter
-     * @param _arbiter Address of arbiter
-     * @param _enabled true - enable arbiter address, false - disable
-     */
-    function updateArbiter(address payable _arbiter, bool _enabled)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        ArbiterInfo storage a = arbiters[_arbiter];
-        if (arbiterList.length == 0 || arbiterList[a.idx] != _arbiter) {
-            a.idx = arbiterList.length;
-            arbiterList.push(_arbiter);
-        }
-        a.status = _enabled;
-    }
-
-    function allArbiters() external view returns (address payable[] memory) {
-        return arbiterList;
     }
 
     /**
@@ -198,17 +172,5 @@ contract WorkQuestFactory is
         onlyRole(ADMIN_ROLE)
     {
         pensionFund = _pensionFund;
-    }
-
-    /**
-     * @notice Get next enabled arbiter
-     */
-    function getArbiter() internal returns (address payable) {
-        for (uint256 i = 0; i < arbiterList.length; i++) {
-            lastArbiter++;
-            if (lastArbiter >= arbiterList.length) lastArbiter = 0;
-            if (arbiters[arbiterList[lastArbiter]].status) break;
-        }
-        return arbiterList[lastArbiter];
     }
 }

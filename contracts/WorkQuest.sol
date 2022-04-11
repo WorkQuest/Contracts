@@ -5,9 +5,17 @@ import '@openzeppelin/contracts/utils/Address.sol';
 import './WQPensionFund.sol';
 import './WQReferral.sol';
 
+interface WorkQuestFactoryInterface {
+    function hasRole(bytes32 role, address account)
+        external
+        view
+        returns (bool);
+}
+
 contract WorkQuest {
     using Address for address payable;
 
+    bytes32 public constant ARBITER_ROLE = keccak256('ARBITER_ROLE');
     string constant errMsg = 'WorkQuest: Access denied or invalid status';
 
     /**
@@ -27,6 +35,8 @@ contract WorkQuest {
     WQPensionFund public immutable pensionFund;
     /// @notice Address of referal contract
     WQReferral public immutable referal;
+    /// @notice Address of quest factory
+    WorkQuestFactoryInterface public immutable factory;
 
     /// @notice Fee coefficient of workquest
     uint256 public immutable fee;
@@ -34,8 +44,6 @@ contract WorkQuest {
     address payable public immutable feeReceiver;
     /// @notice Address of employer
     address payable public immutable employer;
-    /// @notice Address of arbiter
-    address payable public immutable arbiter;
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
@@ -59,7 +67,7 @@ contract WorkQuest {
     event JobCancelled();
 
     /// @notice Event emitted when employer edit job
-    event JobEdited(bytes32 jobHash, uint256 cost);
+    event JobEdited(uint256 cost);
 
     /// @notice Event emitted when employer publish job by transfer funds to contract
     event Received(uint256 amount);
@@ -98,37 +106,37 @@ contract WorkQuest {
      * @param _jobHash Hash of job agreement
      * @param _fee Fee coefficient, from 0 to 1, 18 decimals
      * @param _cost Cost of a job
+     * @param _deadline Deadline timestamp
+     * @param _employer External address of employer
      * @param _feeReceiver Address of a fee reciever
      * @param _pensionFund Address of a pension fund contract
-     * @param _employer External address of employer
-     * @param _arbiter External address of arbiter
+     * @param _referal Address of a referral contract
      */
     constructor(
         bytes32 _jobHash,
         uint256 _fee,
         uint256 _cost,
         uint256 _deadline,
+        address payable _employer,
         address payable _feeReceiver,
         address _pensionFund,
-        address payable _employer,
-        address payable _arbiter,
         address payable _referal
     ) {
         jobHash = _jobHash;
         fee = _fee;
         cost = _cost;
         deadline = _deadline;
+        employer = _employer;
         feeReceiver = _feeReceiver;
         pensionFund = WQPensionFund(_pensionFund);
-        employer = _employer;
-        arbiter = _arbiter;
         referal = WQReferral(_referal);
+        factory = WorkQuestFactoryInterface(msg.sender);
         emit WorkQuestCreated(jobHash);
     }
 
     /**
      * @notice Get info about contract state
-     * @dev Return parameters jobHash, cost, forfeit, employer, worker, arbiter, status, deadline
+     * @dev Return parameters jobHash, cost, forfeit, employer, worker, status, deadline
      */
     function getInfo()
         public
@@ -139,21 +147,11 @@ contract WorkQuest {
             uint256 _forfeit,
             address _employer,
             address _worker,
-            address _arbiter,
             JobStatus _status,
             uint256 _deadline
         )
     {
-        return (
-            jobHash,
-            cost,
-            forfeit,
-            employer,
-            worker,
-            arbiter,
-            status,
-            deadline
-        );
+        return (jobHash, cost, forfeit, employer, worker, status, deadline);
     }
 
     /**
@@ -184,12 +182,12 @@ contract WorkQuest {
         emit JobCancelled();
     }
 
-    function editJob(bytes32 _jobHash, uint256 _cost) external payable {
+    function editJob(uint256 _cost) external payable {
         require(
             status == JobStatus.Published && msg.sender == employer,
             errMsg
         );
-        jobHash = _jobHash;
+        // jobHash = _jobHash;
         if (_cost > cost) {
             uint256 comission = ((_cost - cost) * fee) / 1e18;
             require(
@@ -208,7 +206,7 @@ contract WorkQuest {
             payable(employer).sendValue(cost - _cost);
         }
         cost = _cost;
-        emit JobEdited(_jobHash, _cost);
+        emit JobEdited(_cost);
     }
 
     /**
@@ -280,7 +278,8 @@ contract WorkQuest {
      */
     function arbitrationRework() external {
         require(
-            msg.sender == arbiter && status == JobStatus.Arbitration,
+            factory.hasRole(ARBITER_ROLE, msg.sender) &&
+                status == JobStatus.Arbitration,
             errMsg
         );
         deadline = block.timestamp + 3 days;
@@ -295,7 +294,7 @@ contract WorkQuest {
 
     function arbitrationDecreaseCost(uint256 _forfeit) external {
         require(
-            msg.sender == arbiter && status == JobStatus.Arbitration,
+            factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration,
             errMsg
         );
         require(
@@ -313,7 +312,7 @@ contract WorkQuest {
      */
     function arbitrationAcceptWork() external {
         require(
-            msg.sender == arbiter && status == JobStatus.Arbitration,
+            factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration,
             errMsg
         );
         status = JobStatus.Finished;
@@ -326,7 +325,7 @@ contract WorkQuest {
      */
     function arbitrationRejectWork() external {
         require(
-            msg.sender == arbiter && status == JobStatus.Arbitration,
+            factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration,
             errMsg
         );
         status = JobStatus.Finished;

@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import "./WQPriceOracle.sol";
-import "./WQRouterVault.sol";
-import "./WQCollateralAuction.sol";
-import "./WQSurplusAuction.sol";
-import "./WQDebtAuction.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import './WQPriceOracle.sol';
+import './WQRouterVault.sol';
+import './WQCollateralAuction.sol';
+import './WQSurplusAuction.sol';
+import './WQDebtAuction.sol';
 
 contract WQRouter is
     Initializable,
@@ -24,8 +24,8 @@ contract WQRouter is
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address payable;
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     uint256 constant YEAR = 31536000;
 
     struct UserLot {
@@ -134,14 +134,14 @@ contract WQRouter is
     event Received(uint256 amount);
 
     modifier onlyEnabledToken(string calldata symbol) {
-        require(tokens[symbol].enabled, "WQRouter: Token diabled");
+        require(tokens[symbol].enabled, 'WQRouter: Token diabled');
         _;
     }
 
     modifier onlyCollateralAuction(string calldata symbol) {
         require(
             msg.sender == address(tokens[symbol].collateralAuction),
-            "WQRouter: Only collateral auction"
+            'WQRouter: Only collateral auction'
         );
         _;
     }
@@ -149,7 +149,7 @@ contract WQRouter is
     modifier onlySurplusAuction() {
         require(
             msg.sender == address(surplusAuction),
-            "WQRouter: Only surplus auction"
+            'WQRouter: Only surplus auction'
         );
         _;
     }
@@ -157,7 +157,7 @@ contract WQRouter is
     modifier onlyDebtAuction() {
         require(
             msg.sender == address(debtAuction),
-            "WQRouter: Only debt auction"
+            'WQRouter: Only debt auction'
         );
         _;
     }
@@ -174,7 +174,7 @@ contract WQRouter is
         require(
             userCollateral.lots[lotIndex].priceIndex == priceIndex &&
                 userCollateral.lots[lotIndex].index == index,
-            "WQRouter: Lot not found"
+            'WQRouter: Lot not found'
         );
     }
 
@@ -224,7 +224,7 @@ contract WQRouter is
     ) external nonReentrant onlyEnabledToken(symbol) {
         require(
             collateralRatio >= 1.5e18,
-            "WQRouter: Invalid collateral ratio"
+            'WQRouter: Invalid collateral ratio'
         );
         UserCollateral storage userCollateral = collaterals[symbol][msg.sender];
         if (userCollateral.vault == WQRouterVault(address(0))) {
@@ -249,8 +249,6 @@ contract WQRouter is
         // Save indexes of lot
         _addUserLot(msg.sender, priceIndex, index, symbol);
 
-        // Save info in vault
-        userCollateral.vault.addAmount(collateralAmount);
         // Take tokens
         IERC20Upgradeable(tokens[symbol].token).safeTransferFrom(
             msg.sender,
@@ -299,7 +297,7 @@ contract WQRouter is
                     priceIndex,
                     index
                 ) == uint8(1),
-                "WQRouter: Status not new"
+                'WQRouter: Status not new'
             );
             uint256 extraDebt = ((price - lotPrice) * lotAmount) /
                 collateralRatio;
@@ -355,11 +353,11 @@ contract WQRouter is
                     priceIndex,
                     index
                 ) == uint8(1),
-                "WQRouter: Status not new"
+                'WQRouter: Status not new'
             );
             uint256 returnDebt = ((lotPrice - price) * lotAmount) /
                 collateralRatio;
-            require(msg.value >= returnDebt, "WQRouter: Insufficient value");
+            require(msg.value >= returnDebt, 'WQRouter: Insufficient value');
             // Return change
             if (msg.value > returnDebt) {
                 payable(msg.sender).sendValue(msg.value - returnDebt);
@@ -411,12 +409,11 @@ contract WQRouter is
                     priceIndex,
                     index
                 ) == uint8(1),
-                "WQRouter: Status not new"
+                'WQRouter: Status not new'
             );
             addedCollateral = (lotPrice * lotAmount) / price - lotAmount;
             tokens[symbol].totalCollateral += addedCollateral;
             collaterals[symbol][msg.sender].collateralAmount += addedCollateral;
-            collaterals[symbol][msg.sender].vault.addAmount(addedCollateral);
             (newPriceIndex, newIndex) = tokens[symbol]
                 .collateralAuction
                 .moveLot(priceIndex, index, price, lotAmount + addedCollateral);
@@ -468,7 +465,7 @@ contract WQRouter is
                     priceIndex,
                     index
                 ) == uint8(1),
-                "WQRouter: Status not new"
+                'WQRouter: Status not new'
             );
             uint256 fee = (debtPart *
                 (fixedRate +
@@ -476,7 +473,7 @@ contract WQRouter is
                     YEAR)) / 1e18;
             require(
                 msg.value >= debtPart + fee,
-                "WQRouter: Insufficient value"
+                'WQRouter: Insufficient value'
             );
             collateralPart = (debtPart * collateralRatio) / price;
             totalDebt -= debtPart;
