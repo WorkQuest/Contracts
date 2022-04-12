@@ -138,7 +138,7 @@ contract WQPensionFund is
         wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
         contributed += amount;
-        wusd.safeTransferFrom(msg.sender, msg.sender, amount);
+        wusd.safeTransferFrom(msg.sender, address(this), amount);
         emit Received(worker, amount, block.timestamp);
     }
 
@@ -224,7 +224,7 @@ contract WQPensionFund is
             'WQPension: Insufficient amount'
         );
         borrowed += amount;
-        // payable(msg.sender).sendValue(amount);
+        wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount, block.timestamp);
     }
 
@@ -232,15 +232,12 @@ contract WQPensionFund is
         uint256 amount,
         uint256 elapsedTime,
         uint256
-    ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
-        uint256 rewards = (msg.value - amount);
-        require(
-            (rewards * 1e18) / amount >= (apy * elapsedTime) / YEAR,
-            'WQPension: Insufficient rewards'
-        );
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
+        uint256 rewards = (amount * (apy * elapsedTime)) / YEAR / 1e18;
         borrowed -= amount;
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
+        wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
         emit Refunded(msg.sender, amount, block.timestamp);
     }
 

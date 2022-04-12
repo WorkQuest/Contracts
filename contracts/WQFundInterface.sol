@@ -9,5 +9,9 @@ interface WQFundInterface {
 
     function borrow(uint256 amount) external;
 
-    function refund(uint256 amount, uint256 elapsedTime, uint256 duration) external payable;
+    function refund(
+        uint256 amount,
+        uint256 elapsedTime,
+        uint256 duration
+    ) external;
 }
