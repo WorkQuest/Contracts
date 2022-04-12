@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import '@openzeppelin/contracts/utils/Address.sol';
-import './WQPensionFund.sol';
-import './WQReferral.sol';
-
-interface WorkQuestFactoryInterface {
-    function hasRole(bytes32 role, address account)
-        external
-        view
-        returns (bool);
-}
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import './WorkQuestFactoryInterface.sol';
+import './WQReferralInterface.sol';
+import './WQPensionFundInterface.sol';
 
 contract WorkQuest {
-    using Address for address payable;
+    using SafeERC20 for IERC20;
 
     bytes32 public constant ARBITER_ROLE = keccak256('ARBITER_ROLE');
     string constant errMsg = 'WorkQuest: Access denied or invalid status';
@@ -32,18 +27,20 @@ contract WorkQuest {
     }
 
     /// @notice Pension wallet factory contract address
-    WQPensionFund public immutable pensionFund;
-    /// @notice Address of referal contract
-    WQReferral public immutable referal;
+    WQPensionFundInterface public immutable pensionFund;
+    /// @notice Address of referral contract
+    WQReferralInterface public immutable referral;
     /// @notice Address of quest factory
     WorkQuestFactoryInterface public immutable factory;
 
     /// @notice Fee coefficient of workquest
     uint256 public immutable fee;
     /// @notice Fee receiver address
-    address payable public immutable feeReceiver;
+    address public immutable feeReceiver;
     /// @notice Address of employer
-    address payable public immutable employer;
+    address public immutable employer;
+
+    IERC20 public immutable wusd;
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
@@ -52,7 +49,7 @@ contract WorkQuest {
     /// @notice Forfeit amount if worker didn't  job
     uint256 public forfeit;
     /// @notice Address of worker
-    address payable public worker;
+    address public worker;
     /// @notice Current status of job
     JobStatus public status;
     /// @notice Deadline timestamp
@@ -110,17 +107,18 @@ contract WorkQuest {
      * @param _employer External address of employer
      * @param _feeReceiver Address of a fee reciever
      * @param _pensionFund Address of a pension fund contract
-     * @param _referal Address of a referral contract
+     * @param _referral Address of a referral contract
      */
     constructor(
         bytes32 _jobHash,
         uint256 _fee,
         uint256 _cost,
         uint256 _deadline,
-        address payable _employer,
-        address payable _feeReceiver,
+        address _employer,
+        address _feeReceiver,
         address _pensionFund,
-        address payable _referal
+        address _referral,
+        address _wusd
     ) {
         jobHash = _jobHash;
         fee = _fee;
@@ -128,9 +126,11 @@ contract WorkQuest {
         deadline = _deadline;
         employer = _employer;
         feeReceiver = _feeReceiver;
-        pensionFund = WQPensionFund(_pensionFund);
-        referal = WQReferral(_referal);
+        pensionFund = WQPensionFundInterface(_pensionFund);
+        referral = WQReferralInterface(_referral);
+        wusd = IERC20(_wusd);
         factory = WorkQuestFactoryInterface(msg.sender);
+        status = JobStatus.Published;
         emit WorkQuestCreated(jobHash);
     }
 
@@ -147,29 +147,21 @@ contract WorkQuest {
             uint256 _forfeit,
             address _employer,
             address _worker,
+            address _factory,
             JobStatus _status,
             uint256 _deadline
         )
     {
-        return (jobHash, cost, forfeit, employer, worker, status, deadline);
-    }
-
-    /**
-     * @notice Employer publish job by transfer funds to contract
-     */
-    receive() external payable {
-        require(status == JobStatus.New, errMsg);
-        uint256 comission = (cost * fee) / 1e18;
-        require(
-            msg.value >= cost + comission,
-            'WorkQuest: Insufficient amount'
+        return (
+            jobHash,
+            cost,
+            forfeit,
+            employer,
+            worker,
+            address(factory),
+            status,
+            deadline
         );
-        status = JobStatus.Published;
-        if (msg.value > cost + comission) {
-            payable(employer).sendValue(msg.value - cost - comission);
-        }
-        feeReceiver.sendValue(comission);
-        emit Received(cost);
     }
 
     function cancelJob() external {
@@ -178,32 +170,25 @@ contract WorkQuest {
             errMsg
         );
         status = JobStatus.Finished;
-        payable(employer).sendValue(cost);
+        // payable(employer).sendValue(cost);
         emit JobCancelled();
     }
 
-    function editJob(uint256 _cost) external payable {
+    function editJob(uint256 _cost) external {
         require(
             status == JobStatus.Published && msg.sender == employer,
             errMsg
         );
-        // jobHash = _jobHash;
         if (_cost > cost) {
             uint256 comission = ((_cost - cost) * fee) / 1e18;
-            require(
-                msg.value >= _cost - cost + comission,
-                'WorkQuest: Insufficient amount'
-            );
-            if (msg.value > _cost - cost + comission) {
-                payable(employer).sendValue(
-                    msg.value - (_cost - cost + comission)
-                );
-            }
-            feeReceiver.sendValue(comission);
-            emit Received(msg.value);
+            // require(
+            //     msg.value >= _cost - cost + comission,
+            //     'WorkQuest: Insufficient amount'
+            // );
+            wusd.safeTransfer(feeReceiver, comission);
+            emit Received(_cost);
         } else if (_cost < cost) {
-            require(msg.value == 0, 'WorkQuest: Invalid value amount');
-            payable(employer).sendValue(cost - _cost);
+            wusd.safeTransfer(employer, cost - _cost);
         }
         cost = _cost;
         emit JobEdited(_cost);
@@ -213,7 +198,7 @@ contract WorkQuest {
      * @notice Employer assigned worker to job
      * @param _worker Address of worker
      */
-    function assignJob(address payable _worker) external {
+    function assignJob(address _worker) external {
         require(
             msg.sender == employer &&
                 (status == JobStatus.Published ||
@@ -294,7 +279,8 @@ contract WorkQuest {
 
     function arbitrationDecreaseCost(uint256 _forfeit) external {
         require(
-            factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration,
+            factory.hasRole(ARBITER_ROLE, msg.sender) &&
+                status == JobStatus.Arbitration,
             errMsg
         );
         require(
@@ -312,7 +298,8 @@ contract WorkQuest {
      */
     function arbitrationAcceptWork() external {
         require(
-            factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration,
+            factory.hasRole(ARBITER_ROLE, msg.sender) &&
+                status == JobStatus.Arbitration,
             errMsg
         );
         status = JobStatus.Finished;
@@ -325,13 +312,14 @@ contract WorkQuest {
      */
     function arbitrationRejectWork() external {
         require(
-            factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration,
+            factory.hasRole(ARBITER_ROLE, msg.sender) &&
+                status == JobStatus.Arbitration,
             errMsg
         );
         status = JobStatus.Finished;
         uint256 comission = (cost * fee) / 1e18;
-        employer.sendValue(cost - comission);
-        feeReceiver.sendValue(comission);
+        wusd.safeTransfer(employer, cost - comission);
+        wusd.safeTransfer(feeReceiver, comission);
         emit ArbitrationRejectWork();
     }
 
@@ -340,15 +328,15 @@ contract WorkQuest {
         uint256 comission = (newCost * fee) / 1e18;
         uint256 pensionContribute = (newCost * pensionFund.getFee(worker)) /
             1e18;
-        worker.sendValue(newCost - comission - pensionContribute);
+        wusd.safeTransfer(worker, newCost - comission - pensionContribute);
         if (pensionContribute > 0) {
-            pensionFund.contribute{value: pensionContribute}(worker);
+            wusd.safeApprove(address(pensionFund), type(uint256).max);
+            pensionFund.contribute(worker, pensionContribute);
         }
         if (forfeit > 0) {
-            employer.sendValue(forfeit);
+            wusd.safeTransfer(employer, forfeit);
         }
-        referal.calcReferral(worker, newCost - comission);
-
-        feeReceiver.sendValue(comission);
+        referral.calcReferral(worker, newCost);
+        wusd.safeTransfer(feeReceiver, comission);
     }
 }

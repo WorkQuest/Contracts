@@ -5,6 +5,8 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WorkQuest.sol';
 
 contract WorkQuestFactory is
@@ -13,6 +15,7 @@ contract WorkQuestFactory is
     UUPSUpgradeable
 {
     using AddressUpgradeable for address payable;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant ARBITER_ROLE = keccak256('ARBITER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
@@ -36,17 +39,14 @@ contract WorkQuestFactory is
     /// @notice address of referral
     address payable public referral;
 
+    /// @notice Address of wusd token
+    IERC20Upgradeable public wusd;
+
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
 
-    /// @notice Mapping of arbiters adresses to boolean enabled
-    mapping(address => ArbiterInfo) public arbiters;
-
     /// @notice Mapping for checking contract existing
     mapping(address => bool) public workquestValid;
-
-    /// @notice List of arbiters adresses
-    address payable[] public arbiterList;
 
     /**
      * @notice Event emited when new workquest contract created
@@ -72,20 +72,21 @@ contract WorkQuestFactory is
         uint256 _fee,
         address payable _feeReceiver,
         address payable _pensionFund,
-        address payable _referral
+        address payable _referral,
+        address _wusd
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
-
-        fee = _fee;
-        feeReceiver = _feeReceiver;
-        pensionFund = _pensionFund;
-        referral = _referral;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(ARBITER_ROLE, ADMIN_ROLE);
+        fee = _fee;
+        feeReceiver = _feeReceiver;
+        pensionFund = _pensionFund;
+        referral = _referral;
+        wusd = IERC20Upgradeable(_wusd);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -116,22 +117,25 @@ contract WorkQuestFactory is
         uint256 cost,
         uint256 deadline,
         uint256 nonce
-    ) external payable {
+    ) external {
         address workquest = address(
             new WorkQuest(
                 jobHash,
                 fee,
                 cost,
                 deadline,
-                payable(msg.sender),
+                msg.sender,
                 feeReceiver,
                 pensionFund,
-                referral
+                referral,
+                address(wusd)
             )
         );
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
-        payable(workquest).sendValue(msg.value);
+        uint256 comission = (cost * fee) / 1e18;
+        wusd.safeTransferFrom(msg.sender, workquest, cost);
+        wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit WorkQuestCreated(
             jobHash,
             msg.sender,
@@ -172,5 +176,13 @@ contract WorkQuestFactory is
         onlyRole(ADMIN_ROLE)
     {
         pensionFund = _pensionFund;
+    }
+
+    /**
+     * @notice Update address of WUSD token
+     * @param _wusd  Address of pension fund contract
+     */
+    function updateWusd(address _wusd) external onlyRole(ADMIN_ROLE) {
+        wusd = IERC20Upgradeable(_wusd);
     }
 }

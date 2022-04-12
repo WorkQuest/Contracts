@@ -5,7 +5,8 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WQFundInterface.sol';
 
 contract WQPensionFund is
@@ -15,8 +16,7 @@ contract WQPensionFund is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    using AddressUpgradeable for address payable;
-
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
@@ -40,6 +40,7 @@ contract WQPensionFund is
     uint256 public rewardsDistributed;
     uint256 public borrowed;
     uint256 internal apy;
+    IERC20Upgradeable public wusd;
 
     /// @notice Pension wallet info of worker
     mapping(address => PensionWallet) public wallets;
@@ -94,7 +95,8 @@ contract WQPensionFund is
     function initialize(
         uint256 _lockTime,
         uint256 _defaultFee,
-        uint256 _apy
+        uint256 _apy,
+        address _wusd
     ) public initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -109,6 +111,7 @@ contract WQPensionFund is
         lockTime = _lockTime;
         defaultFee = _defaultFee;
         apy = _apy;
+        wusd = IERC20Upgradeable(_wusd);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -124,7 +127,7 @@ contract WQPensionFund is
      * @dev and fee to DEFAULT_FEE value (1%)
      * @param worker Address of worker
      */
-    function contribute(address worker) external payable nonReentrant {
+    function contribute(address worker, uint256 amount) external nonReentrant {
         PensionWallet storage wallet = wallets[worker];
         if (wallet.createdAt == 0) {
             wallet.createdAt = block.timestamp;
@@ -132,10 +135,11 @@ contract WQPensionFund is
             wallet.fee = defaultFee;
             emit WalletUpdated(worker, wallet.fee, wallet.unlockDate);
         }
-        wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
-        wallet.amount += msg.value;
-        contributed += msg.value;
-        emit Received(worker, msg.value, block.timestamp);
+        wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
+        wallet.amount += amount;
+        contributed += amount;
+        wusd.safeTransferFrom(msg.sender, msg.sender, amount);
+        emit Received(worker, amount, block.timestamp);
     }
 
     /**
@@ -156,7 +160,7 @@ contract WQPensionFund is
         wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
         contributed -= amount;
-        payable(msg.sender).sendValue(amount + reward);
+        wusd.safeTransfer(msg.sender, amount + reward);
         emit Withdrew(msg.sender, amount, block.timestamp);
         emit Claimed(msg.sender, reward, block.timestamp);
     }
@@ -220,7 +224,7 @@ contract WQPensionFund is
             'WQPension: Insufficient amount'
         );
         borrowed += amount;
-        payable(msg.sender).sendValue(amount);
+        // payable(msg.sender).sendValue(amount);
         emit Borrowed(msg.sender, amount, block.timestamp);
     }
 

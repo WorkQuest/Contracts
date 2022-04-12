@@ -28,6 +28,7 @@ contract WQSavingProduct is
         uint256 rewardDebt;
         uint256 rewardDistributed;
         uint256 unlockDate;
+        uint256 duration;
     }
 
     uint256 public contributed;
@@ -85,6 +86,7 @@ contract WQSavingProduct is
         DepositWallet storage wallet = wallets[msg.sender];
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
+            wallet.duration = lockTime;
         }
         wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
         wallet.amount += msg.value;
