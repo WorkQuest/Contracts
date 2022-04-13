@@ -16,10 +16,19 @@ async function main() {
     if (!process.env.LENDING_APY) {
         throw new Error(`Please set your LENDING_APY in a .env-${network} file`);
     }
+    if (!process.env.WUSD_TOKEN) {
+        throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
+    }
 
     console.log("Deploying...");
     const Lending = await hre.ethers.getContractFactory("WQLending");
-    const lending = await upgrades.deployProxy(Lending, [process.env.LENDING_APY], { initializer: 'initialize' })
+    const lending = await upgrades.deployProxy(
+        Lending,
+        [
+            process.env.LENDING_APY,
+            process.env.WUSD_TOKEN
+        ],
+        { initializer: 'initialize' })
     console.log("Lending has been deployed to:", lending.address);
 
     envConfig["LENDING"] = lending.address;

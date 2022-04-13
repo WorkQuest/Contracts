@@ -166,11 +166,12 @@ contract WorkQuest {
 
     function cancelJob() external {
         require(
-            status == JobStatus.Published && msg.sender == employer,
+            (status == JobStatus.Published || status == JobStatus.WaitWorker) &&
+                msg.sender == employer,
             errMsg
         );
         status = JobStatus.Finished;
-        // payable(employer).sendValue(cost);
+        wusd.safeTransfer(employer, cost);
         emit JobCancelled();
     }
 
@@ -181,10 +182,6 @@ contract WorkQuest {
         );
         if (_cost > cost) {
             uint256 comission = ((_cost - cost) * fee) / 1e18;
-            // require(
-            //     msg.value >= _cost - cost + comission,
-            //     'WorkQuest: Insufficient amount'
-            // );
             wusd.safeTransfer(feeReceiver, comission);
             emit Received(_cost);
         } else if (_cost < cost) {
@@ -330,7 +327,10 @@ contract WorkQuest {
             1e18;
         wusd.safeTransfer(worker, newCost - comission - pensionContribute);
         if (pensionContribute > 0) {
-            wusd.safeApprove(address(pensionFund), type(uint256).max);
+            if (wusd.allowance(address(this), address(pensionFund)) > 0) {
+                wusd.safeApprove(address(pensionFund), 0);
+            }
+            wusd.safeApprove(address(pensionFund), pensionContribute);
             pensionFund.contribute(worker, pensionContribute);
         }
         if (forfeit > 0) {

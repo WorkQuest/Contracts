@@ -29,6 +29,9 @@ async function main() {
     if (!process.env.WQT_TOKEN) {
         throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
     }
+    if (!process.env.WUSD_TOKEN) {
+        throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
+    }
     if (!process.env.PENSION_FUND) {
         throw new Error(`Please set your PENSION_FUND in a .env-${network} file`);
     }
@@ -41,7 +44,15 @@ async function main() {
 
     console.log("Deploying...");
     const Borrowing = await hre.ethers.getContractFactory("WQBorrowing");
-    const borrowing = await upgrades.deployProxy(Borrowing, [process.env.PRICE_ORACLE, process.env.BORROWING_FIXED_RATE], { initializer: 'initialize' })
+    const borrowing = await upgrades.deployProxy(
+        Borrowing,
+        [
+            process.env.PRICE_ORACLE,
+            process.env.BORROWING_FIXED_RATE,
+            process.env.WUSD_TOKEN
+        ],
+        { initializer: 'initialize' }
+    );
     console.log("PensionFund has been deployed to:", borrowing.address);
 
     envConfig["BORROWING"] = borrowing.address;

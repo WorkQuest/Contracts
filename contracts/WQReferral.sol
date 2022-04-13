@@ -2,13 +2,11 @@
 pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
-
 import './WQTInterface.sol';
 import './WQPriceOracleInterface.sol';
 import './WorkQuestFactory.sol';
@@ -19,7 +17,7 @@ contract WQReferral is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using AddressUpgradeable for address payable;
     using ECDSAUpgradeable for bytes32;
 
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
@@ -44,8 +42,6 @@ contract WQReferral is
         bool paid;
     }
 
-    /// @notice reward token
-    IERC20Upgradeable public token;
     /// @notice referral bonus amount in USD
     uint256 public referralBonus;
     /// @notice address of price oracle
@@ -65,7 +61,6 @@ contract WQReferral is
     constructor() initializer {}
 
     function initialize(
-        address _token,
         address _oracle,
         address _service,
         uint256 _referralBonus,
@@ -82,7 +77,6 @@ contract WQReferral is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(SERVICE_ROLE, ADMIN_ROLE);
 
-        token = IERC20Upgradeable(_token);
         oracle = WQPriceOracleInterface(_oracle);
         referralBonus = _referralBonus;
         earnedThreshold = _earnedThreshold;
@@ -163,11 +157,11 @@ contract WQReferral is
             referrals[msg.sender].rewardPaid;
         require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
         require(
-            token.balanceOf(address(this)) > rewardAmount,
+            address(this).balance > rewardAmount,
             'WQReferral: Balance on contract too low'
         );
         referrals[msg.sender].rewardPaid = referrals[msg.sender].rewardTotal;
-        token.safeTransfer(msg.sender, rewardAmount);
+        payable(msg.sender).sendValue(rewardAmount);
         emit RewardClaimed(msg.sender, rewardAmount);
     }
 
@@ -182,7 +176,7 @@ contract WQReferral is
      */
     /**
      * @dev Set address of workquest factory
-     * @param _factory Address of token
+     * @param _factory Address of workquest factory
      */
     function setFactory(address _factory) external onlyRole(ADMIN_ROLE) {
         factory = WorkQuestFactory(_factory);
@@ -194,14 +188,6 @@ contract WQReferral is
      */
     function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
         oracle = WQPriceOracleInterface(_oracle);
-    }
-
-    /**
-     * @dev Set token  address
-     * @param _token Address of token
-     */
-    function setToken(address _token) external onlyRole(ADMIN_ROLE) {
-        token = IERC20Upgradeable(_token);
     }
 
     /**

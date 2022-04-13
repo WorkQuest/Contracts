@@ -8,7 +8,6 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WQPriceOracleInterface.sol';
 import './WQFundInterface.sol';
 
@@ -19,7 +18,6 @@ contract WQBorrowing is
     UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using AddressUpgradeable for address payable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     uint256 public constant YEAR = 31536000;
@@ -37,6 +35,8 @@ contract WQBorrowing is
     WQPriceOracleInterface public oracle;
 
     uint256 public fixedRate;
+
+    IERC20Upgradeable public wusd;
 
     /// @notice Mapping of duration to APY coefficient
     mapping(uint256 => uint256) public apys;
@@ -64,10 +64,11 @@ contract WQBorrowing is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address _oracle, uint256 _fixedRate)
-        external
-        initializer
-    {
+    function initialize(
+        address _oracle,
+        uint256 _fixedRate,
+        address _wusd
+    ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -77,6 +78,7 @@ contract WQBorrowing is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         oracle = WQPriceOracleInterface(_oracle);
         fixedRate = _fixedRate;
+        wusd = IERC20Upgradeable(_wusd);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -84,10 +86,6 @@ contract WQBorrowing is
         override
         onlyRole(UPGRADER_ROLE)
     {}
-
-    receive() external payable {
-        emit Received(msg.value);
-    }
 
     /**
      * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
@@ -136,8 +134,8 @@ contract WQBorrowing is
         );
         // Get coins from fund
         loan.fund.borrow(loan.credit);
-        // Send native coins
-        payable(msg.sender).sendValue(loan.credit);
+        // Send wusd credit
+        wusd.safeTransfer(msg.sender, loan.credit);
         emit Borrowed(nonce, msg.sender, collateralAmount, loan.credit, symbol);
     }
 
@@ -146,11 +144,7 @@ contract WQBorrowing is
      * @param nonce Nonce value
      * @param returnAmount Return value of WUSD
      */
-    function refund(uint256 nonce, uint256 returnAmount)
-        external
-        payable
-        nonReentrant
-    {
+    function refund(uint256 nonce, uint256 returnAmount) external nonReentrant {
         BorrowInfo storage loan = borrowers[msg.sender];
         require(loan.credit > 0, 'WQBorrowing: You are not borrowed moneys');
         uint256 tokenAmount = (loan.collateral * returnAmount) / loan.credit;
@@ -168,7 +162,7 @@ contract WQBorrowing is
         uint256 nonce,
         address user,
         uint256 returnAmount
-    ) external payable nonReentrant {
+    ) external nonReentrant {
         BorrowInfo storage loan = borrowers[user];
         require(
             loan.collateral > 0,
@@ -207,30 +201,24 @@ contract WQBorrowing is
             'WQBorrowing: Token is disabled'
         );
         uint256 fee = _getCurrentFee(debtAmount, loan.apy, loan.borrowedAt);
-
-        // Take native coins
-        require(
-            msg.value >= debtAmount + fee,
-            'WQBorrowing: Refund insufficient amount'
-        );
         loan.credit -= debtAmount;
         loan.collateral -= returnCollateral;
-        // and send back to fund
         uint256 rewards = (debtAmount *
             ((loan.fund.apys(loan.duration) *
                 (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
-        rewards = rewards > 0 ? rewards : 1;
-        loan.fund.refund{value: debtAmount + rewards}(
+        // Take wusd
+        wusd.safeTransferFrom(msg.sender, address(this), debtAmount + fee);
+        if (wusd.allowance(address(this), address(loan.fund)) > 0) {
+            wusd.safeApprove(address(loan.fund), 0);
+        }
+        wusd.safeApprove(address(loan.fund), debtAmount + rewards);
+        loan.fund.refund(
             debtAmount,
             block.timestamp - loan.borrowedAt,
             loan.duration
         );
         //Send tokens
         tokens[loan.symbol].safeTransfer(buyer, returnCollateral);
-        // Return change
-        if (msg.value > debtAmount + fee) {
-            payable(buyer).sendValue(msg.value - debtAmount - fee);
-        }
     }
 
     function getCurrentFee(address user) public view returns (uint256) {

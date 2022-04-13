@@ -5,7 +5,8 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WQFundInterface.sol';
 
 contract WQSavingProduct is
@@ -15,8 +16,7 @@ contract WQSavingProduct is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    using AddressUpgradeable for address payable;
-
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
@@ -36,6 +36,7 @@ contract WQSavingProduct is
     uint256 public rewardsProduced;
     uint256 public rewardsDistributed;
     uint256 public borrowed;
+    IERC20Upgradeable public wusd;
 
     /// @notice Mapping lock time to APY values
     mapping(uint256 => uint256) public override apys;
@@ -61,7 +62,7 @@ contract WQSavingProduct is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize() external initializer {
+    function initialize(address _wusd) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -69,6 +70,7 @@ contract WQSavingProduct is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
+        wusd = IERC20Upgradeable(_wusd);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -81,17 +83,18 @@ contract WQSavingProduct is
      * @notice Contribute native coins to contract
      * @param lockTime Lock time in days
      */
-    function deposit(uint256 lockTime) external payable nonReentrant {
+    function deposit(uint256 lockTime, uint256 amount) external nonReentrant {
         require(apys[lockTime] != 0, 'WQSavingProduct: lockTime is invalid');
         DepositWallet storage wallet = wallets[msg.sender];
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
             wallet.duration = lockTime;
         }
-        wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
-        wallet.amount += msg.value;
-        contributed += msg.value;
-        emit Received(msg.sender, msg.value);
+        wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
+        wallet.amount += amount;
+        contributed += amount;
+        wusd.safeTransferFrom(msg.sender, address(this), amount);
+        emit Received(msg.sender, amount);
     }
 
     /**
@@ -111,7 +114,7 @@ contract WQSavingProduct is
             wallet.unlockDate = 0;
         }
         contributed -= amount;
-        payable(msg.sender).sendValue(amount);
+        wusd.safeTransfer(msg.sender, amount);
         emit Withdrew(msg.sender, amount);
     }
 
@@ -123,7 +126,7 @@ contract WQSavingProduct is
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
         rewardsDistributed += reward;
-        payable(msg.sender).sendValue(reward);
+        wusd.safeTransfer(msg.sender, reward);
         emit Claimed(msg.sender, reward);
     }
 
@@ -162,7 +165,7 @@ contract WQSavingProduct is
             'WQSavingProduct: Insufficient amount'
         );
         borrowed += amount;
-        payable(msg.sender).sendValue(amount);
+        wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
     }
 
@@ -176,16 +179,15 @@ contract WQSavingProduct is
         uint256 amount,
         uint256 elapsedTime,
         uint256 duration
-    ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
         require(apys[duration] > 0, 'WQSavingProduct: invalid duration');
-        uint256 rewards = msg.value - amount;
-        require(
-            (rewards * 1e18) / amount >= (apys[duration] * elapsedTime) / YEAR,
-            'WQSavingProduct: Insufficient rewards'
-        );
+        uint256 rewards = (amount * (apys[duration] * elapsedTime)) /
+            YEAR /
+            1e18;
         borrowed -= amount;
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
+        wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
         emit Refunded(msg.sender, amount);
     }
 

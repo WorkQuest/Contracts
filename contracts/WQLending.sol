@@ -5,7 +5,8 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WQFundInterface.sol';
 
 contract WQLending is
@@ -15,8 +16,7 @@ contract WQLending is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    using AddressUpgradeable for address payable;
-
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
@@ -35,6 +35,7 @@ contract WQLending is
     uint256 public rewardsDistributed;
     uint256 public borrowed;
     uint256 internal apy;
+    IERC20Upgradeable public wusd;
 
     /// @notice Deposit wallet info of user
     mapping(address => DepositWallet) public wallets;
@@ -57,7 +58,7 @@ contract WQLending is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(uint256 _apy) external initializer {
+    function initialize(uint256 _apy, address _wusd) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -66,6 +67,7 @@ contract WQLending is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         apy = _apy;
+        wusd = IERC20Upgradeable(_wusd);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -77,12 +79,13 @@ contract WQLending is
     /**
      * @notice Deposit native coins to contract
      */
-    function deposit() external payable nonReentrant {
+    function deposit(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
-        wallet.rewardDebt += (msg.value * rewardsPerContributed) / 1e20;
-        wallet.amount += msg.value;
-        contributed += msg.value;
-        emit Received(msg.sender, msg.value);
+        wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
+        wallet.amount += amount;
+        contributed += amount;
+        wusd.safeTransferFrom(msg.sender, address(this), amount);
+        emit Received(msg.sender, amount);
     }
 
     /**
@@ -95,7 +98,7 @@ contract WQLending is
         wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
         contributed -= amount;
-        payable(msg.sender).sendValue(amount);
+        wusd.safeTransfer(msg.sender, amount);
         emit Withdrew(msg.sender, amount);
     }
 
@@ -106,7 +109,7 @@ contract WQLending is
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
         rewardsDistributed += reward;
-        payable(msg.sender).sendValue(reward);
+        wusd.safeTransfer(msg.sender, reward);
         emit Claimed(msg.sender, reward);
     }
 
@@ -152,7 +155,7 @@ contract WQLending is
             'WQLending: Insufficient amount'
         );
         borrowed += amount;
-        payable(msg.sender).sendValue(amount);
+        wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
     }
 
@@ -165,15 +168,12 @@ contract WQLending is
         uint256 amount,
         uint256 elapsedTime,
         uint256
-    ) external payable override nonReentrant onlyRole(BORROWER_ROLE) {
-        uint256 rewards = msg.value - amount;
-        require(
-            (rewards * 1e18) / amount >= (apy * elapsedTime) / YEAR,
-            'WQLending: Insufficient rewards'
-        );
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
+        uint256 rewards = (amount * (apy * elapsedTime)) / YEAR / 1e18;
         borrowed -= amount;
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;
+        wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
         emit Refunded(msg.sender, amount);
     }
 

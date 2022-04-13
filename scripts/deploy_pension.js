@@ -24,11 +24,20 @@ async function main() {
   if (!process.env.PENSION_APY) {
     throw new Error(`Please set your PENSION_APY in a .env-${network} file`);
   }
-
+  if (!process.env.WUSD_TOKEN) {
+    throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
+  }
 
   console.log("Deploying...");
   const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
-  const pension_fund = await upgrades.deployProxy(PensionFund, [process.env.PENSION_LOCK_TIME, process.env.PENSION_DEFAULT_FEE, process.env.PENSION_APY], { initializer: 'initialize' })
+  const pension_fund = await upgrades.deployProxy(PensionFund,
+    [
+      process.env.PENSION_LOCK_TIME,
+      process.env.PENSION_DEFAULT_FEE,
+      process.env.PENSION_APY,
+      process.env.WUSD_TOKEN
+    ],
+    { initializer: 'initialize' })
   console.log("PensionFund has been deployed to:", pension_fund.address);
 
   envConfig["PENSION_FUND"] = pension_fund.address;

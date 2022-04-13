@@ -10,14 +10,21 @@ async function main() {
     const accounts = await ethers.getSigners();
     const sender = accounts[0].address;
     console.log("Sender address: ", sender);
-
     const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
     for (const k in envConfig) { process.env[k] = envConfig[k]; }
 
+    if (!process.env.WUSD_TOKEN) {
+        throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
+    }
+
     console.log("Deploying...");
     const SavingProduct = await hre.ethers.getContractFactory("WQSavingProduct");
-    const saving = await upgrades.deployProxy(SavingProduct, [], { initializer: 'initialize' })
+    const saving = await upgrades.deployProxy(
+        SavingProduct,
+        [process.env.WUSD_TOKEN],
+        { initializer: 'initialize' }
+    );
     // const saving = await SavingProduct.attach(process.env.SAVING_PRODUCT);
     console.log("Saving Product has been deployed to:", saving.address);
 
