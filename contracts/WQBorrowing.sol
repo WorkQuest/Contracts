@@ -203,9 +203,11 @@ contract WQBorrowing is
         uint256 fee = _getCurrentFee(debtAmount, loan.apy, loan.borrowedAt);
         loan.credit -= debtAmount;
         loan.collateral -= returnCollateral;
-        uint256 rewards = (debtAmount *
-            ((loan.fund.apys(loan.duration) *
-                (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
+        uint256 rewards = _getRewards(
+            debtAmount,
+            loan.fund.apys(loan.duration),
+            loan.borrowedAt
+        );
         // Take wusd
         wusd.safeTransferFrom(msg.sender, address(this), debtAmount + fee);
         if (wusd.allowance(address(this), address(loan.fund)) > 0) {
@@ -252,8 +254,7 @@ contract WQBorrowing is
         uint256 apy,
         uint256 borrowedAt
     ) internal view returns (uint256) {
-        return
-            (amount * ((apy * (block.timestamp - borrowedAt)) / YEAR)) / 1e18;
+        return (amount * apy * (block.timestamp - borrowedAt)) / YEAR / 1e18;
     }
 
     function getFunds()
