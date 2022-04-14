@@ -4,6 +4,9 @@ const { expect } = require('chai')
 const { ethers } = require('hardhat')
 require('@nomiclabs/hardhat-waffle')
 const { parseEther } = require('ethers/lib/utils')
+const BigNumber = require('bignumber.js');
+BigNumber.config({ EXPONENTIAL_AT: 60 });
+
 
 const nullstr = '0x0000000000000000000000000000000000000000';
 const job_hash = web3.utils.keccak256('JOBHASH');
@@ -63,7 +66,7 @@ let wusd_token;
 let pension_fund;
 
 describe('Work Quest test', () => {
-    let call_flow;
+    // let call_flow;
     const twentyWQT = parseEther('20');
     const totalSupplyOfWQToken = parseEther('100000000');
     const zero = parseEther('0');
@@ -84,8 +87,14 @@ describe('Work Quest test', () => {
             validator
         ] = await ethers.getSigners();
 
+        const BridgeToken = await ethers.getContractFactory('WQBridgeToken');
+        wusd_token = await upgrades.deployProxy(BridgeToken, ["WUSD stablecoin", "WUSD"], { initializer: 'initialize', kind: 'transparent' });
+        await wusd_token.deployed();
+        await wusd_token.grantRole(await wusd_token.MINTER_ROLE(), work_quest_owner.address);
+        await wusd_token.mint(employer.address, oneK);
+
         const PensionFund = await hre.ethers.getContractFactory('WQPensionFund');
-        pension_fund = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE, PENSION_APY], { initializer: 'initialize', kind: 'transparent' });
+        pension_fund = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE, PENSION_APY, wusd_token.address], { initializer: 'initialize', kind: 'transparent' });
         await pension_fund.deployed();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
@@ -102,27 +111,14 @@ describe('Work Quest test', () => {
         let sig = ethers.utils.splitSignature(signature);
         await priceOracle.connect(worker).setTokenPriceUSD(nonce, PRICE, sig.v, sig.r, sig.s, SYMBOL);
 
-        const WQToken = await ethers.getContractFactory('WQToken');
-        wqt_token = await upgrades.deployProxy(WQToken, [totalSupplyOfWQToken], { initializer: 'initialize', kind: 'transparent' });
-        await wqt_token.deployed();
-
-        const BridgeToken = await ethers.getContractFactory('WQBridgeToken');
-        wusd_token = await upgrades.deployProxy(BridgeToken, ["WUSD stablecoin", "WUSD"], { initializer: 'initialize', kind: 'transparent' });
-        await wusd_token.deployed();
-        await wusd_token.grantRole(await wusd_token.MINTER_ROLE(), work_quest_owner.address);
-        await wusd_token.mint(employer.address, oneK);
-
-
         const WQReferralContract = await hre.ethers.getContractFactory('WQReferral');
         referral = await upgrades.deployProxy(
             WQReferralContract,
-            [wqt_token.address, priceOracle.address, validator.address, twentyWQT, parseEther("1000")],
+            [priceOracle.address, validator.address, twentyWQT, parseEther("1000")],
             { initializer: 'initialize', kind: 'transparent' }
         )
         await referral.deployed();
         await referral.grantRole(await referral.SERVICE_ROLE(), validator.address);
-
-        await wqt_token.connect(work_quest_owner).transfer(affiliat.address, oneK)
 
         const WorkQuestFactory = await hre.ethers.getContractFactory('WorkQuestFactory');
         work_quest_factory = await upgrades.deployProxy(WorkQuestFactory,
@@ -195,8 +191,8 @@ describe('Work Quest test', () => {
             expect(
                 await work_quest_factory.connect(work_quest_owner).feeReceiver()
             ).to.equal(feeReceiver.address)
-        })
-    })
+        });
+    });
 
     describe('New job', () => {
         it('Create new job: success', async () => {
@@ -216,7 +212,7 @@ describe('Work Quest test', () => {
             expect(info[6]).to.be.equal(JobStatus.Published);
             expect(info[7]).to.be.equal(deadline);
 
-        })
+        });
     })
 
     describe('Publish job', () => {
@@ -236,7 +232,7 @@ describe('Work Quest test', () => {
             expect(info[3]).to.be.equal(employer.address)
             expect(info[4]).to.be.equal(worker.address)
             expect(info[6]).to.be.equal(JobStatus.WaitWorker)
-        })
+        });
 
         it('Assigning worker to job from not employer: fail', async () => {
             await expect(
@@ -272,500 +268,399 @@ describe('Work Quest test', () => {
             await expect(
                 work_quest.connect(employer).assignJob(worker.address)
             ).revertedWith(acces_denied_err);
+        });
+    });
+
+    describe('Worker accepted job', () => {
+        it('Worker accepted job from status WaitWorker: success', async () => {
+            await work_quest.connect(employer).assignJob(worker.address);
+            await work_quest.connect(worker).acceptJob();
+            let info = await work_quest.connect(employer).getInfo();
+            expect(info[0]).to.be.equal(job_hash);
+            expect(info[1]).to.be.equal(cost);
+            expect(info[2]).to.be.equal(0);
+            expect(info[3]).to.be.equal(employer.address);
+            expect(info[4]).to.be.equal(worker.address);
+            expect(info[6]).to.be.equal(JobStatus.InProgress);
+        });
+
+        it('Worker accepted job from not WaitWorker status: fail', async () => {
+            await expect(
+                work_quest.connect(worker).acceptJob()
+            ).revertedWith(acces_denied_err);
+
+            await work_quest.connect(employer).assignJob(worker.address);
+            await work_quest.connect(worker).acceptJob();
+            await expect(
+                work_quest.connect(worker).acceptJob()
+            ).revertedWith(acces_denied_err);
+
+            await work_quest.connect(worker).verificationJob();
+            await expect(
+                work_quest.connect(worker).acceptJob()
+            ).revertedWith(acces_denied_err);
+
+            await work_quest.connect(employer).arbitration();
+            await expect(
+                work_quest.connect(worker).acceptJob()
+            ).revertedWith(acces_denied_err);
+
+            await work_quest.connect(arbiter).arbitrationAcceptWork();
+            await expect(
+                work_quest.connect(worker).acceptJob()
+            ).revertedWith(acces_denied_err);
+        });
+    });
+
+    describe('Job verification', () => {
+        it('Set verification status: success', async () => {
+            await work_quest.connect(employer).assignJob(worker.address);
+            await work_quest.connect(worker).acceptJob();
+            await work_quest.connect(worker).verificationJob();
+            let info = await work_quest.connect(employer).getInfo()
+            expect(info[0]).to.be.equal(job_hash)
+            expect(info[1]).to.be.equal(cost)
+            expect(info[2]).to.be.equal(0)
+            expect(info[3]).to.be.equal(employer.address)
+            expect(info[4]).to.be.equal(worker.address)
+            expect(info[5]).to.be.equal(work_quest_factory.address)
+            expect(info[6]).to.be.equal(JobStatus.WaitJobVerify)
+        })
+
+        it('Job status set Verificatiion by not worker: fail', async () => {
+            //Process job
+            await work_quest.connect(employer).assignJob(worker.address);
+            await work_quest.connect(worker).acceptJob();
+            await expect(
+                work_quest.connect(employer).verificationJob()
+            ).revertedWith(acces_denied_err);
+        })
+
+        it('Job status set Verificatiion from non InProgress status: fail', async () => {
+            await expect(
+                work_quest.connect(worker).verificationJob()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(employer).assignJob(worker.address);
+            await expect(
+                work_quest.connect(worker).verificationJob()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(worker).acceptJob();
+            await work_quest.connect(worker).verificationJob();
+            await work_quest.connect(employer).arbitration();
+            await expect(
+                work_quest.connect(worker).verificationJob()
+            ).revertedWith(acces_denied_err);
+            work_quest.connect(arbiter).arbitrationAcceptWork();
+            await expect(
+                work_quest.connect(worker).verificationJob()
+            ).revertedWith(acces_denied_err);
+        });
+    });
+    describe('Arbitration job', () => {
+        it('Set job to arbitration: success', async () => {
+            await work_quest.connect(employer).assignJob(worker.address);
+            await work_quest.connect(worker).acceptJob();
+            await work_quest.connect(worker).verificationJob();
+            await work_quest.connect(employer).arbitration();
+            let info = await work_quest.connect(employer).getInfo();
+            expect(info[0]).to.be.equal(job_hash);
+            expect(info[1]).to.be.equal(cost);
+            expect(info[2]).to.be.equal(0);
+            expect(info[3]).to.be.equal(employer.address);
+            expect(info[4]).to.be.equal(worker.address);
+            expect(info[5]).to.be.equal(work_quest_factory.address);
+            expect(info[6]).to.be.equal(JobStatus.Arbitration);
+        });
+
+        it('Set job to arbitration from not WaitJobVerify status by employer: fail', async () => {
+            await expect(
+                work_quest.connect(employer).arbitration()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(employer).assignJob(worker.address);
+            await expect(
+                work_quest.connect(employer).arbitration()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(worker).acceptJob();
+            await expect(
+                work_quest.connect(employer).arbitration()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(worker).verificationJob();
+            await work_quest.connect(employer).arbitration();
+            await expect(
+                work_quest.connect(employer).arbitration()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(arbiter).arbitrationAcceptWork();
+            await expect(
+                work_quest.connect(employer).arbitration()
+            ).revertedWith(acces_denied_err);
+        });
+    });
+
+    describe('Rework job', () => {
+        it('Set job to rework: success', async () => {
+            await work_quest.connect(employer).assignJob(worker.address);
+            await work_quest.connect(worker).acceptJob();
+            await work_quest.connect(worker).verificationJob();
+            await work_quest.connect(employer).arbitration();
+            await work_quest.connect(arbiter).arbitrationRework()
+            let info = await work_quest.connect(employer).getInfo()
+            expect(info[0]).to.be.equal(job_hash)
+            expect(info[1]).to.be.equal(cost)
+            expect(info[2]).to.be.equal(0)
+            expect(info[3]).to.be.equal(employer.address)
+            expect(info[4]).to.be.equal(worker.address)
+            expect(info[5]).to.be.equal(work_quest_factory.address)
+            expect(info[6]).to.be.equal(JobStatus.InProgress)
+        })
+
+        it('Rework from not Arbitration status: fail', async () => {
+            //from Publish to InProgress
+            await expect(
+                work_quest.connect(arbiter).arbitrationRework()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(employer).assignJob(worker.address);
+            await expect(
+                work_quest.connect(arbiter).arbitrationRework()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(worker).acceptJob();
+            await expect(
+                work_quest.connect(arbiter).arbitrationRework()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(worker).verificationJob();
+            await expect(
+                work_quest.connect(arbiter).arbitrationRework()
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(employer).arbitration();
+            await work_quest.connect(arbiter).arbitrationAcceptWork()
+            await expect(
+                work_quest.connect(arbiter).arbitrationRework()
+            ).revertedWith(acces_denied_err);
+        });
+    });
+
+    describe('Decrease cost of job', () => {
+        it('Decrease cost of job: success', async () => {
+            await work_quest.connect(employer).assignJob(worker.address);
+            await work_quest.connect(worker).acceptJob();
+            await work_quest.connect(worker).verificationJob();
+            await work_quest.connect(employer).arbitration();
+            let worker_before = await wusd_token.balanceOf(worker.address);
+            let employer_before = await wusd_token.balanceOf(employer.address);
+            await work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit);
+            let worker_after = await wusd_token.balanceOf(worker.address);
+            let employer_after = await wusd_token.balanceOf(employer.address);
+            // expect(employer_after - employer_before).equal(forfeit);
+            expect(worker_after - worker_before).equal(reward_after_forfeit);
+            let info = await work_quest.connect(employer).getInfo();
+            expect(info[0]).to.be.equal(job_hash);
+            expect(info[1]).to.be.equal(cost);
+            expect(info[2]).to.be.equal(forfeit);
+            expect(info[3]).to.be.equal(employer.address);
+            expect(info[4]).to.be.equal(worker.address);
+            expect(info[5]).to.be.equal(work_quest_factory.address);
+            expect(info[6]).to.be.equal(JobStatus.Finished);
+        })
+
+        it('Decrease cost from not Arbitration status: fail', async () => {
+            await expect(
+                work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit)
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(employer).assignJob(worker.address);
+            await expect(
+                work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit)
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(worker).acceptJob();
+            await expect(
+                work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit)
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(worker).verificationJob();
+            await expect(
+                work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit)
+            ).revertedWith(acces_denied_err);
+            await work_quest.connect(employer).arbitration();
+            await work_quest.connect(arbiter).arbitrationAcceptWork()
+            await expect(
+                work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit)
+            ).revertedWith(acces_denied_err);
         })
     })
     /*
-        describe('Worker accepted job', () => {
-            it('Worker accepted job from status WaitWorker: success', async () => {
-                await work_quest.connect(employer).assignJob(worker.address);
-                let info = await work_quest.connect(employer).getInfo();
-                expect(info[0]).to.be.equal(job_hash);
-                expect(info[1]).to.be.equal(cost);
-                expect(info[2]).to.be.equal(0);
-                expect(info[3]).to.be.equal(employer.address);
-                expect(info[4]).to.be.equal(worker.address);
-                expect(info[6]).to.be.equal(JobStatus.InProgress);
-            });
+       describe('Accept job', () => {
+           it('Accept job by employer: success', async () => {
+               //to WaitJobVerify
+               for (let val of call_flow.slice(
+                   setStatus.WaitWorker,
+                   setStatus.WaitJobVerify + 1
+               )) {
+                   await val.func(...val.args)
+               }
+               expect(
+                   (await web3.eth.getBalance(work_quest.address)).toString()
+               ).to.be.equal(cost.toString());
     
-            it('Worker accepted job from not WaitWorker status: fail', async () => {
-                await expect(
-                    work_quest.connect(worker).acceptJob()
-                ).revertedWith(acces_denied_err);
+               let feeReceiverBalance = (await web3.eth.getBalance(feeReceiver.address));
+               let workerBalance = await web3.eth.getBalance(worker.address)
     
-                await work_quest.connect(employer).assignJob(worker.address);
-                await work_quest.connect(worker).acceptJob();
-                await expect(
-                    work_quest.connect(worker).acceptJob()
-                ).revertedWith(acces_denied_err);
+               await work_quest.connect(employer).acceptJobResult();
     
-                await work_quest.connect(worker).verificationJob();
-                await expect(
-                    work_quest.connect(worker).acceptJob()
-                ).revertedWith(acces_denied_err);
+               expect(
+                   ((await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance) / 1e18).toFixed(2)
+               ).to.be.equal('0.01');
+               expect(
+                   ((await web3.eth.getBalance(worker.address) - workerBalance) / 1e18).toFixed(2)
+               ).to.be.equal('0.99');
     
-                await work_quest.connect(employer).arbitration();
-                await expect(
-                    work_quest.connect(worker).acceptJob()
-                ).revertedWith(acces_denied_err);
+               expect(
+                   await web3.eth.getBalance(work_quest.address)
+               ).to.be.equal('0');
+               let info = await work_quest.connect(employer).getInfo();
+               expect(info[6]).to.be.equal(JobStatus.Finished);
+           })
     
-                await work_quest.connect(arbiter).arbitrationAcceptWork();
-                await expect(
-                    work_quest.connect(worker).acceptJob()
-                ).revertedWith(acces_denied_err);
-            });
-        });
+           it('Accept job by arbiter: success', async () => {
+               let info = await work_quest.connect(employer).getInfo()
+               expect(info[1]).to.be.equal(cost)
     
-        describe('Process job', () => {
-            it('Job status set InProgress from WaitJobStart: success', async () => {
-                //Set InProgress job
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.InProgress + 1
-                )) {
-                    await val.func(...val.args)
-                }
+               let employerBalance = await web3.eth.getBalance(employer.address);
+               let workerBalance = await web3.eth.getBalance(worker.address);
+               let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address);
     
-                let info = await work_quest.connect(employer).getInfo()
-                expect(info[0]).to.be.equal(job_hash)
-                expect(info[1]).to.be.equal(cost)
-                expect(info[2]).to.be.equal(0)
-                expect(info[3]).to.be.equal(employer.address)
-                expect(info[4]).to.be.equal(worker.address)
-                expect(info[5]).to.be.equal(work_quest_factory.address)
-                expect(info[6]).to.be.equal(JobStatus.InProgress)
-            })
+               for (let val of call_flow.slice(
+                   setStatus.WaitWorker,
+                   setStatus.Finished + 1
+               )) {
+                   await val.func(...val.args)
+               }
     
-            it('Job status set InProgress by not worker: fail', async () => {
-                //Assign job
-                for (let val of call_flow.slice(setStatus.WaitWorker, setStatus.WaitJobStart + 1)) {
-                    await (val.func)(...val.args);
-                }
-                try {
-                    await work_quest.connect(employer).processJob(...call_flow[setStatus.InProgress].args);
-                    throw new Error('Not reverted');
-                } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
-                }
-            })
+               expect(
+                   ((employerBalance - await web3.eth.getBalance(employer.address)) / 1e18).toFixed(2)
+               ).to.equal((cost_comission / 1e18).toFixed(2));
+               expect(
+                   ((await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance) / 1e18).toFixed(2)
+               ).to.equal((double_comission / 1e18).toFixed(2));
+               expect(
+                   ((await web3.eth.getBalance(worker.address) - workerBalance) / 1e18).toFixed(2)
+               ).to.equal((reward / 1e18).toFixed(2));
     
-            it('Job status set InProgress from non WaitWorker: fail', async () => {
-                try {
-                    await call_flow[setStatus.InProgress].func(
-                        ...call_flow[setStatus.InProgress].args
-                    )
-                    throw new Error('Not reverted')
-                } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
-                }
+               expect(await web3.eth.getBalance(work_quest.address)).to.equal('0')
     
-                await call_flow[setStatus.WaitWorker].func(
-                    ...call_flow[setStatus.WaitWorker].args
-                ) //Assign job
+               info = await work_quest.connect(employer).getInfo()
+               expect(info[6]).to.be.equal(JobStatus.Finished)
+           })
     
-                for (let val of call_flow.slice(
-                    setStatus.InProgress,
-                    setStatus.reworkJob + 1
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await call_flow[setStatus.InProgress].func(
-                            ...call_flow[setStatus.InProgress].args
-                        )
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-            })
-        })
+           it('Accept job result from not WaitJobVerify status by employer: fail', async () => {
+               //from Publish to InProgress
+               for (let val of call_flow.slice(
+                   setStatus.WaitWorker,
+                   setStatus.InProgress + 1
+               )) {
+                   await val.func(...val.args)
+                   try {
+                       await work_quest.connect(employer).acceptJobResult()
+                       throw new Error('Not reverted')
+                   } catch (e) {
+                       await expect(e.message).to.include(acces_denied_err)
+                   }
+               }
     
-        describe('WaitJobVerify job', () => {
-            it('Set verification status: success', async () => {
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.WaitJobVerify + 1
-                )) {
-                    await val.func(...val.args)
-                }
+               await work_quest.connect(worker).verificationJob() //WaitJobVerify
     
-                let info = await work_quest.connect(employer).getInfo()
-                expect(info[0]).to.be.equal(job_hash)
-                expect(info[1]).to.be.equal(cost)
-                expect(info[2]).to.be.equal(0)
-                expect(info[3]).to.be.equal(employer.address)
-                expect(info[4]).to.be.equal(worker.address)
-                expect(info[5]).to.be.equal(work_quest_factory.address)
-                expect(info[6]).to.be.equal(JobStatus.WaitJobVerify)
-            })
+               for (let val of call_flow.slice(setStatus.Arbitration)) {
+                   await val.func(...val.args)
+                   try {
+                       await work_quest.connect(employer).acceptJobResult()
+                       throw new Error('Not reverted')
+                   } catch (e) {
+                       await expect(e.message).to.include(acces_denied_err)
+                   }
+               }
+           })
     
-            it('Job status set Verificatiion by not worker: fail', async () => {
-                //Process job
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.InProgress + 1
-                )) {
-                    await val.func(...val.args)
-                }
-                try {
-                    await work_quest.connect(employer).verificationJob()
-                    throw new Error('Not reverted')
-                } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
-                }
-            })
+           it('Accept job from not Arbitration status by arbiter: fail', async () => {
+               for (let val of call_flow.slice(
+                   setStatus.WaitWorker,
+                   setStatus.WaitJobVerify + 1
+               )) {
+                   await val.func(...val.args)
+                   try {
+                       await work_quest.connect(arbiter).arbitrationAcceptWork()
+                       throw new Error('Not reverted')
+                   } catch (e) {
+                       await expect(e.message).to.include(acces_denied_err)
+                   }
+               }
     
-            it('Job status set Verificatiion from non InProgress status: fail', async () => {
-                //Assign job
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.WaitJobStart + 1
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(worker).verificationJob()
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
+               await work_quest.connect(employer).arbitration() // Arbitration
+               await work_quest.connect(arbiter).arbitrationAcceptWork() // Finished
+               try {
+                   await work_quest.connect(worker).arbitrationAcceptWork()
+                   throw new Error('Not reverted')
+               } catch (e) {
+                   await expect(e.message).to.include(acces_denied_err)
+               }
+           })
+       })
     
-                await await work_quest.connect(worker).processJob()
+       describe('Reject job', () => {
+           it('Reject job by arbiter: success', async () => {
+               //set WaitJobVerify
+               for (let val of call_flow.slice(
+                   setStatus.WaitWorker,
+                   setStatus.WaitJobVerify + 1
+               )) {
+                   await val.func(...val.args)
+               }
+               await work_quest.connect(employer).arbitration()
     
-                for (let val of call_flow.slice(setStatus.WaitJobVerify)) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(worker).verificationJob()
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-            })
-        })
+               // let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address)
     
-        describe('Arbitration job', () => {
-            it('Set job to arbitration: success', async () => {
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.Arbitration + 1
-                )) {
-                    await val.func(...val.args)
-                }
+               await work_quest.connect(arbiter).arbitrationRejectWork()
     
-                let info = await work_quest.connect(employer).getInfo()
-                expect(info[0]).to.be.equal(job_hash)
-                expect(info[1]).to.be.equal(cost)
-                expect(info[2]).to.be.equal(0)
-                expect(info[3]).to.be.equal(employer.address)
-                expect(info[4]).to.be.equal(worker.address)
-                expect(info[5]).to.be.equal(work_quest_factory.address)
-                expect(info[6]).to.be.equal(JobStatus.Arbitration)
-            })
+               expect(await web3.eth.getBalance(work_quest.address)).to.be.equal(
+                   '0'
+               )
     
-            it('Set job to arbitration from not WaitJobVerify status by employer: fail', async () => {
-                //from Publish to Process
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.InProgress + 1
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(employer).arbitration() //Arbitration
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
+               // expect(
+               //   await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance
+               // ).to.be.equal('');
     
-                await work_quest.connect(worker).verificationJob() //WaitJobVerify
+               let info = await work_quest.connect(employer).getInfo()
+               expect(info[0]).to.be.equal(job_hash)
+               expect(info[1]).to.be.equal(cost)
+               // expect(info[2]).to.be.equal(0);
+               expect(info[3]).to.be.equal(employer.address)
+               expect(info[4]).to.be.equal(worker.address)
+               expect(info[5]).to.be.equal(work_quest_factory.address)
+               expect(info[6]).to.be.equal(JobStatus.Finished)
+           })
     
-                for (let val of call_flow.slice(setStatus.Arbitration)) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(employer).arbitration() //Arbitration
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-            })
-        })
+           it('Reject work from non Arbitration status: fail', async () => {
+               //from Publish to DecreasedCost
+               for (let val of call_flow.slice(
+                   setStatus.WaitWorker,
+                   setStatus.WaitJobVerify + 1
+               )) {
+                   await val.func(...val.args)
+                   try {
+                       await work_quest.connect(arbiter).arbitrationRejectWork()
+                       throw new Error('Not reverted')
+                   } catch (e) {
+                       await expect(e.message).to.include(acces_denied_err)
+                   }
+               }
     
-        describe('Rework job', () => {
-            it('Set job to rework: success', async () => {
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.Arbitration + 1
-                )) {
-                    await val.func(...val.args)
-                }
-                await work_quest.connect(arbiter).arbitrationRework()
+               await work_quest.connect(employer).arbitration() //Arbitration
+               await work_quest.connect(arbiter).arbitrationAcceptWork() //Finished
     
-                let info = await work_quest.connect(employer).getInfo()
-                expect(info[0]).to.be.equal(job_hash)
-                expect(info[1]).to.be.equal(cost)
-                expect(info[2]).to.be.equal(0)
-                expect(info[3]).to.be.equal(employer.address)
-                expect(info[4]).to.be.equal(worker.address)
-                expect(info[5]).to.be.equal(work_quest_factory.address)
-                expect(info[6]).to.be.equal(JobStatus.InProgress)
-            })
-    
-            it('Rework from not Arbitration status: fail', async () => {
-                //from Publish to InProgress
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.WaitJobVerify + 1
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(arbiter).arbitrationRework() //Rework
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-                await work_quest.connect(employer).arbitration()
-                await work_quest.connect(arbiter).arbitrationAcceptWork()
-                try {
-                    await work_quest.connect(arbiter).arbitrationRework() //Rework
-                    throw new Error('Not reverted')
-                } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
-                }
-            })
-        })
-    
-        describe('Decrease cost of job', () => {
-            it('Decrease cost of job: success', async () => {
-                //Decrease cost job
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.Arbitration + 1
-                )) {
-                    await val.func(...val.args)
-                }
-    
-                await work_quest.connect(arbiter).arbitrationDecreaseCost(forfeit)
-    
-                let info = await work_quest.connect(employer).getInfo()
-                expect(info[0]).to.be.equal(job_hash)
-                expect(info[1]).to.be.equal(cost)
-                expect(info[2]).to.be.equal(forfeit)
-                expect(info[3]).to.be.equal(employer.address)
-                expect(info[4]).to.be.equal(worker.address)
-                expect(info[5]).to.be.equal(work_quest_factory.address)
-                expect(info[6]).to.be.equal(JobStatus.Finished)
-            })
-    
-            it('Decrease cost from not Arbitration status: fail', async () => {
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.Arbitration
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest
-                            .connect(arbiter)
-                            .arbitrationDecreaseCost(forfeit)
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-                for (let val of call_flow.slice(
-                    setStatus.Arbitration,
-                    setStatus.Finished + 1
-                )) {
-                    await val.func(...val.args)
-                }
-                try {
-                    await work_quest
-                        .connect(arbiter)
-                        .arbitrationDecreaseCost(forfeit)
-                    throw new Error('Not reverted')
-                } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
-                }
-            })
-        })
-    
-        describe('Accept job', () => {
-            it('Accept job by employer: success', async () => {
-                //to WaitJobVerify
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.WaitJobVerify + 1
-                )) {
-                    await val.func(...val.args)
-                }
-                expect(
-                    (await web3.eth.getBalance(work_quest.address)).toString()
-                ).to.be.equal(cost.toString());
-    
-                let feeReceiverBalance = (await web3.eth.getBalance(feeReceiver.address));
-                let workerBalance = await web3.eth.getBalance(worker.address)
-    
-                await work_quest.connect(employer).acceptJobResult();
-    
-                expect(
-                    ((await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance) / 1e18).toFixed(2)
-                ).to.be.equal('0.01');
-                expect(
-                    ((await web3.eth.getBalance(worker.address) - workerBalance) / 1e18).toFixed(2)
-                ).to.be.equal('0.99');
-    
-                expect(
-                    await web3.eth.getBalance(work_quest.address)
-                ).to.be.equal('0');
-                let info = await work_quest.connect(employer).getInfo();
-                expect(info[6]).to.be.equal(JobStatus.Finished);
-            })
-    
-            it('Accept job by arbiter: success', async () => {
-                let info = await work_quest.connect(employer).getInfo()
-                expect(info[1]).to.be.equal(cost)
-    
-                let employerBalance = await web3.eth.getBalance(employer.address);
-                let workerBalance = await web3.eth.getBalance(worker.address);
-                let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address);
-    
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.Finished + 1
-                )) {
-                    await val.func(...val.args)
-                }
-    
-                expect(
-                    ((employerBalance - await web3.eth.getBalance(employer.address)) / 1e18).toFixed(2)
-                ).to.equal((cost_comission / 1e18).toFixed(2));
-                expect(
-                    ((await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance) / 1e18).toFixed(2)
-                ).to.equal((double_comission / 1e18).toFixed(2));
-                expect(
-                    ((await web3.eth.getBalance(worker.address) - workerBalance) / 1e18).toFixed(2)
-                ).to.equal((reward / 1e18).toFixed(2));
-    
-                expect(await web3.eth.getBalance(work_quest.address)).to.equal('0')
-    
-                info = await work_quest.connect(employer).getInfo()
-                expect(info[6]).to.be.equal(JobStatus.Finished)
-            })
-    
-            it('Accept job result from not WaitJobVerify status by employer: fail', async () => {
-                //from Publish to InProgress
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.InProgress + 1
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(employer).acceptJobResult()
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-    
-                await work_quest.connect(worker).verificationJob() //WaitJobVerify
-    
-                for (let val of call_flow.slice(setStatus.Arbitration)) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(employer).acceptJobResult()
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-            })
-    
-            it('Accept job from not Arbitration status by arbiter: fail', async () => {
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.WaitJobVerify + 1
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(arbiter).arbitrationAcceptWork()
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-    
-                await work_quest.connect(employer).arbitration() // Arbitration
-                await work_quest.connect(arbiter).arbitrationAcceptWork() // Finished
-                try {
-                    await work_quest.connect(worker).arbitrationAcceptWork()
-                    throw new Error('Not reverted')
-                } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
-                }
-            })
-        })
-    
-        describe('Reject job', () => {
-            it('Reject job by arbiter: success', async () => {
-                //set WaitJobVerify
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.WaitJobVerify + 1
-                )) {
-                    await val.func(...val.args)
-                }
-                await work_quest.connect(employer).arbitration()
-    
-                // let feeReceiverBalance = await web3.eth.getBalance(feeReceiver.address)
-    
-                await work_quest.connect(arbiter).arbitrationRejectWork()
-    
-                expect(await web3.eth.getBalance(work_quest.address)).to.be.equal(
-                    '0'
-                )
-    
-                // expect(
-                //   await web3.eth.getBalance(feeReceiver.address) - feeReceiverBalance
-                // ).to.be.equal('');
-    
-                let info = await work_quest.connect(employer).getInfo()
-                expect(info[0]).to.be.equal(job_hash)
-                expect(info[1]).to.be.equal(cost)
-                // expect(info[2]).to.be.equal(0);
-                expect(info[3]).to.be.equal(employer.address)
-                expect(info[4]).to.be.equal(worker.address)
-                expect(info[5]).to.be.equal(work_quest_factory.address)
-                expect(info[6]).to.be.equal(JobStatus.Finished)
-            })
-    
-            it('Reject work from non Arbitration status: fail', async () => {
-                //from Publish to DecreasedCost
-                for (let val of call_flow.slice(
-                    setStatus.WaitWorker,
-                    setStatus.WaitJobVerify + 1
-                )) {
-                    await val.func(...val.args)
-                    try {
-                        await work_quest.connect(arbiter).arbitrationRejectWork()
-                        throw new Error('Not reverted')
-                    } catch (e) {
-                        await expect(e.message).to.include(acces_denied_err)
-                    }
-                }
-    
-                await work_quest.connect(employer).arbitration() //Arbitration
-                await work_quest.connect(arbiter).arbitrationAcceptWork() //Finished
-    
-                try {
-                    await work_quest.connect(arbiter).arbitrationRejectWork()
-                    throw new Error('Not reverted')
-                } catch (e) {
-                    await expect(e.message).to.include(acces_denied_err)
-                }
-            })
-        })
-    */
+               try {
+                   await work_quest.connect(arbiter).arbitrationRejectWork()
+                   throw new Error('Not reverted')
+               } catch (e) {
+                   await expect(e.message).to.include(acces_denied_err)
+               }
+           })
+       })
+   */
 
 
     // describe('Testing referal contract', () => {
