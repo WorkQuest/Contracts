@@ -217,8 +217,10 @@ contract WQBorrowing is
         loan.collateral -= returnCollateral;
         // and send back to fund
         uint256 rewards = (debtAmount *
-            ((loan.fund.apys(loan.duration) *
-                (block.timestamp - loan.borrowedAt)) / YEAR)) / 1e18;
+            loan.fund.apys(loan.duration) *
+            (block.timestamp - loan.borrowedAt)) /
+            YEAR /
+            1e18;
         rewards = rewards > 0 ? rewards : 1;
         loan.fund.refund{value: debtAmount + rewards}(
             debtAmount,
