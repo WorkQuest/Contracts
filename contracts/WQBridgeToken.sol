@@ -53,11 +53,7 @@ contract WQBridgeToken is
      * - `to` recipient address.
      * - `amount` amount of tokens.
      */
-    function mint(address to, uint256 amount) external {
-        require(
-            hasRole(MINTER_ROLE, msg.sender),
-            'BridgeToken: You should have a minter role'
-        );
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }
 
