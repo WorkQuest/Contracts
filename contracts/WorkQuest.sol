@@ -243,6 +243,7 @@ contract WorkQuest {
     /**
      * @notice Employer or worker send job to arbitration
      */
+    /// FIXME: replace to 3 days
     function arbitration() external {
         require(
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||

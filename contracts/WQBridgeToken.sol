@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.4;
+pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
@@ -69,33 +69,21 @@ contract WQBridgeToken is
      * - `from` address of user.
      * - `amount` amount of tokens.
      */
-    function burn(address from, uint256 amount) external {
-        require(
-            hasRole(BURNER_ROLE, msg.sender),
-            'BridgeToken: You should have a burner role'
-        );
+    function burn(address from, uint256 amount) external onlyRole(BURNER_ROLE) {
         _burn(from, amount);
     }
 
     /**
      * @dev Pause token
      */
-    function pause() external {
-        require(
-            hasRole(PAUSER_ROLE, msg.sender),
-            'BridgeToken: You should have a pauser role'
-        );
+    function pause() external onlyRole(PAUSER_ROLE) {
         super._pause();
     }
 
     /**
      * @dev Pause token
      */
-    function unpause() external {
-        require(
-            hasRole(PAUSER_ROLE, msg.sender),
-            'BridgeToken: You should have a pauser role'
-        );
+    function unpause() external onlyRole(PAUSER_ROLE) {
         super._unpause();
     }
 
@@ -106,11 +94,7 @@ contract WQBridgeToken is
      *
      * - `user` address of user.
      */
-    function addBlockList(address user) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'BridgeToken: You should have an admin role'
-        );
+    function addBlockList(address user) external onlyRole(ADMIN_ROLE) {
         isBlockListed[user] = true;
         emit AddedBlockList(user);
     }
@@ -119,11 +103,7 @@ contract WQBridgeToken is
      * @notice Remove user address from blocklist
      * @param user address of user.
      */
-    function removeBlockList(address user) external {
-        require(
-            hasRole(ADMIN_ROLE, msg.sender),
-            'BridgeToken: You should have an admin role'
-        );
+    function removeBlockList(address user) external onlyRole(ADMIN_ROLE) {
         isBlockListed[user] = false;
         emit RemovedBlockList(user);
     }
