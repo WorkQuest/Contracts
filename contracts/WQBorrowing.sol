@@ -245,8 +245,9 @@ contract WQBorrowing is
     ) internal view returns (uint256) {
         return
             (amount *
-                (fixedRate + ((apy * (block.timestamp - borrowedAt)) / YEAR))) /
-            1e18;
+                fixedRate +
+                (amount * apy * (block.timestamp - borrowedAt)) /
+                YEAR) / 1e18;
     }
 
     function _getRewards(
