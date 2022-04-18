@@ -81,10 +81,7 @@ contract WQDAOVoting is
         ProposalInfo[] pages;
     }
 
-    /// @dev The address of the governance token
-    WQTInterface public token;
-
-    /// @dev minimum quorum of voters for for making a decision
+    /// @dev Minimum quorum of voters for for making a decision
     uint256 public minimumQuorum;
 
     /// @dev The duration of voting on a proposal, in seconds
@@ -132,11 +129,11 @@ contract WQDAOVoting is
     /**
      * @notice Initializes the contract
      * @param chairPerson Chairperson address
-     * @param _voteToken The address of the DAO token
+     * @param _minimumQuorum Minimum quorum of voters for for making a decision
+     * @param _votingPeriod The duration of voting on a proposal, in seconds
      */
     function initialize(
         address chairPerson,
-        address _voteToken,
         uint256 _minimumQuorum,
         uint256 _votingPeriod
     ) public initializer {
@@ -148,7 +145,6 @@ contract WQDAOVoting is
         _setupRole(CHAIRPERSON_ROLE, chairPerson);
         _setRoleAdmin(CHAIRPERSON_ROLE, ADMIN_ROLE);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        token = WQTInterface(_voteToken);
         minimumQuorum = _minimumQuorum;
         votingPeriod = _votingPeriod;
         proposalThreshold = 10000e18; //10,000
@@ -172,9 +168,8 @@ contract WQDAOVoting is
         returns (uint256)
     {
         require(
-            token.getPastVotes(msg.sender, block.number - 1) >=
-                proposalThreshold,
-            'Proposer votes below proposal threshold'
+            msg.sender.balance >= proposalThreshold,
+            'WQDAO: Proposer votes below proposal threshold'
         );
 
         Proposal storage proposal = proposals[proposalCount++];
@@ -261,7 +256,7 @@ contract WQDAOVoting is
         view
         returns (uint8 proposalState)
     {
-        require(_proposalId < proposalCount, 'Invalid proposal id');
+        require(_proposalId < proposalCount, 'WQDAO: Invalid proposal id');
         if (proposals[_proposalId].active) return 2;
         else return voteResults[_proposalId].succeded ? 1 : 0;
     }
@@ -308,14 +303,14 @@ contract WQDAOVoting is
         uint256 _proposalId,
         bool _support
     ) internal returns (uint256) {
-        require(_proposalId < proposalCount, 'Invalid proposal id');
+        require(_proposalId < proposalCount, 'WQDAO: Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
-        uint256 votes = token.getPastVotes(_voter, proposal.blockNumber);
-        require(votes >= voteThreshold, 'Voter votes below vote threshold');
+        uint256 votes = _voter.balance;
+        require(votes >= voteThreshold, 'WQDAO: Voter votes below vote threshold');
         Receipt storage receipt = proposal.receipts[_voter];
-        require(proposal.active == true, 'Voting is closed');
-        require(receipt.hasVoted == false, 'Voter has already voted');
-        require(block.timestamp < proposal.expireTime, 'Proposal expired');
+        require(proposal.active == true, 'WQDAO: Voting is closed');
+        require(receipt.hasVoted == false, 'WQDAO: Voter has already voted');
+        require(block.timestamp < proposal.expireTime, 'WQDAO: Proposal expired');
 
         if (_support) {
             proposal.forVotes += votes;
@@ -340,9 +335,9 @@ contract WQDAOVoting is
         public
         onlyRole(CHAIRPERSON_ROLE)
     {
-        require(_proposalId < proposalCount, 'Invalid proposal id');
+        require(_proposalId < proposalCount, 'WQDAO: Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
-        require(proposal.active == true, 'Voting is closed');
+        require(proposal.active == true, 'WQDAO: Voting is closed');
         proposal.active = false;
         calcState(_proposalId);
         emit ProposalExecuted(
@@ -360,8 +355,8 @@ contract WQDAOVoting is
         public
         onlyRole(CHAIRPERSON_ROLE)
     {
-        require(_proposalId < proposalCount, 'Invalid proposal id');
-        require(proposals[_proposalId].active == true, 'Voting is closed');
+        require(_proposalId < proposalCount, 'WQDAO: Invalid proposal id');
+        require(proposals[_proposalId].active == true, 'WQDAO: Voting is closed');
         proposals[_proposalId].active = false;
         voteResults[_proposalId].succeded = false;
         voteResults[_proposalId].defeated = true;
