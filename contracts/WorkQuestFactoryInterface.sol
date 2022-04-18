@@ -6,4 +6,6 @@ interface WorkQuestFactoryInterface {
         external
         view
         returns (bool);
+
+    function workquestValid(address workquest) external view returns (bool);
 }
