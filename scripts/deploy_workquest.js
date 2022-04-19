@@ -15,8 +15,11 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.WORKQUEST_FEE) {
-    throw new Error(`Please set your WORKQUEST_FEE in a .env-${network} file`);
+  if (!process.env.WORKQUEST_FEE_EMPLOYER) {
+    throw new Error(`Please set your WORKQUEST_FEE_EMPLOYER in a .env-${network} file`);
+  }
+  if (!process.env.WORKQUEST_FEE_WORKER) {
+    throw new Error(`Please set your WORKQUEST_FEE_WORKER in a .env-${network} file`);
   }
   if (!process.env.WORKQUEST_FEE_RECEIVER) {
     throw new Error(`Please set your WORKQUEST_FEE_RECEIVER in a .env-${network} file`);
@@ -35,7 +38,8 @@ async function main() {
   const work_quest_factory = await upgrades.deployProxy(
     WorkQuestFactory,
     [
-      process.env.WORKQUEST_FEE,
+      process.env.WORKQUEST_FEE_EMPLOYER,
+      process.env.WORKQUEST_FEE_WORKER,
       process.env.WORKQUEST_FEE_RECEIVER,
       process.env.PENSION_FUND,
       process.env.REFERRAL,

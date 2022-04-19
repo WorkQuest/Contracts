@@ -28,7 +28,8 @@ contract WorkQuestFactory is
     uint256 lastArbiter;
 
     /// @notice Fee amount
-    uint256 public fee;
+    uint256 public feeEmployer;
+    uint256 public feeWorker;
 
     /// @notice Address of Fee receiver
     address payable public feeReceiver;
@@ -64,12 +65,14 @@ contract WorkQuestFactory is
 
     /**
      * @notice Create new WorkQuestFactory contract
-     * @param _fee Fee of jobs cost
+     * @param _feeEmployer Fee of jobs cost
+     * @param _feeWorker Fee of jobs cost
      * @param _feeReceiver Address of reciever of fee
      * @param _pensionFund Address of pension fund contract
      */
     function initialize(
-        uint256 _fee,
+        uint256 _feeEmployer,
+        uint256 _feeWorker,
         address payable _feeReceiver,
         address payable _pensionFund,
         address payable _referral,
@@ -82,7 +85,8 @@ contract WorkQuestFactory is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(ARBITER_ROLE, ADMIN_ROLE);
-        fee = _fee;
+        feeEmployer = _feeEmployer;
+        feeWorker = _feeWorker;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
         referral = _referral;
@@ -121,7 +125,7 @@ contract WorkQuestFactory is
         address workquest = address(
             new WorkQuest(
                 jobHash,
-                fee,
+                feeWorker,
                 cost,
                 deadline,
                 msg.sender,
@@ -133,7 +137,7 @@ contract WorkQuestFactory is
         );
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
-        uint256 comission = (cost * fee) / 1e18;
+        uint256 comission = (cost * feeEmployer) / 1e18;
         wusd.safeTransferFrom(msg.sender, workquest, cost);
         wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit WorkQuestCreated(
@@ -146,10 +150,10 @@ contract WorkQuestFactory is
     }
 
     /**
-     * @notice Update address of fee receiver
+     * @notice Set address of fee receiver
      * @param _feeReceiver Address of fee receiver
      */
-    function updateFeeReceiver(address payable _feeReceiver)
+    function setFeeReceiver(address payable _feeReceiver)
         external
         onlyRole(ADMIN_ROLE)
     {
@@ -157,10 +161,10 @@ contract WorkQuestFactory is
     }
 
     /**
-     * @notice Update address of refferal contract
+     * @notice Set address of refferal contract
      * @param _referral  Address of refferal contract
      */
-    function updateRefferal(address payable _referral)
+    function setRefferal(address payable _referral)
         external
         onlyRole(ADMIN_ROLE)
     {
@@ -168,10 +172,10 @@ contract WorkQuestFactory is
     }
 
     /**
-     * @notice Update address of pension fund contract
+     * @notice Set address of pension fund contract
      * @param _pensionFund  Address of pension fund contract
      */
-    function updatePensionFund(address payable _pensionFund)
+    function setPensionFund(address payable _pensionFund)
         external
         onlyRole(ADMIN_ROLE)
     {
@@ -179,10 +183,21 @@ contract WorkQuestFactory is
     }
 
     /**
-     * @notice Update address of WUSD token
+     * @notice Set address of WUSD token
      * @param _wusd  Address of pension fund contract
      */
-    function updateWusd(address _wusd) external onlyRole(ADMIN_ROLE) {
+    function setWusd(address _wusd) external onlyRole(ADMIN_ROLE) {
         wusd = IERC20Upgradeable(_wusd);
+    }
+
+    /**
+     * @notice Set fee value for employer
+     */
+    function setFeeEmployer(uint256 _fee) external onlyRole(ADMIN_ROLE) {
+        feeEmployer = _fee;
+    }
+
+    function setFeeWorker(uint256 _fee) external onlyRole(ADMIN_ROLE) {
+        feeWorker = _fee;
     }
 }

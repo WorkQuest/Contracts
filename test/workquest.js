@@ -123,6 +123,7 @@ describe('Work Quest test', () => {
         work_quest_factory = await upgrades.deployProxy(WorkQuestFactory,
             [
                 WORKQUEST_FEE,
+                WORKQUEST_FEE,
                 feeReceiver.address,
                 pension_fund.address,
                 referral.address,
@@ -160,7 +161,10 @@ describe('Work Quest test', () => {
                     .hasRole(arbiter_role, arbiter.address)
             ).to.equal(true);
             expect(
-                await work_quest_factory.connect(work_quest_owner).fee()
+                await work_quest_factory.connect(work_quest_owner).feeWorker()
+            ).to.equal(WORKQUEST_FEE);
+            expect(
+                await work_quest_factory.connect(work_quest_owner).feeEmployer()
             ).to.equal(WORKQUEST_FEE);
             expect(
                 await work_quest_factory.connect(work_quest_owner).feeReceiver()
