@@ -46,7 +46,7 @@ task("config_router", "Config router")
         // await router.setSurplusAuction(process.env.SURPLUS_AUCTION);
         // await router.addToken(process.env.ETH_TOKEN, process.env.ETH_AUCTION, "ETH");
         // await router.addToken(process.env.BNB_TOKEN, process.env.BNB_AUCTION, "BNB");
-        await router.addToken(process.env.WQT_TOKEN, process.env.WQT_AUCTION, "WQT");
+        // await router.addToken(process.env.WQT_TOKEN, process.env.WQT_AUCTION, "WQT");
         // await router.updateToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, "ETH");
         // await router.updateToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, "BNB");
         // await router.updateToken(1, process.env.WQT_TOKEN, process.env.WQT_AUCTION, "WQT");

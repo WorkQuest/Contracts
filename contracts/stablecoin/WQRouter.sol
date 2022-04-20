@@ -53,7 +53,7 @@ contract WQRouter is
     }
 
     WQPriceOracle public oracle;
-    IERC20Upgradeable wqt;
+    IERC20Upgradeable wusd;
     WQSurplusAuction public surplusAuction;
     WQDebtAuction public debtAuction;
 
@@ -64,7 +64,7 @@ contract WQRouter is
     uint256 public annualInterestRate;
 
     uint256 public totalDebt;
-    uint256 public surplus;
+    address public feeReceiver;
 
     mapping(string => TokenSettings) public tokens;
     mapping(string => mapping(address => UserCollateral)) public collaterals;
@@ -183,7 +183,7 @@ contract WQRouter is
 
     function initialize(
         address _oracle,
-        address _wqt,
+        address _wusd,
         uint256 _fixedRate,
         uint256 _annualInterestRate
     ) external initializer {
@@ -195,7 +195,7 @@ contract WQRouter is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         oracle = WQPriceOracle(_oracle);
-        wqt = IERC20Upgradeable(_wqt);
+        wusd = IERC20Upgradeable(_wusd);
         fixedRate = _fixedRate;
         annualInterestRate = _annualInterestRate;
     }
@@ -255,8 +255,9 @@ contract WQRouter is
             address(userCollateral.vault),
             collateralAmount
         );
-        // Send native coins
-        payable(msg.sender).sendValue(debtAmount);
+        // Send wusd
+        wusd.mint(msg.sender, debtAmount);
+        // payable(msg.sender).sendValue(debtAmount);
         emit Produced(
             msg.sender,
             collateralAmount,
@@ -304,7 +305,8 @@ contract WQRouter is
 
             totalDebt += extraDebt;
             userCollateral.debtAmount += extraDebt;
-            payable(msg.sender).sendValue(extraDebt);
+            // payable(msg.sender).sendValue(extraDebt);
+            wusd.mint(msg.sender, extraDebt);
             (newPriceIndex, newIndex) = tokens[symbol]
                 .collateralAuction
                 .moveLot(priceIndex, index, price, lotAmount);
@@ -357,11 +359,6 @@ contract WQRouter is
             );
             uint256 returnDebt = ((lotPrice - price) * lotAmount) /
                 collateralRatio;
-            require(msg.value >= returnDebt, 'WQRouter: Insufficient value');
-            // Return change
-            if (msg.value > returnDebt) {
-                payable(msg.sender).sendValue(msg.value - returnDebt);
-            }
             totalDebt -= returnDebt;
             userCollateral.debtAmount -= returnDebt;
             (newPriceIndex, newIndex) = tokens[symbol]
@@ -369,6 +366,7 @@ contract WQRouter is
                 .moveLot(priceIndex, index, price, lotAmount);
             _removeUserLot(msg.sender, priceIndex, index, symbol);
             _addUserLot(msg.sender, newPriceIndex, newIndex, symbol);
+            wusd.burn(msg.sender, returnDebt);
         }
         emit Moved(
             lotAmount,
@@ -471,13 +469,9 @@ contract WQRouter is
                 (fixedRate +
                     (annualInterestRate * (block.timestamp - createdAt)) /
                     YEAR)) / 1e18;
-            require(
-                msg.value >= debtPart + fee,
-                'WQRouter: Insufficient value'
-            );
             collateralPart = (debtPart * collateralRatio) / price;
             totalDebt -= debtPart;
-            surplus += fee;
+            // surplus += fee;
             tokens[symbol].totalCollateral -= collateralPart;
             UserCollateral storage userCollateral = collaterals[symbol][
                 msg.sender
@@ -495,15 +489,14 @@ contract WQRouter is
             }
 
             //Return change
-            if (msg.value > debtPart + fee) {
-                payable(msg.sender).sendValue(msg.value - debtPart - fee);
-            }
             //Transfer collateral token
             userCollateral.vault.transfer(
                 payable(msg.sender),
                 collateralPart,
                 tokens[symbol].token
             );
+            wusd.burn(msg.sender, debtPart);
+            wusd.safeTransferFrom(msg.sender, feeReceiver, fee);
         }
         emit Removed(
             msg.sender,
@@ -612,9 +605,10 @@ contract WQRouter is
     function buyCollateral(
         uint256 priceIndex,
         uint256 index,
+        uint256 amount,
         uint256 fee,
         string calldata symbol
-    ) external payable nonReentrant onlyCollateralAuction(symbol) {
+    ) external nonReentrant onlyCollateralAuction(symbol) {
         uint256 collateralPart;
         uint256 lotPrice;
         uint256 collateralRatio;
@@ -631,8 +625,7 @@ contract WQRouter is
             userCollateral.debtAmount -=
                 (collateralPart * lotPrice) /
                 collateralRatio;
-            totalDebt -= msg.value - fee;
-            surplus += fee;
+            totalDebt -= amount;
             if (
                 tokens[symbol].collateralAuction.getLotStatus(
                     priceIndex,
@@ -646,6 +639,8 @@ contract WQRouter is
                 collateralPart,
                 tokens[symbol].token
             );
+            wusd.burn(buyer, amount);
+            wusd.safeTransferFrom(buyer, feeReceiver, fee);
         }
         emit Removed(
             msg.sender,
@@ -677,7 +672,8 @@ contract WQRouter is
         totalDebt += amount;
         //FIXME: transfer wqt to vault
         wqt.transferFrom(user, address(this), cost);
-        user.sendValue(amount);
+        // .sendValue();
+        wusd.mint(user, amount);
     }
 
     /**

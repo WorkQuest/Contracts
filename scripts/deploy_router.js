@@ -15,8 +15,8 @@ async function main() {
     if (!process.env.PRICE_ORACLE) {
         throw new Error(`Please set your PRICE_ORACLE in a .env-${network} file`);
     }
-    if (!process.env.WQT_TOKEN) {
-        throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
+    if (!process.env.WUSD_TOKEN) {
+        throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
     }
     if (!process.env.ROUTER_FIXED_RATE) {
         throw new Error(`Please set your ROUTER_FIXED_RATE in a .env-${network} file`);
@@ -31,7 +31,7 @@ async function main() {
         Router,
         [
             process.env.PRICE_ORACLE,
-            process.env.WQT_TOKEN,
+            process.env.WUSD_TOKEN,
             process.env.ROUTER_FIXED_RATE,
             process.env.ROUTER_ANNUAL_INTEREST_RATE
         ],

@@ -42,6 +42,7 @@ interface WQRouterInterface {
     function buyCollateral(
         uint256 priceIndex,
         uint256 index,
+        uint256 amount,
         uint256 fee,
         string calldata symbol
     ) external payable;

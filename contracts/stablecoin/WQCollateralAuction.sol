@@ -434,9 +434,10 @@ contract WQCollateralAuction is
         } else {
             lot.status = LotStatus.Liquidated;
         }
-        router.buyCollateral{value: cost + fee}(
+        router.buyCollateral(
             priceIndex,
             index,
+            cost,
             fee,
             token.symbol()
         );
