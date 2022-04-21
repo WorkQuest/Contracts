@@ -18,16 +18,16 @@ task("bridge_redeem", "Redeem token on bridge")
         const bridge = await hre.ethers.getContractAt("WQBridge", process.env.BRIDGE);
         // nonce, amount, recipient, chainFrom, chainTo, symbol
         message = await web3.utils.soliditySha3(
-            { t: 'uint', v: 1 },
-            { t: 'uint', v: "100000000000000" },
-            { t: 'address', v: "0x42F41630aED8c6E1381108A32b5554E0DF75d9dc" },
+            { t: 'uint', v: 2 },
+            { t: 'uint', v: "1000000000" },
+            { t: 'address', v: "0xE24f99419d788003c0D5212f05F47B1572cDC38a" },
+            { t: 'uint256', v: 2 },
             { t: 'uint256', v: 1 },
-            { t: 'uint256', v: 3 },
-            { t: 'string', v: "WQT" }
+            { t: 'string', v: "USDT" }
         );
         let signature = await web3.eth.sign(message, validator);
         let sig = ethers.utils.splitSignature(signature);
         // nonce, chainFrom, amount, recipient, v, r, s, symbol
-        console.log(await bridge.redeem(1, 1, "100000000000000", "0x42F41630aED8c6E1381108A32b5554E0DF75d9dc", sig.v, sig.r, sig.s, "WQT"));
+        console.log(await bridge.redeem(2, 2, "1000000000", "0xE24f99419d788003c0D5212f05F47B1572cDC38a", sig.v, sig.r, sig.s, "USDT"));
         console.log("Done");
     });

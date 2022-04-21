@@ -16,16 +16,18 @@ contract WQBridgeToken is
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     address private owner;
+    uint8 private _decimals;
 
     mapping(address => bool) public isBlockListed;
 
     event AddedBlockList(address user);
     event RemovedBlockList(address user);
 
-    function initialize(string memory name, string memory symbol)
-        external
-        initializer
-    {
+    function initialize(
+        string memory name,
+        string memory symbol,
+        uint8 decimals_
+    ) external initializer {
         __ERC20_init(name, symbol);
         __ERC20Pausable_init();
         __AccessControl_init();
@@ -35,6 +37,7 @@ contract WQBridgeToken is
         _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(PAUSER_ROLE, ADMIN_ROLE);
         owner = msg.sender;
+        _decimals = decimals_;
     }
 
     /**
@@ -43,6 +46,10 @@ contract WQBridgeToken is
      */
     function getOwner() external view returns (address) {
         return owner;
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _decimals;
     }
 
     /**

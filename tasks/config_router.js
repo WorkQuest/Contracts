@@ -4,12 +4,12 @@ task("config_router", "Config router")
         const accounts = await ethers.getSigners();
         const sender = accounts[0].address;
         console.log("Sender address: ", sender);
-
         const network = hre.network.name;
         const fs = require('fs');
         const dotenv = require('dotenv');
         const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
         for (const k in envConfig) { process.env[k] = envConfig[k]; }
+
         if (!process.env.ROUTER) {
             throw new Error(`Please set your ROUTER in a .env-${network} file`);
         }
@@ -32,7 +32,7 @@ task("config_router", "Config router")
             throw new Error(`Please set your ETH_AUCTION in a .env-${network} file`);
         }
         if (!process.env.BNB_TOKEN) {
-            throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
+            throw new Error(`Please set your BNB_TOKEN in a .env-${network} file`);
         }
         if (!process.env.BNB_AUCTION) {
             throw new Error(`Please set your BNB_AUCTION in a .env-${network} file`);
