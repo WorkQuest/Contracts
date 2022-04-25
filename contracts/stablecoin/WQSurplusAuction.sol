@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "./WQPriceOracle.sol";
-import "./WQRouterInterface.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import './WQPriceOracle.sol';
+import './WQRouterInterface.sol';
 
 contract WQSurplusAuction is
     Initializable,
@@ -15,8 +14,8 @@ contract WQSurplusAuction is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     enum LotStatus {
         Unknown,
@@ -30,14 +29,13 @@ contract WQSurplusAuction is
         uint256 endTime;
         address payable buyer;
         LotStatus status;
+        string symbol;
     }
 
     /// @dev Address of price oracle
     WQPriceOracle public oracle;
     /// @dev Address of router
     WQRouterInterface public router;
-    /// @dev Address of token WQT
-    IERC20MetadataUpgradeable public token;
 
     /// @dev Duration of surplus auction
     uint256 public auctionDuration;
@@ -49,6 +47,8 @@ contract WQSurplusAuction is
     uint256 public maxLotAmountFactor;
     /// @dev Total amount of surplus auctioned
     uint256 public totalAuctioned;
+
+    mapping(string => bool) public tokens;
 
     /// @dev Queue
     mapping(uint256 => LotInfo) public lots;
@@ -64,7 +64,6 @@ contract WQSurplusAuction is
     constructor() initializer {}
 
     function initialize(
-        address _token,
         address _oracle,
         address _router,
         uint256 _auctionDuration,
@@ -79,7 +78,6 @@ contract WQSurplusAuction is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        token = IERC20MetadataUpgradeable(_token);
         oracle = WQPriceOracle(_oracle);
         router = WQRouterInterface(_router);
         auctionDuration = _auctionDuration;
@@ -97,9 +95,15 @@ contract WQSurplusAuction is
     /**
      * @dev Get current surplus amount (when price increased)
      */
-    function getSurplusAmount() public view returns (uint256) {
-        if ((router.totalCollateral() * 2) / 3e18 > router.totalDebt()) {
-            return (router.totalCollateral() * 2) / 3e18 - router.totalDebt();
+    function getSurplusAmount(string memory symbol)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 totalCollateral = router.totalCollateral(symbol) *
+            oracle.getTokenPriceUSD(symbol);
+        if ((totalCollateral * 2) / 3e18 > router.totalDebt(symbol)) {
+            return (totalCollateral * 2) / 3e18 - router.totalDebt(symbol);
         }
         return 0;
     }
@@ -108,24 +112,28 @@ contract WQSurplusAuction is
      *  @dev Start or restart surplus auction
      * @param amount Buyed amount of WUSD
      */
-    function startAuction(uint256 amount) external nonReentrant {
-        require(amount > 0, "WQAuction: Incorrect amount value");
+    function startAuction(uint256 amount, string calldata symbol)
+        external
+        nonReentrant
+    {
+        require(tokens[symbol], 'WQAuction: This token is disabled');
+        require(amount > 0, 'WQAuction: Incorrect amount value');
         if (lots[amount].status == LotStatus.Auctioned) {
             require(
                 block.timestamp > lots[amount].endTime,
-                "WQAuction: Lot is auctioned yet"
+                'WQAuction: Lot is auctioned yet'
             );
         } else {
             totalAuctioned += amount;
         }
-        uint256 totalSurplus = getSurplusAmount();
+        uint256 totalSurplus = getSurplusAmount(symbol);
         require(
             totalAuctioned <= totalSurplus,
-            "WQAuction: Amount of bid is greater than total surplus"
+            'WQAuction: Amount of bid is greater than total surplus'
         );
         require(
             (amount * 1e18) / totalSurplus <= maxLotAmountFactor,
-            "WQAuction: Auction of this lot is temporarily suspended"
+            'WQAuction: Auction of this lot is temporarily suspended'
         );
         //If amount not exist push this
         uint256 index = lots[amount].index;
@@ -141,7 +149,8 @@ contract WQSurplusAuction is
             buyer: payable(0),
             amount: amount,
             endTime: block.timestamp + auctionDuration,
-            status: LotStatus.Auctioned
+            status: LotStatus.Auctioned,
+            symbol: symbol
         });
 
         emit AuctionStarted(index, amount);
@@ -152,33 +161,42 @@ contract WQSurplusAuction is
      * @param index Index value
      * To need tokens approved to router
      */
-    function buyLot(uint256 index, uint256 maxCost) external nonReentrant {
+    function buyLot(uint256 index, uint256 maxCost)
+        external
+        payable
+        nonReentrant
+    {
         LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
-            "WQAuction: Lot is not auctioned"
+            'WQAuction: Lot is not auctioned'
         );
         require(
             block.timestamp <= lot.endTime,
-            "WQAuction: Auction time is over"
+            'WQAuction: Auction time is over'
         );
-        uint256 totalSurplus = getSurplusAmount();
+        uint256 totalSurplus = getSurplusAmount(lot.symbol);
         require(
             totalSurplus > 0 &&
                 (lot.amount * 1e18) / totalSurplus <= maxLotAmountFactor,
-            "WQAuction: Auction of this lot is temporarily suspended"
+            'WQAuction: Auction of this lot is temporarily suspended'
         );
         uint256 cost = _getCurrentLotCost(lot);
         if (maxCost > 0) {
             require(
                 cost <= maxCost,
-                "WQAuction: Current cost is greater maximum"
+                'WQAuction: Current cost is greater maximum'
             );
         }
         totalAuctioned -= lot.amount;
         lot.buyer = payable(msg.sender);
         lot.status = LotStatus.Selled;
-        router.transferSurplus(payable(msg.sender), lot.amount, cost);
+        router.transferSurplus(
+            payable(msg.sender),
+            lot.amount,
+            cost,
+            lot.symbol
+        );
         emit LotBuyed(lot.index, lot.amount);
     }
 
@@ -193,11 +211,11 @@ contract WQSurplusAuction is
         LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
-            "WQAuction: Lot is not auctioned"
+            'WQAuction: Lot is not auctioned'
         );
         require(
             block.timestamp > lot.endTime,
-            "WQAuction: Auction time is not over yet"
+            'WQAuction: Auction time is not over yet'
         );
 
         if (amounts[lot.index] == lot.amount) {
@@ -218,7 +236,7 @@ contract WQSurplusAuction is
         LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
-            "WQAuction: This lot is not auctioned"
+            'WQAuction: This lot is not auctioned'
         );
         return _getCurrentLotCost(lot);
     }
@@ -232,8 +250,7 @@ contract WQSurplusAuction is
             ((lowerBoundCost +
                 ((upperBoundCost - lowerBoundCost) *
                     (lot.endTime - block.timestamp)) /
-                auctionDuration) * lot.amount) /
-            oracle.getTokenPriceUSD(token.symbol());
+                auctionDuration) * lot.amount) / oracle.getTokenPriceUSD('WQT');
     }
 
     /** Admin Functions */
@@ -254,11 +271,14 @@ contract WQSurplusAuction is
     }
 
     /**
-     * @dev Set WQT token address
-     * @param _token Address of token
+     * @dev Set enabled tokens
+     * @param symbol Symbol of token
      */
-    function setToken(address _token) external onlyRole(ADMIN_ROLE) {
-        token = IERC20MetadataUpgradeable(_token);
+    function setToken(bool enabled, string calldata symbol)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        tokens[symbol] = enabled;
     }
 
     /**

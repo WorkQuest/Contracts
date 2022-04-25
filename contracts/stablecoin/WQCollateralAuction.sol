@@ -356,10 +356,11 @@ contract WQCollateralAuction is
      */
     function getLiquidatedCollaterallAmount() public view returns (uint256) {
         string memory symbol = token.symbol();
-        uint256 totalCollateral = router.totalCollateral();
-        if (liquidateThreshold * router.totalDebt() > totalCollateral) {
+        uint256 totalCollateral = router.totalCollateral(symbol) *
+            oracle.getTokenPriceUSD(symbol);
+        if (liquidateThreshold * router.totalDebt(symbol) > totalCollateral) {
             return
-                (3e18 * router.totalDebt() - 2 * totalCollateral) /
+                (3e18 * router.totalDebt(symbol) - 2 * totalCollateral) /
                 oracle.getTokenPriceUSD(symbol);
         }
         return 0;
@@ -434,13 +435,7 @@ contract WQCollateralAuction is
         } else {
             lot.status = LotStatus.Liquidated;
         }
-        router.buyCollateral(
-            priceIndex,
-            index,
-            cost,
-            fee,
-            token.symbol()
-        );
+        router.buyCollateral(priceIndex, index, cost, fee, token.symbol());
         //Return change
         if (msg.value > cost + fee) {
             payable(msg.sender).sendValue(msg.value - cost - fee);

@@ -15,14 +15,12 @@ interface WQRouterInterface {
         view
         returns (TokenSettings memory);
 
-    function totalCollateral() external view returns (uint256);
-
     function totalCollateral(string calldata symbol)
         external
         view
         returns (uint256);
 
-    function totalDebt() external view returns (uint256);
+    function totalDebt(string calldata symbol) external view returns (uint256);
 
     function fixedRate() external view returns (uint256);
 
@@ -50,8 +48,14 @@ interface WQRouterInterface {
     function transferSurplus(
         address payable to,
         uint256 amount,
-        uint256 cost
+        uint256 cost,
+        string calldata symbol
     ) external;
 
-    function transferDebt(address to, uint256 amount) external payable;
+    function transferDebt(
+        address to,
+        uint256 amount,
+        uint256 cost,
+        string calldata symbol
+    ) external;
 }
