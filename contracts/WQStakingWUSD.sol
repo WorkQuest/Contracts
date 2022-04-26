@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.4;
+pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
@@ -7,15 +7,14 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 
-contract WQStakingNative is
+contract WQStakingWUSD is
     Initializable,
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    using AddressUpgradeable for address payable;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
@@ -44,6 +43,8 @@ contract WQStakingNative is
     }
 
     /// @notice Common contract configuration variables
+    /// @notice Address of token
+    IERC20Upgradeable public token;
     /// @notice Time of start staking
     uint256 public startTime;
     /// @notice Increase of rewards per distribution time
@@ -92,7 +93,8 @@ contract WQStakingNative is
         uint256 _stakePeriod,
         uint256 _claimPeriod,
         uint256 _minStake,
-        uint256 _maxStake
+        uint256 _maxStake,
+        address _token
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -105,7 +107,7 @@ contract WQStakingNative is
         minStake = _minStake;
         maxStake = _maxStake;
         producedTime = _startTime;
-
+        token = IERC20Upgradeable(_token);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
@@ -121,18 +123,18 @@ contract WQStakingNative is
     /**
      * @dev stake native coins to the contract
      */
-    function stake() external payable nonReentrant dailyLocked {
+    function stake(uint256 amount) external nonReentrant dailyLocked {
         require(
             block.timestamp > startTime,
             'WQStaking: Staking time has not come yet'
         );
         require(
-            msg.value >= minStake,
+            amount >= minStake,
             'WQStaking: Amount should be greater than minimum stake'
         );
         Staker storage staker = stakes[msg.sender];
         require(
-            msg.value + staker.amount <= maxStake,
+            amount + staker.amount <= maxStake,
             'WQStaking: Amount should be less than maximum stake'
         );
         require(
@@ -142,36 +144,31 @@ contract WQStakingNative is
         if (totalStaked > 0) {
             update();
         }
-        staker.rewardDebt += (msg.value * tokensPerStake) / 1e18;
-        totalStaked += msg.value;
-        staker.amount += msg.value;
+        staker.rewardDebt += (amount * tokensPerStake) / 1e18;
+        totalStaked += amount;
+        staker.amount += amount;
         staker.stakedAt = block.timestamp;
-        emit Staked(msg.value, block.timestamp, msg.sender);
-    }
-
-    receive() external payable {
-        emit Received(msg.value, block.timestamp, msg.sender);
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        emit Staked(amount, block.timestamp, msg.sender);
     }
 
     /**
      * @dev unstake - return staked amount
-     * @param _amount Unstake amount
+     * @param amount Unstake amount
      */
 
-    function unstake(uint256 _amount) external nonReentrant dailyLocked {
+    function unstake(uint256 amount) external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
         require(
-            staker.amount >= _amount,
+            staker.amount >= amount,
             'WQStaking: Not enough tokens to unstake'
         );
-
         update();
-        staker.rewardAllowed += (_amount * tokensPerStake) / 1e18;
-        staker.amount -= _amount;
-        totalStaked -= _amount;
-
-        payable(msg.sender).sendValue(_amount);
-        emit Unstaked(_amount, block.timestamp, msg.sender);
+        staker.rewardAllowed += (amount * tokensPerStake) / 1e18;
+        staker.amount -= amount;
+        totalStaked -= amount;
+        token.safeTransfer(msg.sender, amount);
+        emit Unstaked(amount, block.timestamp, msg.sender);
     }
 
     /**
@@ -193,9 +190,7 @@ contract WQStakingNative is
         staker.distributed += reward;
         staker.claimedAt = block.timestamp;
         totalDistributed += reward;
-
-        payable(msg.sender).sendValue(reward);
-
+        token.safeTransfer(msg.sender, reward);
         emit Claimed(reward, block.timestamp, msg.sender);
     }
 
@@ -221,7 +216,7 @@ contract WQStakingNative is
             update();
         }
         uint256 renewalReward = calcReward(msg.sender, tokensPerStake);
-        if (renewalReward > maxStake - staker.amount){
+        if (renewalReward > maxStake - staker.amount) {
             renewalReward = maxStake - staker.amount;
         }
         require(renewalReward > 0, 'WQStaking: You cannot reinvest rewards');
@@ -342,10 +337,10 @@ contract WQStakingNative is
     /**
      * @dev setReward - sets amount of reward during `distributionTime`
      */
-    function updateRewardTotal(uint256 _amount) external onlyRole(ADMIN_ROLE) {
+    function updateRewardTotal(uint256 amount) external onlyRole(ADMIN_ROLE) {
         earlierProduced = produced();
         producedTime = block.timestamp;
-        rewardTotal = _amount;
+        rewardTotal = amount;
     }
 
     function updateDistributionTime(uint256 _distributionTime)
@@ -416,14 +411,14 @@ contract WQStakingNative is
      */
     function updateStakerInfo(
         address _user,
-        uint256 _amount,
+        uint256 amount,
         uint256 _rewardAllowed,
         uint256 _rewardDebt,
         uint256 _distributed
     ) external onlyRole(ADMIN_ROLE) {
         Staker storage staker = stakes[_user];
 
-        staker.amount = _amount;
+        staker.amount = amount;
         staker.rewardAllowed = _rewardAllowed;
         staker.rewardDebt = _rewardDebt;
         staker.distributed = _distributed;

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.8.4;
+pragma solidity ^0.8.4;
 
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
-contract WQStaking is
+contract WQStakingWQT is
     Initializable,
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -41,20 +41,12 @@ contract WQStaking is
         uint256 maxStake;
         uint256 totalStaked;
         uint256 totalDistributed;
-        address stakeTokenAddress;
-        address rewardTokenAddress;
+        address token;
     }
 
-    // Stakers info by token holders.
-    mapping(address => Staker) public stakes;
-
-    // ERC20 token staked to the contract.
-    IERC20Upgradeable public stakeToken;
-
-    // ERC20 token earned by stakers as reward.
-    IERC20Upgradeable public rewardToken;
-
     /// @notice Common contract configuration variables
+    // ERC20 token staked to the contract.
+    IERC20Upgradeable public token;
     /// @notice Time of start staking
     uint256 public startTime;
     /// @notice Increase of rewards per distribution time
@@ -76,6 +68,9 @@ contract WQStaking is
     uint256 public producedTime;
     uint256 public totalStaked;
     uint256 public totalDistributed;
+
+    // Stakers info by token holders.
+    mapping(address => Staker) public stakes;
 
     event tokensStaked(uint256 amount, uint256 time, address indexed sender);
     event tokensClaimed(uint256 amount, uint256 time, address indexed sender);
@@ -100,8 +95,7 @@ contract WQStaking is
         uint256 _claimPeriod,
         uint256 _minStake,
         uint256 _maxStake,
-        address _rewardToken,
-        address _stakeToken
+        address _token
     ) public initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -114,8 +108,7 @@ contract WQStaking is
         claimPeriod = _claimPeriod;
         minStake = _minStake;
         maxStake = _maxStake;
-        rewardToken = IERC20Upgradeable(_rewardToken);
-        stakeToken = IERC20Upgradeable(_stakeToken);
+        token = IERC20Upgradeable(_token);
         producedTime = _startTime;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -134,9 +127,9 @@ contract WQStaking is
      *
      * Parameters:
      *
-     * - `_amount` - stake amount
+     * - `amount` - stake amount
      */
-    function stake(uint256 _amount, uint256 duration)
+    function stake(uint256 amount, uint256 duration)
         external
         nonReentrant
         dailyLocked
@@ -146,12 +139,12 @@ contract WQStaking is
             'WQStaking: Staking time has not come yet'
         );
         require(
-            _amount >= minStake,
+            amount >= minStake,
             'WQStaking: Amount should be greater than minimum stake'
         );
         Staker storage staker = stakes[msg.sender];
         require(
-            _amount + staker.amount <= maxStake,
+            amount + staker.amount <= maxStake,
             'WQStaking: Amount should be less than maximum stake'
         );
         if (block.timestamp >= staker.unstakeTime) {
@@ -169,13 +162,13 @@ contract WQStaking is
         if (totalStaked > 0) {
             update();
         }
-        staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
-        totalStaked += _amount;
-        staker.amount += _amount;
+        staker.rewardDebt += (amount * tokensPerStake) / 1e20;
+        totalStaked += amount;
+        staker.amount += amount;
         staker.stakedAt = block.timestamp;
 
-        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
-        emit tokensStaked(_amount, block.timestamp, msg.sender);
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        emit tokensStaked(amount, block.timestamp, msg.sender);
     }
 
     /**
@@ -183,27 +176,25 @@ contract WQStaking is
      *
      * Parameters:
      *
-     * - `_amount` - stake amount
+     * - `amount` - stake amount
      */
 
-    function unstake(uint256 _amount) external nonReentrant dailyLocked {
+    function unstake(uint256 amount) external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
         require(
             staker.unstakeTime <= block.timestamp,
             'WQStaking: You cannot unstake token yet'
         );
         require(
-            staker.amount >= _amount,
+            staker.amount >= amount,
             'WQStaking: Not enough tokens to unstake'
         );
-
         update();
-        staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
-        staker.amount -= _amount;
-        totalStaked -= _amount;
-
-        stakeToken.safeTransfer(msg.sender, _amount);
-        emit tokensUnstaked(_amount, block.timestamp, msg.sender);
+        staker.rewardAllowed += (amount * tokensPerStake) / 1e20;
+        staker.amount -= amount;
+        totalStaked -= amount;
+        token.safeTransfer(msg.sender, amount);
+        emit tokensUnstaked(amount, block.timestamp, msg.sender);
     }
 
     /**
@@ -225,8 +216,7 @@ contract WQStaking is
         staker.distributed += reward;
         staker.claimedAt = block.timestamp;
         totalDistributed += reward;
-
-        IERC20Upgradeable(rewardToken).safeTransfer(msg.sender, reward);
+        token.safeTransfer(msg.sender, reward);
         emit tokensClaimed(reward, block.timestamp, msg.sender);
     }
 
@@ -344,12 +334,7 @@ contract WQStaking is
         Staker storage staker = stakes[user];
         staked_ = staker.amount;
         claim_ = getClaim(user);
-        return (
-            staked_,
-            claim_,
-            stakeToken.balanceOf(user),
-            staker.unstakeTime
-        );
+        return (staked_, claim_, token.balanceOf(user), staker.unstakeTime);
     }
 
     /**
@@ -366,8 +351,7 @@ contract WQStaking is
             maxStake: maxStake,
             totalStaked: totalStaked,
             totalDistributed: totalDistributed,
-            stakeTokenAddress: address(stakeToken),
-            rewardTokenAddress: address(rewardToken)
+            token: address(token)
         });
         return info_;
     }
@@ -454,7 +438,7 @@ contract WQStaking is
      */
     function updateStakerInfo(
         address _user,
-        uint256 _amount,
+        uint256 amount,
         uint256 _rewardAllowed,
         uint256 _rewardDebt,
         uint256 _distributed,
@@ -462,7 +446,7 @@ contract WQStaking is
     ) external onlyRole(ADMIN_ROLE) {
         Staker storage staker = stakes[_user];
 
-        staker.amount = _amount;
+        staker.amount = amount;
         staker.rewardAllowed = _rewardAllowed;
         staker.rewardDebt = _rewardDebt;
         staker.distributed = _distributed;
