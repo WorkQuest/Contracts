@@ -1,6 +1,8 @@
 const Web3 = require('web3')
 const { expect } = require('chai')
 const { ethers } = require('hardhat')
+const BigNumber = require('bignumber.js');
+BigNumber.config({ EXPONENTIAL_AT: 60 });
 require('@nomiclabs/hardhat-waffle')
 const { parseEther } = require('ethers/lib/utils')
 
@@ -14,11 +16,13 @@ const START_PRICE_FACTOR = parseEther("1.2");
 const COLLATERAL_AUCTION_DURATION = "300"; // 5 min
 const PRICE_INDEX_STEP = parseEther("1"); // 1 WUSD
 const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
+const MIN_RATIO = parseEther("1.5");
 
 describe('Router test', () => {
     let Vault;
     let priceOracle;
     let weth;
+    let wusd_token;
     let router;
     let auction;
     let nonce = 1;
@@ -26,11 +30,12 @@ describe('Router test', () => {
     let user1;
     let user2;
     let service;
+    let feeReceiver;
 
     async function getTimestamp() {
         let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
         let txBlockNumber = await hre.ethers.provider.send("eth_getBlockByNumber", [blockNumber, false]);
-        return parseInt(txBlockNumber.timestamp)
+        return parseInt(txBlockNumber.timestamp);
     }
 
     async function oracleSetPrice(price, symbol) {
@@ -48,7 +53,7 @@ describe('Router test', () => {
     }
 
     beforeEach(async () => {
-        [owner, user1, user2, service] = await ethers.getSigners();
+        [owner, user1, user2, service, feeReceiver] = await ethers.getSigners();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
         priceOracle = await upgrades.deployProxy(PriceOracle, [service.address, VALID_TIME], { kind: 'transparent' });
@@ -62,8 +67,29 @@ describe('Router test', () => {
         await weth.transfer(user1.address, parseEther("1000").toString());
         await weth.transfer(user2.address, parseEther("1000").toString());
 
+        const BridgeToken = await ethers.getContractFactory('WQBridgeToken');
+        wusd_token = await upgrades.deployProxy(
+            BridgeToken,
+            ["WUSD stablecoin", "WUSD", 18],
+            { initializer: 'initialize', kind: 'transparent' }
+        );
+        await wusd_token.deployed();
+
+
         const Router = await ethers.getContractFactory('WQRouter');
-        router = await upgrades.deployProxy(Router, [priceOracle.address, NULL_ADDRESS, FIXED_RATE, ANNUAL_INTEREST_RATE], { kind: 'transparent' });
+        router = await upgrades.deployProxy(Router,
+            [
+                priceOracle.address,
+                wusd_token.address,
+                FIXED_RATE,
+                ANNUAL_INTEREST_RATE,
+                feeReceiver.address
+            ],
+            { kind: 'transparent' }
+        );
+
+        await wusd_token.grantRole(await wusd_token.MINTER_ROLE(), router.address);
+        await wusd_token.grantRole(await wusd_token.BURNER_ROLE(), router.address);
 
         const Auction = await ethers.getContractFactory('WQCollateralAuction');
         auction = await upgrades.deployProxy(
@@ -77,17 +103,17 @@ describe('Router test', () => {
                 parseEther("1"),
                 COLLATERAL_AUCTION_DURATION,
                 PRICE_INDEX_STEP
-            ], { kind: 'transparent' }
+            ],
+            { kind: 'transparent' }
         );
 
-        await router.addToken(weth.address, auction.address, SYMBOL);
+        await router.setToken(1, weth.address, auction.address, MIN_RATIO, SYMBOL);
         Vault = await ethers.getContractFactory('WQRouterVault');
     });
 
     describe('Deployment', () => {
         it('STEP1: Should set the roles, addresses and variables', async () => {
             expect((await router.tokens(SYMBOL)).enabled).to.equal(true);
-            expect(await router.oracle()).to.equal(priceOracle.address);
             expect((await router.tokens(SYMBOL)).collateralAuction).to.equal(auction.address);
             expect(
                 await router.hasRole(await router.DEFAULT_ADMIN_ROLE(), owner.address)
@@ -101,32 +127,33 @@ describe('Router test', () => {
             expect(
                 await router.getRoleAdmin(await router.UPGRADER_ROLE())
             ).to.equal(await router.ADMIN_ROLE());
+            let router_info = await router.getParams();
+            expect(router_info[0]).to.equal(priceOracle.address);
+            expect(router_info[1]).to.equal(wusd_token.address);
+            expect(router_info[2]).to.equal(NULL_ADDRESS);
+            expect(router_info[3]).to.equal(NULL_ADDRESS);
+            expect(router_info[4]).to.equal(FIXED_RATE);
+            expect(router_info[5]).to.equal(ANNUAL_INTEREST_RATE);
+            expect(router_info[6]).to.equal(feeReceiver.address);
         });
     });
 
     describe('Produce WUSD', () => {
         it('STEP1: Should create collateral vault and set all variables and transfer WUSD to user', async () => {
-            await web3.eth.sendTransaction(
-                {
-                    from: owner.address,
-                    to: router.address,
-                    value: parseEther("20").toString()
-                }
-            );
             await weth.connect(user1).approve(router.address, parseEther("1"));
-
-            let balanceWUSDBefore = await ethers.provider.getBalance(user1.address);
-            let balanceETHBefore = await weth.balanceOf(user1.address);
+            let balanceWUSDBefore = BigInt(await wusd_token.balanceOf(user1.address));
+            let balanceETHBefore = BigInt(await weth.balanceOf(user1.address));
+            // console.log("balanceWUSDBefore, balanceETHBefore", balanceWUSDBefore, balanceETHBefore);
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
-            let balanceWUSDAfter = await ethers.provider.getBalance(user1.address);
-            let balanceETHAfter = await weth.balanceOf(user1.address);
+            let balanceWUSDAfter = BigInt(await wusd_token.balanceOf(user1.address));
+            let balanceETHAfter = BigInt(await weth.balanceOf(user1.address));
 
-            expect(((balanceETHBefore - balanceETHAfter) / 1e18).toFixed(2)).to.equal("1.00");
-            expect(((balanceWUSDAfter - balanceWUSDBefore) / 1e18).toFixed(2)).to.equal("20.00");
+            expect(balanceETHBefore - balanceETHAfter).to.equal(BigInt(parseEther("1")));
+            expect(balanceWUSDAfter - balanceWUSDBefore).to.equal(BigInt(parseEther("20")));
 
             // check common info
-            expect(await router.totalCollateral()).to.equal(parseEther("30000000000000000000"));
-            expect(await router.totalDebt()).to.equal(parseEther("20"));
+            expect(await router.getCollateral(SYMBOL)).to.equal(parseEther("1"));
+            expect(await router.getDebt(SYMBOL)).to.equal(parseEther("20"));
 
             // check user info
             let collateralInfo = await router.collaterals(SYMBOL, user1.address);
@@ -150,34 +177,26 @@ describe('Router test', () => {
             let vault = await Vault.attach(collateralInfo.vault);
             expect(await vault.router()).to.equal(router.address);
             expect(await vault.owner()).to.equal(user1.address);
-            expect(await vault.amount()).to.equal(parseEther("1"));
             expect(await weth.balanceOf(vault.address)).to.equal(parseEther("1"));
         });
     });
 
     describe('Claim extra debt when price increased', () => {
         beforeEach(async () => {
-            await web3.eth.sendTransaction(
-                {
-                    from: owner.address,
-                    to: router.address,
-                    value: parseEther("30").toString()
-                }
-            );
             await weth.connect(user1).approve(router.address, parseEther("1"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(parseEther("45"), SYMBOL);
         });
 
         it('STEP1: Should give to user extra debt', async () => {
-            let balanceWUSDBefore = await ethers.provider.getBalance(user1.address);
+            let balanceWUSDBefore = BigInt(await wusd_token.balanceOf(user1.address));
             await router.connect(user1).claimExtraDebt(ETH_PRICE, 0, SYMBOL);
-            let balanceWUSDAfter = await ethers.provider.getBalance(user1.address);
-            expect(((balanceWUSDAfter - balanceWUSDBefore) / 1e18).toFixed(2)).to.equal("10.00");
+            let balanceWUSDAfter = BigInt(await wusd_token.balanceOf(user1.address));
+            expect(balanceWUSDAfter - balanceWUSDBefore).to.equal(BigInt(parseEther("10")));
 
             // check common info
-            expect(await router.totalCollateral()).to.equal(parseEther("45000000000000000000"));
-            expect(await router.totalDebt()).to.equal(parseEther("30"));
+            expect(await router.getCollateral(SYMBOL)).to.equal(parseEther("1"));
+            expect(await router.getDebt(SYMBOL)).to.equal(parseEther("30"));
 
             // check user info
             let collateralInfo = await router.collaterals(SYMBOL, user1.address);
@@ -200,34 +219,26 @@ describe('Router test', () => {
             let vault = await Vault.attach(collateralInfo.vault);
             expect(await vault.router()).to.equal(router.address);
             expect(await vault.owner()).to.equal(user1.address);
-            expect(await vault.amount()).to.equal(parseEther("1"));
             expect(await weth.balanceOf(vault.address)).to.equal(parseEther("1"));
         });
     });
 
     describe('Dispose debt when price decreased', () => {
         beforeEach(async () => {
-            await web3.eth.sendTransaction(
-                {
-                    from: owner.address,
-                    to: router.address,
-                    value: parseEther("40").toString()
-                }
-            );
             await weth.connect(user1).approve(router.address, parseEther("1"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(parseEther("15"), SYMBOL);
         });
 
         it('STEP1: Should take from user debt', async () => {
-            let balanceWUSDBefore = await ethers.provider.getBalance(user1.address);
-            await router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL, { value: parseEther("10") });
-            let balanceWUSDAfter = await ethers.provider.getBalance(user1.address);
-            expect(((balanceWUSDBefore - balanceWUSDAfter) / 1e18).toFixed(2)).to.equal("10.00");
+            let balanceWUSDBefore = BigInt(await wusd_token.balanceOf(user1.address));
+            await router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL);
+            let balanceWUSDAfter = BigInt(await wusd_token.balanceOf(user1.address));
+            expect(balanceWUSDBefore - balanceWUSDAfter).to.equal(BigInt(parseEther("10")));
 
             // check common info
-            expect(await router.totalCollateral()).to.equal(parseEther("15000000000000000000"));
-            expect(await router.totalDebt()).to.equal(parseEther("10"));
+            expect(await router.getCollateral(SYMBOL)).to.equal(parseEther("1"));
+            expect(await router.getDebt(SYMBOL)).to.equal(parseEther("10"));
 
             // check user info
             let collateralInfo = await router.collaterals(SYMBOL, user1.address);
@@ -250,13 +261,7 @@ describe('Router test', () => {
             let vault = await Vault.attach(collateralInfo.vault);
             expect(await vault.router()).to.equal(router.address);
             expect(await vault.owner()).to.equal(user1.address);
-            expect(await vault.amount()).to.equal(parseEther("1"));
             expect(await weth.balanceOf(vault.address)).to.equal(parseEther("1"));
-        });
-        it('STEP2: Should reverted when insuffience value', async () => {
-            await expect(
-                router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL, { value: parseEther("9.9") })
-            ).to.be.revertedWith("WQRouter: Insufficient value");
         });
         it('STEP3: Should reverted when lot is auctioned', async () => {
             await oracleSetPrice(parseEther("21"), SYMBOL);
@@ -270,31 +275,24 @@ describe('Router test', () => {
 
     describe('Remove collateral', () => {
         beforeEach(async () => {
-            await web3.eth.sendTransaction(
-                {
-                    from: owner.address,
-                    to: router.address,
-                    value: parseEther("60").toString()
-                }
-            );
             await weth.connect(user1).approve(router.address, parseEther("1"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
         });
 
         it('STEP1: Should removed part of collateral', async () => {
-            let balanceWUSDBefore = await ethers.provider.getBalance(user1.address);
-            let balanceETHBefore = await weth.balanceOf(user1.address);
-            await router.connect(user1).removeCollateral(ETH_PRICE, 0, parseEther("10"), SYMBOL, { value: parseEther("13") });
-            let balanceWUSDAfter = await ethers.provider.getBalance(user1.address);
-            let balanceETHAfter = await weth.balanceOf(user1.address);
+            await wusd_token.connect(user1).approve(router.address, parseEther("1"));
+            let balanceWUSDBefore = BigInt(await wusd_token.balanceOf(user1.address));
+            let balanceETHBefore = BigInt(await weth.balanceOf(user1.address));
+            await router.connect(user1).removeCollateral(ETH_PRICE, 0, parseEther("10"), SYMBOL);
+            let balanceWUSDAfter = BigInt(await wusd_token.balanceOf(user1.address));
+            let balanceETHAfter = BigInt(await weth.balanceOf(user1.address));
 
-            expect(((balanceETHAfter - balanceETHBefore) / 1e18).toFixed(2)).to.equal("0.50");
-            expect(((balanceWUSDBefore - balanceWUSDAfter) / 1e18).toFixed(2)).to.equal("11.00");
+            expect(balanceETHAfter - balanceETHBefore).to.equal(BigInt(parseEther("0.5")));
+            expect(balanceWUSDBefore - balanceWUSDAfter).to.equal(BigInt(parseEther("11.00")));
 
             // check common info
-            expect(await router.totalCollateral()).to.equal(parseEther("15000000000000000000"));
-            expect(await router.totalDebt()).to.equal(parseEther("10"));
-            expect(await router.surplus()).to.equal(parseEther("1"));
+            expect(await router.getCollateral(SYMBOL)).to.equal(parseEther("0.5"));
+            expect(await router.getDebt(SYMBOL)).to.equal(parseEther("10"));
 
             // check user info
             let collateralInfo = await router.collaterals(SYMBOL, user1.address);
@@ -318,7 +316,6 @@ describe('Router test', () => {
             let vault = await Vault.attach(collateralInfo.vault);
             expect(await vault.router()).to.equal(router.address);
             expect(await vault.owner()).to.equal(user1.address);
-            expect(await vault.amount()).to.equal(parseEther("0.5"));
             expect(await weth.balanceOf(vault.address)).to.equal(parseEther("0.5"));
         });
     });

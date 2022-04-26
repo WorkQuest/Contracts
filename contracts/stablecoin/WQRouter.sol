@@ -45,11 +45,11 @@ contract WQRouter is
      * @dev Settings of collateral token
      */
     struct TokenSettings {
-        uint256 index;
         uint256 totalCollateral;
         uint256 totalDebt;
         address token;
         WQCollateralAuction collateralAuction;
+        uint256 minRatio;
         bool enabled;
     }
 
@@ -57,7 +57,6 @@ contract WQRouter is
     WQBridgeTokenInterface wusd;
     WQSurplusAuction surplusAuction;
     WQDebtAuction debtAuction;
-    uint256 minRatio;
 
     /**
      * @notice Stability fee settings
@@ -68,7 +67,6 @@ contract WQRouter is
 
     mapping(string => TokenSettings) public tokens;
     mapping(string => mapping(address => UserCollateral)) public collaterals;
-    string[] tokenList;
 
     /**
      * @dev Event emitted when user deposited colateral tokens and takes WUSD
@@ -185,7 +183,8 @@ contract WQRouter is
         address _oracle,
         address _wusd,
         uint256 _fixedRate,
-        uint256 _annualInterestRate
+        uint256 _annualInterestRate,
+        address _feeReceiver
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -198,6 +197,7 @@ contract WQRouter is
         wusd = WQBridgeTokenInterface(_wusd);
         fixedRate = _fixedRate;
         annualInterestRate = _annualInterestRate;
+        feeReceiver = _feeReceiver;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -223,7 +223,7 @@ contract WQRouter is
         string calldata symbol
     ) external nonReentrant onlyEnabledToken(symbol) {
         require(
-            collateralRatio >= minRatio,
+            collateralRatio >= tokens[symbol].minRatio,
             'WQRouter: Invalid collateral ratio'
         );
         UserCollateral storage userCollateral = collaterals[symbol][msg.sender];
@@ -658,7 +658,7 @@ contract WQRouter is
         );
     }
 
-    function totalCollateral(string calldata symbol)
+    function getCollateral(string calldata symbol)
         external
         view
         returns (uint256 amount)
@@ -666,29 +666,13 @@ contract WQRouter is
         return tokens[symbol].totalCollateral;
     }
 
-    function totalDebt(string calldata symbol)
+    function getDebt(string calldata symbol)
         external
         view
         returns (uint256 amount)
     {
         return tokens[symbol].totalDebt;
     }
-
-    // function totalCollateral() external view returns (uint256 amount) {
-    //     for (uint256 i = 0; i < tokenList.length; i++) {
-    //         amount +=
-    //             tokens[tokenList[i]].totalCollateral *
-    //             oracle.getTokenPriceUSD(tokenList[i]);
-    //     }
-    //     return amount;
-    // }
-
-    // function totalDebt() external view returns (uint256 amount) {
-    //     for (uint256 i = 0; i < tokenList.length; i++) {
-    //         amount += tokens[tokenList[i]].totalDebt;
-    //     }
-    //     return amount;
-    // }
 
     function getParams()
         external
@@ -700,7 +684,6 @@ contract WQRouter is
             WQDebtAuction,
             uint256,
             uint256,
-            uint256,
             address
         )
     {
@@ -709,7 +692,6 @@ contract WQRouter is
             wusd,
             surplusAuction,
             debtAuction,
-            minRatio,
             fixedRate,
             annualInterestRate,
             feeReceiver
@@ -771,53 +753,29 @@ contract WQRouter is
     }
 
     /**
-     * @dev Set address of price oracle contract
-     * @param _minRatio Min ratio value
-     */
-    function setMinRate(uint256 _minRatio) external onlyRole(ADMIN_ROLE) {
-        minRatio = _minRatio;
-    }
-
-    /**
-     * @dev Set address of token
-     * @param token Address of token
-     * @param auction Address of collateral auction
-     * @param symbol Symbol of token
-     */
-    function addToken(
-        address token,
-        address auction,
-        string calldata symbol
-    ) external onlyRole(ADMIN_ROLE) {
-        tokens[symbol].enabled = true;
-        tokens[symbol].token = token;
-        tokens[symbol].collateralAuction = WQCollateralAuction(auction);
-        tokens[symbol].index = tokenList.length;
-        tokenList.push(symbol);
-    }
-
-    /**
      * @dev Update settings of token
      * @param symbol Symbol of token
      * @param auction Address of collateral auction
      * @param enabled Token disabled/enabled flag
      */
-    function updateToken(
+    function setToken(
         bool enabled,
         address token,
         address auction,
+        uint256 minRatio,
         string calldata symbol
     ) external onlyRole(ADMIN_ROLE) {
         tokens[symbol].token = token;
         tokens[symbol].collateralAuction = WQCollateralAuction(auction);
         tokens[symbol].enabled = enabled;
+        tokens[symbol].minRatio = minRatio;
     }
 
     /**
      * @dev Set fixed rate value value
      * @param _fixedRate Fixed rate value
      */
-    function updateFixedRate(uint256 _fixedRate) external onlyRole(ADMIN_ROLE) {
+    function setFixedRate(uint256 _fixedRate) external onlyRole(ADMIN_ROLE) {
         fixedRate = _fixedRate;
     }
 
@@ -825,23 +783,21 @@ contract WQRouter is
      * @dev Set stability fee value
      * @param _annualInterestRate Annual interest rate value
      */
-    function updateAnnualInterestRate(uint256 _annualInterestRate)
+    function setAnnualInterestRate(uint256 _annualInterestRate)
         external
         onlyRole(ADMIN_ROLE)
     {
         annualInterestRate = _annualInterestRate;
     }
 
-    function cleanVault(address user) external onlyRole(ADMIN_ROLE) {
-        for (uint256 i = 0; i < tokenList.length; i++) {
-            UserCollateral storage uc = collaterals[tokenList[i]][user];
-            uc.collateralAmount = 0;
-            uc.debtAmount = 0;
-            for (uint256 j = 0; j < uc.lots.length; j++) {
-                uc.lots.pop();
-            }
-            tokens[tokenList[i]].totalCollateral = 0;
-        }
-        // totalDebt = 0;
+    /**
+     * @dev Set stability fee value
+     * @param _feeReceiver Address of fee receiver
+     */
+    function setFeeReceiver(address _feeReceiver)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        feeReceiver = _feeReceiver;
     }
 }

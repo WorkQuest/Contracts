@@ -15,12 +15,12 @@ interface WQRouterInterface {
         view
         returns (TokenSettings memory);
 
-    function totalCollateral(string calldata symbol)
+    function getCollateral(string calldata symbol)
         external
         view
         returns (uint256);
 
-    function totalDebt(string calldata symbol) external view returns (uint256);
+    function getDebt(string calldata symbol) external view returns (uint256);
 
     function fixedRate() external view returns (uint256);
 

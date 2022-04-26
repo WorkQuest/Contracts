@@ -100,10 +100,11 @@ contract WQDebtAuction is
      * @dev Get current debt amount (when price increased)
      */
     function getDebtAmount(string memory symbol) public view returns (uint256) {
-        uint256 totalCollateral = router.totalCollateral(symbol) *
+        uint256 collateral = router.getCollateral(symbol) *
             oracle.getTokenPriceUSD(symbol);
-        if (router.totalDebt(symbol) > (totalCollateral * 2) / 3e18) {
-            return router.totalDebt(symbol) - (totalCollateral * 2) / 3e18;
+        uint256 debt = router.getDebt(symbol);
+        if (debt > (collateral * 2) / 3e18) {
+            return debt - (collateral * 2) / 3e18;
         }
         return 0;
     }

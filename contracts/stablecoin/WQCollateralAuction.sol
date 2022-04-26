@@ -356,11 +356,12 @@ contract WQCollateralAuction is
      */
     function getLiquidatedCollaterallAmount() public view returns (uint256) {
         string memory symbol = token.symbol();
-        uint256 totalCollateral = router.totalCollateral(symbol) *
+        uint256 collateral = router.getCollateral(symbol) *
             oracle.getTokenPriceUSD(symbol);
-        if (liquidateThreshold * router.totalDebt(symbol) > totalCollateral) {
+        uint256 debt = router.getDebt(symbol);
+        if (liquidateThreshold * debt > collateral) {
             return
-                (3e18 * router.totalDebt(symbol) - 2 * totalCollateral) /
+                (3e18 * debt - 2 * collateral) /
                 oracle.getTokenPriceUSD(symbol);
         }
         return 0;

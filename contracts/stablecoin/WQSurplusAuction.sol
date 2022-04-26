@@ -100,10 +100,11 @@ contract WQSurplusAuction is
         view
         returns (uint256)
     {
-        uint256 totalCollateral = router.totalCollateral(symbol) *
+        uint256 collateral = router.getCollateral(symbol) *
             oracle.getTokenPriceUSD(symbol);
-        if ((totalCollateral * 2) / 3e18 > router.totalDebt(symbol)) {
-            return (totalCollateral * 2) / 3e18 - router.totalDebt(symbol);
+        uint256 debt = router.getDebt(symbol);
+        if ((collateral * 2) / 3e18 > debt) {
+            return (collateral * 2) / 3e18 - debt;
         }
         return 0;
     }
