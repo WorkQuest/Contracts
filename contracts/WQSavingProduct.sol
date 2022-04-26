@@ -191,14 +191,6 @@ contract WQSavingProduct is
         emit Refunded(msg.sender, amount);
     }
 
-    function getCurrentRewards(
-        uint256 amount,
-        uint256 elapsedTime,
-        uint256 duration
-    ) external view returns (uint256) {
-        return (amount * (apys[duration] * elapsedTime)) / YEAR / 1e18;
-    }
-
     /**
      * @notice Set APY value
      * @param duration Duration of lock time

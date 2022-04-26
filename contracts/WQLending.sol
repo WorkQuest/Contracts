@@ -27,6 +27,8 @@ contract WQLending is
         uint256 rewardAllowed;
         uint256 rewardDebt;
         uint256 rewardDistributed;
+        uint256 unlockDate;
+        uint256 duration;
     }
 
     uint256 public contributed;
@@ -79,8 +81,12 @@ contract WQLending is
     /**
      * @notice Deposit native coins to contract
      */
-    function deposit(uint256 amount) external nonReentrant {
+    function deposit(uint256 lockTime, uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
+        if (wallet.unlockDate == 0) {
+            wallet.unlockDate = block.timestamp + lockTime * 1 days;
+            wallet.duration = lockTime;
+        }
         wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
         contributed += amount;
@@ -94,6 +100,10 @@ contract WQLending is
      */
     function withdraw(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
+        require(
+            block.timestamp >= wallet.unlockDate,
+            'WQSavingProduct: Lock time is not over yet'
+        );
         require(amount <= wallet.amount, 'WQDeposit: Amount is invalid');
         wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
@@ -106,6 +116,7 @@ contract WQLending is
      * @notice Claim rewards
      */
     function claim() external nonReentrant {
+        require(block.timestamp >= wallets[msg.sender].unlockDate);
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
         rewardsDistributed += reward;
