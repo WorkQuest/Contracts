@@ -21,6 +21,7 @@ contract WQSavingProduct is
     bytes32 public constant BORROWER_ROLE = keccak256('BORROWER_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     uint256 public constant YEAR = 31536000;
+    uint256 public constant MONTH = 2592000;
 
     struct DepositWallet {
         uint256 amount;
@@ -37,6 +38,11 @@ contract WQSavingProduct is
     uint256 public rewardsDistributed;
     uint256 public borrowed;
     IERC20Upgradeable public wusd;
+
+    /// @notice Fee settings
+    address public feeReceiver;
+    uint256 public feePerMonth;
+    uint256 public feeWithdraw;
 
     /// @notice Mapping lock time to APY values
     mapping(uint256 => uint256) public override apys;
@@ -62,7 +68,12 @@ contract WQSavingProduct is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address _wusd) external initializer {
+    function initialize(
+        address _wusd,
+        address _feeReceiver,
+        uint256 _feePerMonth,
+        uint256 _feeWithdraw
+    ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -71,6 +82,9 @@ contract WQSavingProduct is
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         wusd = IERC20Upgradeable(_wusd);
+        feeReceiver = _feeReceiver;
+        feePerMonth = _feePerMonth;
+        feeWithdraw = _feeWithdraw;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -201,5 +215,29 @@ contract WQSavingProduct is
         onlyRole(ADMIN_ROLE)
     {
         apys[duration] = apy;
+    }
+
+    /**
+     * @notice Set fee receiver address
+     * @param _feeReceiver Fee receiver address
+     */
+    function setFeeReceiver(address _feeReceiver)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        feeReceiver = _feeReceiver;
+    }
+
+    /**
+     * @notice Set fee receiver address
+     * @param _feeWithdraw Fee value for withdraw value
+     * @param _feePerMonth Fee per month value
+     */
+    function setFee(uint256 _feeWithdraw, uint256 _feePerMonth)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        feeWithdraw = _feeWithdraw;
+        feePerMonth = _feePerMonth;
     }
 }

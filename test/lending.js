@@ -9,7 +9,9 @@ const web3 = new Web3(hre.network.provider);
 
 const LENDING_APY = parseEther("0.0431");
 const YEAR = 31536000;
+const DAY = 86400;
 const oneK = parseEther("1000");
+const LENDING_FEE = 1000000000000000;
 
 async function getTimestamp() {
     let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
@@ -28,7 +30,7 @@ describe("Lending test", () => {
         const BridgeToken = await ethers.getContractFactory('WQBridgeToken');
         wusd_token = await upgrades.deployProxy(
             BridgeToken,
-            ["WUSD stablecoin", "WUSD"],
+            ["WUSD stablecoin", "WUSD", 18],
             { initializer: 'initialize', kind: 'transparent' }
         );
         await wusd_token.deployed();
@@ -39,7 +41,12 @@ describe("Lending test", () => {
         const Lending = await hre.ethers.getContractFactory("WQLending");
         lending = await upgrades.deployProxy(
             Lending,
-            [LENDING_APY, wusd_token.address],
+            [
+                LENDING_APY,
+                wusd_token.address,
+                accounts[3].address,
+                LENDING_FEE
+            ],
             { initializer: 'initialize', kind: 'transparent' }
         );
         await lending.grantRole(await lending.BORROWER_ROLE(), accounts[2].address);
@@ -60,7 +67,7 @@ describe("Lending test", () => {
     describe('Lending: success execution', () => {
         it('STEP 1: deposit and create users wallet', async () => {
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
-            await lending.connect(accounts[1]).deposit(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
             let wallet_info = await lending.wallets(accounts[1].address);
             expect(wallet_info.amount).equal(parseEther('1'));
@@ -71,8 +78,9 @@ describe("Lending test", () => {
         });
 
         it('STEP 2: withdraw', async () => {
-            await lending.connect(accounts[1]).deposit(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
+            await ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + DAY]);
             await lending.connect(accounts[1]).withdraw(parseEther('1'));
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
             let wallet_info = await lending.wallets(accounts[1].address);
@@ -84,13 +92,13 @@ describe("Lending test", () => {
         });
 
         it('STEP 3: borrow funds', async () => {
-            await lending.connect(accounts[1]).deposit(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
             await lending.connect(accounts[2]).borrow(parseEther('1'));
             expect(await lending.borrowed()).equal(parseEther('1'));
         });
 
         it('STEP 4: refund loans', async () => {
-            await lending.connect(accounts[1]).deposit(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
             await lending.connect(accounts[2]).borrow(parseEther('1'));
             let currrent = await getTimestamp();
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [currrent + YEAR]);
@@ -99,7 +107,7 @@ describe("Lending test", () => {
         });
 
         it('STEP 5: claim rewards', async () => {
-            await lending.connect(accounts[1]).deposit(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
             await lending.connect(accounts[2]).borrow(parseEther('1'));
             let currrent = await getTimestamp();
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [currrent + YEAR]);

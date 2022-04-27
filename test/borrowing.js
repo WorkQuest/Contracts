@@ -12,17 +12,26 @@ const PENSION_DEFAULT_FEE = parseEther("0.05");
 const PRICE_ORACLE_VALID_TIME = 600;
 const WQT_SUPPLY = parseEther("100000000");
 const YEAR = 31536000;
-
+const PENSION_APY = "50000000000000000";
+const PENSION_FEE_PER_MONTH = "1200000000000000";
+const PENSION_FEE_WITHDRAW = "5000000000000000";
+const LENDING_FEE = "1000000000000000";
+const SAVING_PRODUCT_FEE_PER_MONTH = "1200000000000000";
+const SAVING_PRODUCT_FEE_WITHDRAW = "5000000000000000";
+const BORROWING_FEE = "5000000000000000";
 
 describe("Borrowing test", () => {
     let nonce = 1;
     let depositor;
     let borrower;
     let validator;
+    let buyer;
+    let feeReceiver;
 
     let wqt_token;
     let eth_token;
     let bnb_token;
+    let wusd_token;
     let priceOracle;
     let pension;
     let lending;
@@ -49,19 +58,33 @@ describe("Borrowing test", () => {
     }
 
     beforeEach(async () => {
-        [deployer, depositor, borrower, validator, buyer] = await ethers.getSigners();
+        [deployer, depositor, borrower, validator, buyer, feeReceiver] = await ethers.getSigners();
         const WQToken = await ethers.getContractFactory("WQToken");
         wqt_token = await upgrades.deployProxy(WQToken, [WQT_SUPPLY], { initializer: 'initialize', kind: 'transparent' });
         await wqt_token.deployed();
 
-        const WQBridgeToken = await ethers.getContractFactory("WQBridgeToken");
-        eth_token = await upgrades.deployProxy(WQBridgeToken, ["ETH WQ wrapped", "ETH"], { initializer: 'initialize', kind: 'transparent' });
+        const BridgeToken = await ethers.getContractFactory("WQBridgeToken");
+        eth_token = await upgrades.deployProxy(
+            BridgeToken,
+            ["ETH WQ wrapped", "ETH", 18],
+            { initializer: 'initialize', kind: 'transparent' }
+        );
         await eth_token.deployed();
         await eth_token.grantRole(await eth_token.MINTER_ROLE(), deployer.address);
         await eth_token.mint(borrower.address, parseEther("10"));
-
-        bnb_token = await upgrades.deployProxy(WQBridgeToken, ["BNB WQ wrapped", "BNB"], { initializer: 'initialize', kind: 'transparent' });
+        bnb_token = await upgrades.deployProxy(
+            BridgeToken,
+            ["BNB WQ wrapped", "BNB", 18],
+            { initializer: 'initialize', kind: 'transparent' }
+        );
         await bnb_token.deployed();
+        wusd_token = await upgrades.deployProxy(
+            BridgeToken,
+            ["WUSD stablecoin", "WUSD", 18],
+            { initializer: 'initialize', kind: 'transparent' }
+        );
+        await wusd_token.deployed();
+        await wusd_token.grantRole(await wusd_token.MINTER_ROLE(), deployer.address);
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
         priceOracle = await upgrades.deployProxy(PriceOracle, [validator.address, PRICE_ORACLE_VALID_TIME], { initializer: 'initialize', kind: 'transparent' });
@@ -71,16 +94,53 @@ describe("Borrowing test", () => {
         await priceOracle.updateToken(1, "WQT");
 
         const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
-        pension = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE], { initializer: 'initialize', kind: 'transparent' })
+        pension = await upgrades.deployProxy(PensionFund,
+            [
+                PENSION_LOCK_TIME,
+                PENSION_DEFAULT_FEE,
+                PENSION_APY,
+                wusd_token.address,
+                feeReceiver.address,
+                PENSION_FEE_PER_MONTH,
+                PENSION_FEE_WITHDRAW
+            ],
+            { initializer: 'initialize', kind: 'transparent' })
 
         const Lending = await hre.ethers.getContractFactory("WQLending");
-        lending = await upgrades.deployProxy(Lending, [LENDING_APY], { initializer: 'initialize', kind: 'transparent' });
+        lending = await upgrades.deployProxy(
+            Lending,
+            [
+                LENDING_APY,
+                wusd_token.address,
+                feeReceiver.address,
+                LENDING_FEE
+            ],
+            { initializer: 'initialize', kind: 'transparent' });
 
         const Saving = await hre.ethers.getContractFactory("WQSavingProduct");
-        saving = await upgrades.deployProxy(Saving, [], { initializer: 'initialize', kind: 'transparent' });
+        saving = await upgrades.deployProxy(
+            Saving,
+            [
+                wusd_token.address,
+                feeReceiver.address,
+                SAVING_PRODUCT_FEE_PER_MONTH,
+                SAVING_PRODUCT_FEE_WITHDRAW
+            ],
+            { initializer: 'initialize', kind: 'transparent' }
+        );
 
         const Borrowing = await hre.ethers.getContractFactory("WQBorrowing");
-        borrowing = await upgrades.deployProxy(Borrowing, [priceOracle.address, FIXED_RATE], { initializer: 'initialize', kind: 'transparent' })
+        borrowing = await upgrades.deployProxy(
+            Borrowing,
+            [
+                priceOracle.address,
+                FIXED_RATE,
+                wusd_token.address,
+                feeReceiver.address,
+                BORROWING_FEE
+            ],
+            { initializer: 'initialize', kind: 'transparent' }
+        );
         await borrowing.setApy(7, parseEther("0.0451"));
         await borrowing.setApy(14, parseEther("0.0467"));
         await borrowing.setApy(30, parseEther("0.0482"));
@@ -98,7 +158,9 @@ describe("Borrowing test", () => {
 
         await eth_token.connect(borrower).approve(borrowing.address, parseEther("1"));
         await oracleSetPrice(parseEther("300"), "ETH");
-        await pension.connect(depositor).contribute(depositor.address, { value: parseEther("300") });
+        await wusd_token.mint(depositor.address, parseEther("330"));
+        await wusd_token.connect(depositor).approve(pension.address, parseEther("330"));
+        await pension.connect(depositor).contribute(depositor.address, parseEther("300"));
 
     });
 
@@ -114,10 +176,10 @@ describe("Borrowing test", () => {
 
     describe('Borrowing: success execution', () => {
         it('STEP 1: Borrow', async () => {
-            let balanceBefore = await web3.eth.getBalance(borrower.address);
+            let balanceBefore = await wusd_token.balanceOf(borrower.address);
             let balanceEthBefore = await eth_token.balanceOf(borrower.address);
             await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
-            let balanceAfter = await web3.eth.getBalance(borrower.address);
+            let balanceAfter = await wusd_token.balanceOf(borrower.address);
             let balanceEthAfter = await eth_token.balanceOf(borrower.address);
             expect(((balanceEthBefore - balanceEthAfter) / 1e18).toFixed(2)).equal('1.00');
             expect(((balanceAfter - balanceBefore) / 1e18).toFixed(2)).equal('200.00');
@@ -125,11 +187,13 @@ describe("Borrowing test", () => {
 
         it('STEP 2: Refund', async () => {
             await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
+            await wusd_token.mint(borrower.address, parseEther("12"));
+            await wusd_token.connect(borrower).approve(borrowing.address, parseEther("212"));
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
-            let balanceBefore = await web3.eth.getBalance(borrower.address);
+            let balanceBefore = await wusd_token.balanceOf(borrower.address);
             let balanceEthBefore = await eth_token.balanceOf(borrower.address);
-            await borrowing.connect(borrower).refund(1, parseEther("200"), { value: parseEther("211.62") });
-            let balanceAfter = await web3.eth.getBalance(borrower.address);
+            await borrowing.connect(borrower).refund(1, parseEther("200"));
+            let balanceAfter = await wusd_token.balanceOf(borrower.address);
             let balanceEthAfter = await eth_token.balanceOf(borrower.address);
             expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('1.00');
             expect(((balanceBefore - balanceAfter) / 1e18).toFixed(2)).equal('211.62');
@@ -137,12 +201,14 @@ describe("Borrowing test", () => {
 
         it('STEP 3: Buy collateral', async () => {
             await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
+            await wusd_token.mint(buyer.address, parseEther("212"));
+            await wusd_token.connect(buyer).approve(borrowing.address, parseEther("212"));
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
-            let balanceBefore = await web3.eth.getBalance(buyer.address);
+            let balanceBefore = await wusd_token.balanceOf(buyer.address);
             let balanceEthBefore = await eth_token.balanceOf(buyer.address);
             await oracleSetPrice(parseEther("200"), "ETH");
-            await borrowing.connect(buyer).buyCollateral(1, borrower.address, parseEther("200"), { value: parseEther("211.63") });
-            let balanceAfter = await web3.eth.getBalance(buyer.address);
+            await borrowing.connect(buyer).buyCollateral(1, borrower.address, parseEther("200"));
+            let balanceAfter = await wusd_token.balanceOf(buyer.address);
             let balanceEthAfter = await eth_token.balanceOf(buyer.address);
             expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('1.00');
             expect(((balanceBefore - balanceAfter) / 1e18).toFixed(2)).equal('211.62');
@@ -179,7 +245,7 @@ describe("Borrowing test", () => {
     describe('Refund: failed execution', () => {
         it('STEP 1: Refund when not borrowed moneys', async () => {
             await expect(
-                borrowing.connect(borrower).refund(1, parseEther("300"), { value: parseEther("300") })
+                borrowing.connect(borrower).refund(1, parseEther("300"))
             ).revertedWith("WQBorrowing: You are not borrowed moneys");
         });
 
@@ -187,7 +253,7 @@ describe("Borrowing test", () => {
             await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
             await borrowing.setToken("0x0000000000000000000000000000000000000000", "ETH");
             await expect(
-                borrowing.connect(borrower).refund(1, parseEther("200"), { value: parseEther("211.62") })
+                borrowing.connect(borrower).refund(1, parseEther("200"))
             ).revertedWith("WQBorrowing: Token is disabled");
         });
 
@@ -195,8 +261,8 @@ describe("Borrowing test", () => {
             await borrowing.connect(borrower).borrow(1, parseEther("1"), 0, 7, "ETH");
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
             await expect(
-                borrowing.connect(borrower).refund(1, parseEther("200"), { value: parseEther("200") })
-            ).revertedWith("WQBorrowing: Refund insufficient amount");
+                borrowing.connect(borrower).refund(1, parseEther("200"))
+            ).revertedWith("ERC20: insufficient allowance");
         });
     });
 });

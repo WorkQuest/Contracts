@@ -33,10 +33,12 @@ contract WQBorrowing is
     }
 
     WQPriceOracleInterface public oracle;
-
     uint256 public fixedRate;
-
     IERC20Upgradeable public wusd;
+
+    /// @notice Fee settings
+    address public feeReceiver;
+    uint256 public fee;
 
     /// @notice Mapping of duration to APY coefficient
     mapping(uint256 => uint256) public apys;
@@ -67,7 +69,9 @@ contract WQBorrowing is
     function initialize(
         address _oracle,
         uint256 _fixedRate,
-        address _wusd
+        address _wusd,
+        address _feeReceiver,
+        uint256 _fee
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -79,6 +83,8 @@ contract WQBorrowing is
         oracle = WQPriceOracleInterface(_oracle);
         fixedRate = _fixedRate;
         wusd = IERC20Upgradeable(_wusd);
+        feeReceiver = _feeReceiver;
+        fee = _fee;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -200,7 +206,6 @@ contract WQBorrowing is
             tokens[loan.symbol] != IERC20Upgradeable(address(0)),
             'WQBorrowing: Token is disabled'
         );
-        uint256 fee = _getCurrentFee(debtAmount, loan.apy, loan.borrowedAt);
         loan.credit -= debtAmount;
         loan.collateral -= returnCollateral;
         uint256 rewards = _getRewards(
@@ -209,7 +214,11 @@ contract WQBorrowing is
             loan.borrowedAt
         );
         // Take wusd
-        wusd.safeTransferFrom(msg.sender, address(this), debtAmount + fee);
+        wusd.safeTransferFrom(
+            msg.sender,
+            address(this),
+            debtAmount + _getCurrentFee(debtAmount, loan.apy, loan.borrowedAt)
+        );
         if (wusd.allowance(address(this), address(loan.fund)) > 0) {
             wusd.safeApprove(address(loan.fund), 0);
         }
@@ -315,6 +324,25 @@ contract WQBorrowing is
         onlyRole(ADMIN_ROLE)
     {
         tokens[symbol] = token;
+    }
+
+    /**
+     * @notice Set fee receiver address
+     * @param _feeReceiver Fee receiver address
+     */
+    function setFeeReceiver(address _feeReceiver)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        feeReceiver = _feeReceiver;
+    }
+
+    /**
+     * @notice Set fee receiver address
+     * @param _fee Fee value
+     */
+    function setFee(uint256 _fee) external onlyRole(ADMIN_ROLE) {
+        fee = _fee;
     }
 
     function cleanBorrow(address user) external onlyRole(ADMIN_ROLE) {

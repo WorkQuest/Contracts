@@ -20,6 +20,12 @@ async function main() {
     if (!process.env.BORROWING_FIXED_RATE) {
         throw new Error(`Please set your BORROWING_FIXED_RATE in a .env-${network} file`);
     }
+    if (!process.env.BORROWING_FEE_RECEIVER) {
+        throw new Error(`Please set your BORROWING_FEE_RECEIVER in a .env-${network} file`);
+    }
+    if (!process.env.BORROWING_FEE) {
+        throw new Error(`Please set your BORROWING_FEE in a .env-${network} file`);
+    }
     if (!process.env.ETH_TOKEN) {
         throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
     }
@@ -49,7 +55,9 @@ async function main() {
         [
             process.env.PRICE_ORACLE,
             process.env.BORROWING_FIXED_RATE,
-            process.env.WUSD_TOKEN
+            process.env.WUSD_TOKEN,
+            process.env.BORROWING_FEE_RECEIVER,
+            process.env.BORROWING_FEE
         ],
         { initializer: 'initialize' }
     );

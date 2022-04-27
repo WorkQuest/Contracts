@@ -39,6 +39,10 @@ contract WQLending is
     uint256 internal apy;
     IERC20Upgradeable public wusd;
 
+    /// @notice Fee settings
+    address public feeReceiver;
+    uint256 public fee;
+
     /// @notice Deposit wallet info of user
     mapping(address => DepositWallet) public wallets;
 
@@ -60,7 +64,12 @@ contract WQLending is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(uint256 _apy, address _wusd) external initializer {
+    function initialize(
+        uint256 _apy,
+        address _wusd,
+        address _feeReceiver,
+        uint256 _fee
+    ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -70,6 +79,8 @@ contract WQLending is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         apy = _apy;
         wusd = IERC20Upgradeable(_wusd);
+        feeReceiver = _feeReceiver;
+        fee = _fee;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -194,5 +205,24 @@ contract WQLending is
      */
     function setApy(uint256 _apy) external onlyRole(ADMIN_ROLE) {
         apy = _apy;
+    }
+
+    /**
+     * @notice Set fee receiver address
+     * @param _feeReceiver Fee receiver address
+     */
+    function setFeeReceiver(address _feeReceiver)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        feeReceiver = _feeReceiver;
+    }
+
+    /**
+     * @notice Set fee receiver address
+     * @param _fee Fee value
+     */
+    function setFee(uint256 _fee) external onlyRole(ADMIN_ROLE) {
+        fee = _fee;
     }
 }

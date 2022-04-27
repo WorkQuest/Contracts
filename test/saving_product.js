@@ -9,6 +9,8 @@ const web3 = new Web3(hre.network.provider);
 const SEVEN_DAYS = 7 * 24 * 60 * 60;
 const YEAR = 31536000;
 const oneK = parseEther("1000");
+const SAVING_PRODUCT_FEE_PER_MONTH = "1200000000000000";
+const SAVING_PRODUCT_FEE_WITHDRAW = "5000000000000000";
 
 async function getTimestamp() {
     let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
@@ -27,7 +29,7 @@ describe("Saving Product test", () => {
         const BridgeToken = await ethers.getContractFactory('WQBridgeToken');
         wusd_token = await upgrades.deployProxy(
             BridgeToken,
-            ["WUSD stablecoin", "WUSD"],
+            ["WUSD stablecoin", "WUSD", 18],
             { initializer: 'initialize', kind: 'transparent' }
         );
         await wusd_token.deployed();
@@ -38,7 +40,12 @@ describe("Saving Product test", () => {
         const Saving = await hre.ethers.getContractFactory("WQSavingProduct");
         saving = await upgrades.deployProxy(
             Saving,
-            [wusd_token.address],
+            [
+                wusd_token.address,
+                accounts[3].address,
+                SAVING_PRODUCT_FEE_PER_MONTH,
+                SAVING_PRODUCT_FEE_WITHDRAW
+            ],
             { initializer: 'initialize', kind: 'transparent' }
         );
         await saving.grantRole(await saving.BORROWER_ROLE(), accounts[2].address);
