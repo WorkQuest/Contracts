@@ -3,12 +3,14 @@ pragma solidity ^0.8.4;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/utils/Address.sol';
 import './WorkQuestFactoryInterface.sol';
 import './WQReferralInterface.sol';
 import './WQPensionFundInterface.sol';
 
 contract WorkQuest {
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
     bytes32 public constant ARBITER_ROLE = keccak256('ARBITER_ROLE');
     string constant errMsg = 'WorkQuest: Access denied or invalid status';
@@ -244,7 +246,7 @@ contract WorkQuest {
      * @notice Employer or worker send job to arbitration
      */
     /// FIXME: replace to 3 days
-    function arbitration() external {
+    function arbitration() external payable {
         require(
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
                 (msg.sender == worker &&
@@ -252,6 +254,7 @@ contract WorkQuest {
                     block.timestamp > timeDone + 1 minutes), //3 days),
             errMsg
         );
+        require(msg.value >= fee, 'WorkQuest: insufficient fee');
         status = JobStatus.Arbitration;
         emit ArbitrationStarted();
     }
@@ -267,6 +270,7 @@ contract WorkQuest {
         );
         deadline = block.timestamp + 3 days;
         status = JobStatus.InProgress;
+        payable(msg.sender).sendValue(address(this).balance);
         emit ArbitrationRework();
     }
 
@@ -288,6 +292,7 @@ contract WorkQuest {
         status = JobStatus.Finished;
         forfeit = _forfeit;
         _transferFunds();
+        payable(msg.sender).sendValue(address(this).balance);
         emit ArbitrationDecreaseCost();
     }
 
@@ -302,6 +307,7 @@ contract WorkQuest {
         );
         status = JobStatus.Finished;
         _transferFunds();
+        
         emit ArbitrationAcceptWork();
     }
 
@@ -318,6 +324,7 @@ contract WorkQuest {
         uint256 comission = (cost * fee) / 1e18;
         wusd.safeTransfer(employer, cost - comission);
         wusd.safeTransfer(feeReceiver, comission);
+        payable(msg.sender).sendValue(address(this).balance);
         emit ArbitrationRejectWork();
     }
 

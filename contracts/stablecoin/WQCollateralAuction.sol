@@ -19,8 +19,6 @@ contract WQCollateralAuction is
     UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using AddressUpgradeable for address payable;
-
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     uint256 constant YEAR = 31536000;
@@ -33,12 +31,12 @@ contract WQCollateralAuction is
     }
 
     struct LotInfo {
-        address payable user;
+        address user;
         uint256 price;
         uint256 amount;
         uint256 ratio;
         uint256 created;
-        address payable buyer;
+        address buyer;
         uint256 saleAmount;
         uint256 endCost;
         uint256 endTime;
@@ -165,7 +163,7 @@ contract WQCollateralAuction is
      * @param ratio Collateral ratio value
      */
     function addLot(
-        address payable user,
+        address user,
         uint256 price,
         uint256 amount,
         uint256 ratio
@@ -182,7 +180,7 @@ contract WQCollateralAuction is
                 amount: amount,
                 ratio: ratio,
                 created: block.timestamp,
-                buyer: payable(0),
+                buyer: address(0),
                 saleAmount: 0,
                 endCost: 0,
                 endTime: 0,
@@ -356,13 +354,11 @@ contract WQCollateralAuction is
      */
     function getLiquidatedCollaterallAmount() public view returns (uint256) {
         string memory symbol = token.symbol();
-        uint256 collateral = router.getCollateral(symbol) *
-            oracle.getTokenPriceUSD(symbol);
+        uint256 price = oracle.getTokenPriceUSD(symbol);
+        uint256 collateral = router.getCollateral(symbol) * price;
         uint256 debt = router.getDebt(symbol);
-        if (liquidateThreshold * debt > collateral) {
-            return
-                (3e18 * debt - 2 * collateral) /
-                oracle.getTokenPriceUSD(symbol);
+        if (collateral < liquidateThreshold * debt && collateral > 1e8 * debt) {
+            return (3e18 * debt - 2 * collateral) / price;
         }
         return 0;
     }
@@ -407,11 +403,7 @@ contract WQCollateralAuction is
      * @param priceIndex Price index value
      * @param index Index value
      */
-    function buyLot(uint256 priceIndex, uint256 index)
-        external
-        payable
-        nonReentrant
-    {
+    function buyLot(uint256 priceIndex, uint256 index) external nonReentrant {
         LotInfo storage lot = lots[priceIndex][index];
         require(
             lot.status == LotStatus.Auctioned,
@@ -427,9 +419,8 @@ contract WQCollateralAuction is
                 (router.annualInterestRate() *
                     (block.timestamp - lot.created)) /
                 YEAR)) / 1e18;
-        require(msg.value >= cost + fee, 'WQAuction: Insufficient amount');
         totalAuctioned -= lot.saleAmount;
-        lot.buyer = payable(msg.sender);
+        lot.buyer = msg.sender;
         lot.amount -= lot.saleAmount;
         if (lot.amount > 0) {
             lot.status = LotStatus.New;
@@ -437,11 +428,6 @@ contract WQCollateralAuction is
             lot.status = LotStatus.Liquidated;
         }
         router.buyCollateral(priceIndex, index, cost, fee, token.symbol());
-        //Return change
-        if (msg.value > cost + fee) {
-            payable(msg.sender).sendValue(msg.value - cost - fee);
-        }
-
         emit LotBuyed(priceIndex, index, lot.saleAmount, cost);
         lot.saleAmount = 0;
     }

@@ -192,7 +192,7 @@ contract WQSurplusAuction is
         totalAuctioned -= lot.amount;
         lot.buyer = payable(msg.sender);
         lot.status = LotStatus.Selled;
-        router.transferSurplus(
+        router.transferSurplus{value: msg.value}(
             payable(msg.sender),
             lot.amount,
             cost,

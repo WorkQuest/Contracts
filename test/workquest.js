@@ -25,6 +25,8 @@ const WORKQUEST_FEE = '10000000000000000';
 const PENSION_LOCK_TIME = '60';
 const PENSION_DEFAULT_FEE = '10000000000000000';
 const PENSION_APY = '50000000000000000';
+const PENSION_FEE_PER_MONTH = "1200000000000000";
+const PENSION_FEE_WITHDRAW = "5000000000000000";
 const VALID_TIME = "600";
 const PRICE = parseEther("228");
 const SYMBOL = "WQT";
@@ -87,13 +89,25 @@ describe('Work Quest test', () => {
         ] = await ethers.getSigners();
 
         const BridgeToken = await ethers.getContractFactory('WQBridgeToken');
-        wusd_token = await upgrades.deployProxy(BridgeToken, ["WUSD stablecoin", "WUSD"], { initializer: 'initialize', kind: 'transparent' });
+        wusd_token = await upgrades.deployProxy(BridgeToken, ["WUSD stablecoin", "WUSD", 18], { initializer: 'initialize', kind: 'transparent' });
         await wusd_token.deployed();
         await wusd_token.grantRole(await wusd_token.MINTER_ROLE(), work_quest_owner.address);
         await wusd_token.mint(employer.address, oneK);
 
         const PensionFund = await hre.ethers.getContractFactory('WQPensionFund');
-        pension_fund = await upgrades.deployProxy(PensionFund, [PENSION_LOCK_TIME, PENSION_DEFAULT_FEE, PENSION_APY, wusd_token.address], { initializer: 'initialize', kind: 'transparent' });
+        pension_fund = await upgrades.deployProxy(
+            PensionFund,
+            [
+                PENSION_LOCK_TIME,
+                PENSION_DEFAULT_FEE,
+                PENSION_APY,
+                wusd_token.address,
+                feeReceiver.address,
+                PENSION_FEE_PER_MONTH,
+                PENSION_FEE_WITHDRAW
+            ],
+            { initializer: 'initialize', kind: 'transparent' }
+        );
         await pension_fund.deployed();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');

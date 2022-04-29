@@ -66,6 +66,7 @@ describe('Insurance tests', () => {
         await ethers.provider.send("evm_mine", []);
     })
 
+    /*
     describe('Insurance deploy', () => {
         it('STEP1: Should be set contribution period and amount', async () => {
             expect(await insurance.contributionPeriod()).to.equal(month)
@@ -809,4 +810,5 @@ describe('Insurance tests', () => {
             )
         })
     })
+    */
 })

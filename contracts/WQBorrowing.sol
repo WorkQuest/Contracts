@@ -344,10 +344,4 @@ contract WQBorrowing is
     function setFee(uint256 _fee) external onlyRole(ADMIN_ROLE) {
         fee = _fee;
     }
-
-    function cleanBorrow(address user) external onlyRole(ADMIN_ROLE) {
-        BorrowInfo storage loan = borrowers[user];
-        loan.credit = 0;
-        loan.collateral = 0;
-    }
 }

@@ -178,7 +178,6 @@ contract WQDebtAuction is
                 (lot.amount * 1e18) / totalDebt <= maxLotAmountFactor,
             'WQAuction: Auction of this lot is temporarily suspended'
         );
-        // require(msg.value >= lot.amount, 'WQAuction: Insufficient amount');
         uint256 cost = _getCurrentLotCost(lot);
         if (minCost > 0) {
             require(

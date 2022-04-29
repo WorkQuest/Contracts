@@ -21,6 +21,7 @@ const LOWER_BOUND_FACTOR = parseEther("0.95");
 const MAX_LOT_AMOUNT_FACTOR = parseEther("0.9");
 const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 const ONE = "1";
+const MIN_RATIO = parseEther("1.5");
 
 const LotStatus = Object.freeze({
     Unknown: 0,
@@ -40,6 +41,7 @@ describe('Surplus auction test', () => {
     let user1;
     let user2;
     let service;
+    let feeReceiver;
 
     async function getCurrentTimestamp() {
         let block = await web3.eth.getBlock(await web3.eth.getBlockNumber());
@@ -61,7 +63,7 @@ describe('Surplus auction test', () => {
     }
 
     beforeEach(async () => {
-        [owner, user1, user2, service] = await ethers.getSigners();
+        [owner, user1, user2, service, feeReceiver] = await ethers.getSigners();
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
         priceOracle = await upgrades.deployProxy(PriceOracle,
@@ -91,7 +93,8 @@ describe('Surplus auction test', () => {
                 priceOracle.address,
                 wqt.address,
                 STABILITY_FEE,
-                ANNUAL_INTEREST_RATE
+                ANNUAL_INTEREST_RATE,
+                feeReceiver.address
             ],
             { kind: 'transparent' });
         // Transfer wqt tokens
@@ -113,13 +116,12 @@ describe('Surplus auction test', () => {
                 PRICE_INDEX_STEP
             ],
             { kind: 'transparent' });
-        await router.addToken(weth.address, collateralAuction.address, SYMBOL);
+        await router.setToken(1, weth.address, collateralAuction.address, MIN_RATIO, SYMBOL);
 
         const SurplusAuction = await ethers.getContractFactory('WQSurplusAuction');
         surplusAuction = await upgrades.deployProxy(
             SurplusAuction,
             [
-                wqt.address,
                 priceOracle.address,
                 router.address,
                 AUCTION_DURATION,
@@ -134,7 +136,6 @@ describe('Surplus auction test', () => {
 
     describe('Deployment', () => {
         it('STEP1: Should set the roles, addresses and variables', async () => {
-            expect(await surplusAuction.token()).equal(wqt.address);
             expect(await surplusAuction.oracle()).equal(priceOracle.address);
             expect(await surplusAuction.router()).equal(router.address);
             expect(await surplusAuction.auctionDuration()).equal(AUCTION_DURATION);
@@ -159,13 +160,6 @@ describe('Surplus auction test', () => {
 
     describe('Check start auction', () => {
         beforeEach(async () => {
-            await web3.eth.sendTransaction(
-                {
-                    from: owner.address,
-                    to: router.address,
-                    value: parseEther("45").toString()
-                }
-            );
             await oracleSetPrice(ETH_PRICE, SYMBOL);
             await weth.connect(user1).approve(router.address, parseEther("1"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
@@ -173,7 +167,7 @@ describe('Surplus auction test', () => {
         });
         it('STEP1: Start auction: success', async () => {
             expect(await surplusAuction.getSurplusAmount()).equal("6666666666666666666");
-            await surplusAuction.startAuction(parseEther("6"));
+            await surplusAuction.startAuction(parseEther("6"), SYMBOL);
             expect(await surplusAuction.totalAuctioned()).equal(parseEther("6"));
 
             let lot = await surplusAuction.lots(parseEther("6"));
@@ -186,32 +180,25 @@ describe('Surplus auction test', () => {
         });
 
         it('STEP2: Start auction when amount greater than totalSurplus: fail', async () => {
-            await surplusAuction.startAuction(parseEther("5"));
+            await surplusAuction.startAuction(parseEther("5"), SYMBOL);
             await expect(
-                surplusAuction.startAuction(parseEther("2"))
+                surplusAuction.startAuction(parseEther("2"), SYMBOL)
             ).revertedWith("WQAuction: Amount of bid is greater than total surplus");
         });
 
         it('STEP3: Start auction when amount/totalSurplus greater than 90%', async () => {
             await expect(
-                surplusAuction.startAuction(parseEther("6.1"))
+                surplusAuction.startAuction(parseEther("6.1"), SYMBOL)
             ).revertedWith("WQAuction: Auction of this lot is temporarily suspended");
         });
         it('STEP4: Start auction with incorrect amount', async () => {
             await expect(
-                surplusAuction.startAuction(0)
+                surplusAuction.startAuction(0, SYMBOL)
             ).revertedWith("WQAuction: Incorrect amount value");
         });
     });
     describe('Check buy lot', () => {
         beforeEach(async () => {
-            await web3.eth.sendTransaction(
-                {
-                    from: owner.address,
-                    to: router.address,
-                    value: parseEther("45").toString()
-                }
-            );
             await oracleSetPrice(ETH_PRICE, SYMBOL);
             await weth.connect(user1).approve(router.address, parseEther("1"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
@@ -219,7 +206,7 @@ describe('Surplus auction test', () => {
             await wqt.connect(user2).approve(router.address, parseEther("10000"));
         });
         it('STEP1: Buy lot: success', async () => {
-            await surplusAuction.startAuction(parseEther("6"));
+            await surplusAuction.startAuction(parseEther("6"), SYMBOL);
             let lot = await surplusAuction.lots(parseEther("6"));
             expect(lot.status).equal(LotStatus.Auctioned);
             expect(await surplusAuction.amounts(0)).equal(parseEther("6"));
@@ -253,7 +240,7 @@ describe('Surplus auction test', () => {
             ).revertedWith("WQAuction: Lot is not auctioned");
         });
         it('STEP3: Buy lot when auction time is over: fail', async () => {
-            await surplusAuction.startAuction(parseEther("6"));
+            await surplusAuction.startAuction(parseEther("6"), SYMBOL);
             let lot = await surplusAuction.lots(parseEther("6"));
             await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot.endTime) + 1]);
             await expect(
@@ -261,14 +248,14 @@ describe('Surplus auction test', () => {
             ).revertedWith("WQAuction: Auction time is over");
         });
         it('STEP4: Buy lot when price decreased: fail', async () => {
-            await surplusAuction.startAuction(parseEther("6"));
+            await surplusAuction.startAuction(parseEther("6"), SYMBOL);
             await oracleSetPrice(parseEther("31"), SYMBOL);
             await expect(
                 surplusAuction.connect(user2).buyLot(parseEther("6"), 0)
             ).revertedWith("WQAuction: Auction of this lot is temporarily suspended");
         });
         it('STEP5: Buy lot when cost is greater that maximum: fail', async () => {
-            await surplusAuction.startAuction(parseEther("6"));
+            await surplusAuction.startAuction(parseEther("6"), SYMBOL);
             await oracleSetPrice(WQT_PRICE, "WQT");
             await expect(
                 surplusAuction.connect(user2).buyLot(parseEther("6"), parseEther("18"))

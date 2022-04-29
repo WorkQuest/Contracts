@@ -50,7 +50,7 @@ interface WQRouterInterface {
         uint256 amount,
         uint256 cost,
         string calldata symbol
-    ) external;
+    ) external payable;
 
     function transferDebt(
         address to,

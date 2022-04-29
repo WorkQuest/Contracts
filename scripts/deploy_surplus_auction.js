@@ -15,9 +15,6 @@ async function main() {
     if (!process.env.PRICE_ORACLE) {
         throw new Error(`Please set your PRICE_ORACLE in a .env-${network} file`);
     }
-    if (!process.env.WQT_TOKEN) {
-        throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
-    }
     if (!process.env.ROUTER) {
         throw new Error(`Please set your ROUTER in a .env-${network} file`);
     }
@@ -38,7 +35,6 @@ async function main() {
     const auction = await upgrades.deployProxy(
         Auction,
         [
-            process.env.WQT_TOKEN,
             process.env.PRICE_ORACLE,
             process.env.ROUTER,
             process.env.SURPLUS_AUCTION_DURATION,

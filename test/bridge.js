@@ -42,7 +42,7 @@ describe("Bridge test", () => {
         await token.transfer(sender.address, amount);
 
         const WQBridgeToken = await ethers.getContractFactory("WQBridgeToken");
-        lockable_token = await upgrades.deployProxy(WQBridgeToken, ["LockToken", lockable_symbol], { initializer: 'initialize', kind: 'transparent' });
+        lockable_token = await upgrades.deployProxy(WQBridgeToken, ["LockToken", lockable_symbol, 18], { initializer: 'initialize', kind: 'transparent' });
         await lockable_token.deployed();
         await lockable_token.grantRole(await lockable_token.MINTER_ROLE(), bridge_owner.address);
         await lockable_token.mint(sender.address, amount);
@@ -85,7 +85,7 @@ describe("Bridge test", () => {
         });
     });
 
-    describe('bridge: swap', () => {
+    describe('Bridge: swap', () => {
 
         it('STEP 1: Swap with same chain id: fail', async () => {
             try {

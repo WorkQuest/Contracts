@@ -12,7 +12,7 @@ task("stake_tokens", "Stake tokens to staking contracts")
         for (const k in envConfig) { process.env[k] = envConfig[k]; }
 
         const Token = await hre.ethers.getContractFactory("WQBridgeToken");
-        const token = await upgrades.deployProxy(Token, ["Workquest Token", "WQT"], { initializer: 'initialize' });
+        const token = await upgrades.deployProxy(Token, ["Workquest Token", "WQT", 18], { initializer: 'initialize' });
         await token.deployed()
         await token.grantRole(await token.MINTER_ROLE(), accounts[0].address);
         for (let i = 0; i < 6; i++) {

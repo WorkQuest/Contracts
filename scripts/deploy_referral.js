@@ -38,7 +38,6 @@ async function main() {
     const wqReferral = await upgrades.deployProxy(
         WQReferral,
         [
-            process.env.WQT_TOKEN,
             process.env.PRICE_ORACLE,
             process.env.REFERRAL_SERVICE,
             process.env.REFERRAL_REWARD,

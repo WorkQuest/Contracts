@@ -69,7 +69,7 @@ module.exports = {
       url: "http://127.0.0.1:8545/"
     },
     wqdevnet: {
-      url: "https://dev-node-nyc3.workquest.co/",
+      url: "https://dev-node-ams3.workquest.co/",
       accounts: { mnemonic: mnemonic },
       chainId: 20220112
     },
@@ -83,6 +83,20 @@ module.exports = {
     bscmainnet: {
       url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/mainnet`,
       chainId: 56,
+      gas: "auto",
+      gasPrice: 5000000000,
+      accounts: { mnemonic: mnemonic }
+    },
+    mumbai: {
+      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/polygon/mumbai`,
+      chainId: 80001,
+      gas: "auto",
+      gasPrice: 5000000000,
+      accounts: { mnemonic: mnemonic }
+    },
+    polygon: {
+      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/polygon/mainnet`,
+      chainId: 137,
       gas: "auto",
       gasPrice: 5000000000,
       accounts: { mnemonic: mnemonic }
