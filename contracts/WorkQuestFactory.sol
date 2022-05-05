@@ -25,11 +25,10 @@ contract WorkQuestFactory is
         bool status;
     }
 
-    uint256 lastArbiter;
-
     /// @notice Fee amount
     uint256 public feeEmployer;
     uint256 public feeWorker;
+    uint256 public feeTx;
 
     /// @notice Address of Fee receiver
     address payable public feeReceiver;
@@ -73,6 +72,7 @@ contract WorkQuestFactory is
     function initialize(
         uint256 _feeEmployer,
         uint256 _feeWorker,
+        uint256 _feeTx,
         address payable _feeReceiver,
         address payable _pensionFund,
         address payable _referral,
@@ -87,6 +87,7 @@ contract WorkQuestFactory is
         _setRoleAdmin(ARBITER_ROLE, ADMIN_ROLE);
         feeEmployer = _feeEmployer;
         feeWorker = _feeWorker;
+        feeTx = _feeTx;
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
         referral = _referral;
@@ -103,12 +104,20 @@ contract WorkQuestFactory is
      * @notice Get list of adresses of employers workquests
      * @param employer Address of employer
      */
-    function getWorkQuests(address employer)
-        external
-        view
-        returns (address[] memory)
-    {
-        return workquests[employer];
+    function getWorkQuests(
+        address employer,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (address[] memory page) {
+        address[] storage quests = workquests[employer];
+        if (limit > quests.length - offset) {
+            limit = quests.length - offset;
+        }
+        page = new address[](limit);
+        for (uint256 i = 0; i < limit; i++) {
+            page[i] = quests[offset + i];
+        }
+        return page;
     }
 
     /**
@@ -123,17 +132,7 @@ contract WorkQuestFactory is
         uint256 nonce
     ) external {
         address workquest = address(
-            new WorkQuest(
-                jobHash,
-                feeWorker,
-                cost,
-                deadline,
-                msg.sender,
-                feeReceiver,
-                pensionFund,
-                referral,
-                address(wusd)
-            )
+            new WorkQuest(jobHash, cost, deadline, msg.sender)
         );
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
@@ -199,5 +198,9 @@ contract WorkQuestFactory is
 
     function setFeeWorker(uint256 _fee) external onlyRole(ADMIN_ROLE) {
         feeWorker = _fee;
+    }
+
+    function setFeeTx(uint256 _fee) external onlyRole(ADMIN_ROLE) {
+        feeTx = _fee;
     }
 }

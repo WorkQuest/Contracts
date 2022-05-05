@@ -28,21 +28,11 @@ contract WorkQuest {
         Finished
     }
 
-    /// @notice Pension wallet factory contract address
-    WQPensionFundInterface public immutable pensionFund;
-    /// @notice Address of referral contract
-    WQReferralInterface public immutable referral;
     /// @notice Address of quest factory
     WorkQuestFactoryInterface public immutable factory;
 
-    /// @notice Fee coefficient of workquest
-    uint256 public immutable fee;
-    /// @notice Fee receiver address
-    address public immutable feeReceiver;
     /// @notice Address of employer
     address public immutable employer;
-
-    IERC20 public immutable wusd;
 
     /// @notice Hash of a text of a job offer
     bytes32 public jobHash;
@@ -103,34 +93,20 @@ contract WorkQuest {
     /**
      * @notice Create new WorkQuest contract
      * @param _jobHash Hash of job agreement
-     * @param _fee Fee coefficient, from 0 to 1, 18 decimals
      * @param _cost Cost of a job
      * @param _deadline Deadline timestamp
      * @param _employer External address of employer
-     * @param _feeReceiver Address of a fee reciever
-     * @param _pensionFund Address of a pension fund contract
-     * @param _referral Address of a referral contract
      */
     constructor(
         bytes32 _jobHash,
-        uint256 _fee,
         uint256 _cost,
         uint256 _deadline,
-        address _employer,
-        address _feeReceiver,
-        address _pensionFund,
-        address _referral,
-        address _wusd
+        address _employer
     ) {
         jobHash = _jobHash;
-        fee = _fee;
         cost = _cost;
         deadline = _deadline;
         employer = _employer;
-        feeReceiver = _feeReceiver;
-        pensionFund = WQPensionFundInterface(_pensionFund);
-        referral = WQReferralInterface(_referral);
-        wusd = IERC20(_wusd);
         factory = WorkQuestFactoryInterface(msg.sender);
         status = JobStatus.Published;
         emit WorkQuestCreated(jobHash);
@@ -173,7 +149,7 @@ contract WorkQuest {
             errMsg
         );
         status = JobStatus.Finished;
-        wusd.safeTransfer(employer, cost);
+        IERC20(factory.wusd()).safeTransfer(employer, cost);
         emit JobCancelled();
     }
 
@@ -183,11 +159,20 @@ contract WorkQuest {
             errMsg
         );
         if (_cost > cost) {
-            uint256 comission = ((_cost - cost) * fee) / 1e18;
-            wusd.safeTransfer(feeReceiver, comission);
+            uint256 comission = ((_cost - cost) * factory.feeWorker()) / 1e18;
+            IERC20(factory.wusd()).safeTransferFrom(
+                msg.sender,
+                address(this),
+                (_cost - cost)
+            );
+            IERC20(factory.wusd()).safeTransferFrom(
+                msg.sender,
+                factory.feeReceiver(),
+                comission
+            );
             emit Received(_cost);
         } else if (_cost < cost) {
-            wusd.safeTransfer(employer, cost - _cost);
+            IERC20(factory.wusd()).safeTransfer(employer, cost - _cost);
         }
         cost = _cost;
         emit JobEdited(_cost);
@@ -254,7 +239,7 @@ contract WorkQuest {
                     block.timestamp > timeDone + 1 minutes), //3 days),
             errMsg
         );
-        require(msg.value >= fee, 'WorkQuest: insufficient fee');
+        require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');
         status = JobStatus.Arbitration;
         emit ArbitrationStarted();
     }
@@ -307,7 +292,7 @@ contract WorkQuest {
         );
         status = JobStatus.Finished;
         _transferFunds();
-        
+        payable(msg.sender).sendValue(address(this).balance);
         emit ArbitrationAcceptWork();
     }
 
@@ -321,30 +306,45 @@ contract WorkQuest {
             errMsg
         );
         status = JobStatus.Finished;
-        uint256 comission = (cost * fee) / 1e18;
-        wusd.safeTransfer(employer, cost - comission);
-        wusd.safeTransfer(feeReceiver, comission);
+        uint256 comission = (cost * factory.feeWorker()) / 1e18;
+        IERC20(factory.wusd()).safeTransfer(employer, cost - comission);
+        IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
         payable(msg.sender).sendValue(address(this).balance);
         emit ArbitrationRejectWork();
     }
 
     function _transferFunds() internal {
         uint256 newCost = cost - forfeit;
-        uint256 comission = (newCost * fee) / 1e18;
-        uint256 pensionContribute = (newCost * pensionFund.getFee(worker)) /
+        uint256 comission = (newCost * factory.feeWorker()) / 1e18;
+        uint256 pensionContribute = (newCost *
+            WQPensionFundInterface(factory.pensionFund()).getFee(worker)) /
             1e18;
-        wusd.safeTransfer(worker, newCost - comission - pensionContribute);
+        IERC20(factory.wusd()).safeTransfer(
+            worker,
+            newCost - comission - pensionContribute
+        );
         if (pensionContribute > 0) {
-            if (wusd.allowance(address(this), address(pensionFund)) > 0) {
-                wusd.safeApprove(address(pensionFund), 0);
+            if (
+                IERC20(factory.wusd()).allowance(
+                    address(this),
+                    factory.pensionFund()
+                ) > 0
+            ) {
+                IERC20(factory.wusd()).safeApprove(factory.pensionFund(), 0);
             }
-            wusd.safeApprove(address(pensionFund), pensionContribute);
-            pensionFund.contribute(worker, pensionContribute);
+            IERC20(factory.wusd()).safeApprove(
+                factory.pensionFund(),
+                pensionContribute
+            );
+            WQPensionFundInterface(factory.pensionFund()).contribute(
+                worker,
+                pensionContribute
+            );
         }
         if (forfeit > 0) {
-            wusd.safeTransfer(employer, forfeit);
+            IERC20(factory.wusd()).safeTransfer(employer, forfeit);
         }
-        referral.calcReferral(worker, newCost);
-        wusd.safeTransfer(feeReceiver, comission);
+        WQReferralInterface(factory.referral()).calcReferral(worker, newCost);
+        IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
     }
 }

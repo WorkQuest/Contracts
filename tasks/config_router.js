@@ -37,16 +37,21 @@ task("config_router", "Config router")
         if (!process.env.BNB_AUCTION) {
             throw new Error(`Please set your BNB_AUCTION in a .env-${network} file`);
         }
-
+        if (!process.env.USDT_TOKEN) {
+            throw new Error(`Please set your USDT_TOKEN in a .env-${network} file`);
+        }
+        if (!process.env.USDT_AUCTION) {
+            throw new Error(`Please set your USDT_AUCTION in a .env-${network} file`);
+        }
         const router = await hre.ethers.getContractAt("WQRouter", process.env.ROUTER);
         console.log("Try to config router:", router.address);
         // await router.updateFixedRate(process.env.ROUTER_FIXED_RATE);
         // await router.updateAnnualInterestRate(process.env.ROUTER_ANNUAL_INTEREST_RATE);
-        // await router.setDebtAuction(process.env.DEBT_AUCTION);
-        // await router.setSurplusAuction(process.env.SURPLUS_AUCTION);
-        await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
-        await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
-        await router.setToken(1, process.env.WQT_TOKEN, process.env.WQT_AUCTION, process.env.WQT_AUCTION_MIN_RATIO, "WQT");
-        await router.setToken(1, process.env.WQT_TOKEN, process.env.WQT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
+        await router.setDebtAuction(process.env.DEBT_AUCTION);
+        await router.setSurplusAuction(process.env.SURPLUS_AUCTION);
+        // await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
+        // await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
+        // await router.setToken(1, process.env.WQT_TOKEN, process.env.WQT_AUCTION, process.env.WQT_AUCTION_MIN_RATIO, "WQT");
+        // await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
         console.log("Done")
     });

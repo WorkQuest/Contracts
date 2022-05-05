@@ -56,6 +56,7 @@ contract WQReferral is
     event RegisteredAffiliat(address referral, address affiliate);
     event PaidReferral(address referral, address affiliate, uint256 amount);
     event RewardClaimed(address affiliate, uint256 amount);
+    event Received(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -87,6 +88,10 @@ contract WQReferral is
         override
         onlyRole(UPGRADER_ROLE)
     {}
+
+    receive() external payable {
+        emit Received(msg.value);
+    }
 
     /**
      * @dev Add addresses of referral by affiliate

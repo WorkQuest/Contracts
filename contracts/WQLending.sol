@@ -101,7 +101,9 @@ contract WQLending is
         wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
         contributed += amount;
+        uint256 comission = (amount * fee) / 1e18;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
+        wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit Received(msg.sender, amount);
     }
 

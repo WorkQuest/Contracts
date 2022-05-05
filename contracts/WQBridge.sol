@@ -6,6 +6,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import './WQBridgeTokenInterface.sol';
@@ -14,7 +15,8 @@ import './WQBridgePool.sol';
 contract WQBridge is
     Initializable,
     AccessControlUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     using ECDSAUpgradeable for bytes32;
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -48,6 +50,8 @@ contract WQBridge is
 
     /// @notice Admin role constant
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    /// @notice Upgrader role constant
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     /// @notice Validator role constant
     bytes32 public constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
@@ -109,22 +113,34 @@ contract WQBridge is
 
     event Transferred(address token, address recipient, uint256 amount);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialize(uint256 _chainId, address payable _pool, address validator)
-        external
-        initializer
-    {
+    function initialize(
+        uint256 _chainId,
+        address payable _pool,
+        address validator
+    ) external initializer {
         __AccessControl_init();
         __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
         _setupRole(VALIDATOR_ROLE, validator);
         chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?
         pool = _pool;
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     /**
      * @dev Creates new swap. Emits a {SwapInitialized} event.

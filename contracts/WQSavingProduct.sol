@@ -107,7 +107,9 @@ contract WQSavingProduct is
         wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
         contributed += amount;
+        uint256 comission = (amount * feePerMonth * lockTime) / MONTH / 1e18;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
+        wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit Received(msg.sender, amount);
     }
 
@@ -128,7 +130,9 @@ contract WQSavingProduct is
             wallet.unlockDate = 0;
         }
         contributed -= amount;
-        wusd.safeTransfer(msg.sender, amount);
+        uint256 comission = (amount * feeWithdraw) / 1e18;
+        wusd.safeTransfer(msg.sender, amount - comission);
+        wusd.safeTransfer(feeReceiver, comission);
         emit Withdrew(msg.sender, amount);
     }
 

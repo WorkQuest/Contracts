@@ -48,12 +48,12 @@ task("grant_roles_for_bridge", "Grant roles for bridge in tokens and pool")
             console.log('bnb minter:', await bnb_token.hasRole(minter_role, BRIDGE_ADDRESS), 'bnb burner:', await bnb_token.hasRole(burner_role, BRIDGE_ADDRESS));
         }
 
-        console.log("Grant roles in USDT Token:", process.env.USDT_TOKEN);
-        const token = await hre.ethers.getContractAt("WQBridgeToken", process.env.USDT_TOKEN);
-        let minter_role = await token.MINTER_ROLE();
-        let burner_role = await token.BURNER_ROLE();
-        await token.grantRole(minter_role, BRIDGE_ADDRESS);
-        await token.grantRole(burner_role, BRIDGE_ADDRESS);
+        // console.log("Grant roles in USDT Token:", process.env.USDT_TOKEN);
+        // const token = await hre.ethers.getContractAt("WQBridgeToken", process.env.USDT_TOKEN);
+        // let minter_role = await token.MINTER_ROLE();
+        // let burner_role = await token.BURNER_ROLE();
+        // await token.grantRole(minter_role, BRIDGE_ADDRESS);
+        // await token.grantRole(burner_role, BRIDGE_ADDRESS);
 
         console.log("Grant roles in pool:", process.env.BRIDGE_POOL);
         const pool = await hre.ethers.getContractAt("WQBridgePool", process.env.BRIDGE_POOL);

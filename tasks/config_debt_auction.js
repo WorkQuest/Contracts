@@ -34,6 +34,9 @@ task("config_debt_auction", "Config debt auction")
         // await auction.setLowerBoundCost(process.env.DEBT_AUCTION_LOWER_BOUND_COST);
         // await auction.setAuctionDuration(process.env.DEBT_AUCTION_DURATION);
         // await auction.setMaxLotAmountFactor(process.env.DEBT_MAX_LOT_AMOUNT_FACTOR);
-        await auction.setRouter(process.env.ROUTER);
+        // await auction.setRouter(process.env.ROUTER);
+        await auction.setToken(1, "ETH");
+        await auction.setToken(1, "BNB");
+        await auction.setToken(1, "USDT");
         console.log("Done.")
     });

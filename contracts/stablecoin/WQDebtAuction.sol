@@ -269,7 +269,9 @@ contract WQDebtAuction is
     function setToken(bool enabled, string calldata symbol)
         external
         onlyRole(ADMIN_ROLE)
-    {}
+    {
+        tokens[symbol] = enabled;
+    }
 
     /**
      * @dev Set duration of dutch auction

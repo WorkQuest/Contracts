@@ -26,7 +26,7 @@ async function main() {
             process.env.BRIDGE_TOKEN_SYMBOL,
             process.env.BRIDGE_TOKEN_DECIMALS
         ],
-        { initializer: 'initialize', gasPrice: "100", gasLimit: "50000000" }
+        { initializer: 'initialize', gasPrice: "100", gasLimit: "50000000", kind: 'uups' }
     );
     await bridge_token.deployed();
     console.log(`${process.env.BRIDGE_TOKEN_NAME} has been deployed to:`, bridge_token.address);

@@ -147,10 +147,15 @@ contract WQPensionFund is
             wallet.fee = defaultFee;
             emit WalletUpdated(worker, wallet.fee, wallet.unlockDate);
         }
-        wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
-        wallet.amount += amount;
-        contributed += amount;
-        wusd.safeTransferFrom(msg.sender, address(this), amount);
+        //FIXME: amount calculation
+        uint256 comission = (amount * feePerMonth * lockTime) / MONTH / 1e18;
+        wallet.rewardDebt +=
+            ((amount - comission) * rewardsPerContributed) /
+            1e20;
+        wallet.amount += (amount - comission);
+        contributed += (amount - comission);
+        wusd.safeTransferFrom(msg.sender, address(this), amount - comission);
+        wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit Received(worker, amount, block.timestamp);
     }
 
@@ -172,8 +177,9 @@ contract WQPensionFund is
         wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
         contributed -= amount;
-        wusd.safeTransfer(msg.sender, amount + reward);
-        wusd.safeTransfer(feeReceiver, amount + reward);
+        uint256 comission = (amount * feeWithdraw) / 1e18;
+        wusd.safeTransfer(msg.sender, amount + reward - comission);
+        wusd.safeTransfer(feeReceiver, comission);
         emit Withdrew(msg.sender, amount, block.timestamp);
         emit Claimed(msg.sender, reward, block.timestamp);
     }
@@ -210,6 +216,11 @@ contract WQPensionFund is
             'WQPensionFund: Lock time is not over yet'
         );
         wallet.unlockDate = block.timestamp + YEAR;
+        wusd.safeTransferFrom(
+            msg.sender,
+            feeReceiver,
+            (wallet.amount * feePerMonth * YEAR) / MONTH / 1e18
+        );
     }
 
     function getFee(address user) external view returns (uint256) {

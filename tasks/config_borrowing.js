@@ -19,9 +19,9 @@ task("config_borrowing", "Config borrowers roles in funds")
         if (!process.env.BNB_TOKEN) {
             throw new Error(`Please set your BNB_TOKEN in a .env-${network} file`);
         }
-        if (!process.env.WQT_TOKEN) {
-            throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
-        }
+        // if (!process.env.WQT_TOKEN) {
+        //     throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
+        // }
         if (!process.env.PENSION_FUND) {
             throw new Error(`Please set your PENSION_FUND in a .env-${network} file`);
         }
@@ -42,7 +42,7 @@ task("config_borrowing", "Config borrowers roles in funds")
 
         await borrowing.setToken(process.env.ETH_TOKEN, "ETH");
         await borrowing.setToken(process.env.BNB_TOKEN, "BNB");
-        await borrowing.setToken(process.env.WQT_TOKEN, "WQT");
+        // await borrowing.setToken(process.env.WQT_TOKEN, "WQT");
         console.log("Token setting complete");
 
         await borrowing.addFund(process.env.PENSION_FUND);

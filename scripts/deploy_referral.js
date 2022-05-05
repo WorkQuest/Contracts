@@ -16,12 +16,7 @@ async function main() {
         process.env[k] = envConfig[k]
     }
     if (!process.env.REFERRAL_REWARD) {
-        throw new Error(
-            `Plese set your REFERRAL_REWARD in a .env-${network} file`
-        )
-    }
-    if (!process.env.WQT_TOKEN) {
-        throw new Error(`Plese set your WQT_TOKEN in a .env-${network} file`)
+        throw new Error(`Plese set your REFERRAL_REWARD in a .env-${network} file`)
     }
     if (!process.env.PRICE_ORACLE) {
         throw new Error(`Plese set your PRICE_ORACLE in a .env-${network} file`)

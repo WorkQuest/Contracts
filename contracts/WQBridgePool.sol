@@ -7,16 +7,19 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
 contract WQBridgePool is
     Initializable,
     AccessControlUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address payable;
 
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     bytes32 public constant BRIDGE_ROLE = keccak256('BRIDGE_ROLE');
 
     bool private initialized;
@@ -28,13 +31,24 @@ contract WQBridgePool is
     event Transferred(address token, address recipient, uint256 amount);
     event TransferredNative(address sender, uint256 amount);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     function initialize() external initializer {
         __AccessControl_init();
         __Pausable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BRIDGE_ROLE, ADMIN_ROLE);
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
 
     function transfer(
         address payable recipient,

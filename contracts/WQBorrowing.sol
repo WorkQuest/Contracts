@@ -131,6 +131,7 @@ contract WQBorrowing is
             loan.credit <= loan.fund.balanceOf(),
             'WQBorrowing: Insufficient amount in fund'
         );
+        uint256 comission = (loan.credit * fee) / 1e18;
 
         // Take tokens
         tokens[symbol].safeTransferFrom(
@@ -141,7 +142,8 @@ contract WQBorrowing is
         // Get coins from fund
         loan.fund.borrow(loan.credit);
         // Send wusd credit
-        wusd.safeTransfer(msg.sender, loan.credit);
+        wusd.safeTransfer(msg.sender, loan.credit - comission);
+        wusd.safeTransfer(feeReceiver, comission);
         emit Borrowed(nonce, msg.sender, collateralAmount, loan.credit, symbol);
     }
 

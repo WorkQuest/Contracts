@@ -21,6 +21,9 @@ async function main() {
   if (!process.env.WORKQUEST_FEE_WORKER) {
     throw new Error(`Please set your WORKQUEST_FEE_WORKER in a .env-${network} file`);
   }
+  if (!process.env.WORKQUEST_FEE_TX) {
+    throw new Error(`Please set your WORKQUEST_FEE_TX in a .env-${network} file`);
+  }
   if (!process.env.WORKQUEST_FEE_RECEIVER) {
     throw new Error(`Please set your WORKQUEST_FEE_RECEIVER in a .env-${network} file`);
   }
@@ -40,6 +43,7 @@ async function main() {
     [
       process.env.WORKQUEST_FEE_EMPLOYER,
       process.env.WORKQUEST_FEE_WORKER,
+      process.env.WORKQUEST_FEE_TX,
       process.env.WORKQUEST_FEE_RECEIVER,
       process.env.PENSION_FUND,
       process.env.REFERRAL,
