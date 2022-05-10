@@ -41,12 +41,12 @@ task("config_collateral_auction", "Config collateral auction")
 
         let auction = await ethers.getContractAt("WQCollateralAuction", auction_address);
         console.log("Try to config collateral auction:", args.token, auction_address);
-        await auction.setLiquidateTreshold(liquidate_threshold);
+        // await auction.setLiquidateTreshold(liquidate_threshold);
         // await auction.setUpperBoundCost(upper_bound_cost);
         // await auction.setLowerBoundCost(lower_bound_cost);
         // await auction.setAuctionDuration(auction_duration);
         // await auction.setPriceIndexStep(index_step);
-        // await auction.setRouter(process.env.ROUTER);
+        await auction.setRouter(process.env.ROUTER);
 
         console.log("Done")
     });

@@ -13,8 +13,10 @@ task("prices", "Get all prices")
         let eth_upd = parseInt((await priceOracle.tokens("ETH")).updatedTime);
         let bnb_upd = parseInt((await priceOracle.tokens("BNB")).updatedTime);
         let wqt_upd = parseInt((await priceOracle.tokens("WQT")).updatedTime);
+        let usdt_upd = parseInt((await priceOracle.tokens("USDT")).updatedTime);
         let valid = parseInt(await priceOracle.validTime());
         console.log("ETH:", (await priceOracle.tokens("ETH")).price / 1e18, valid - cur + eth_upd);
         console.log("BNB:", (await priceOracle.tokens("BNB")).price / 1e18, valid - cur + bnb_upd);
         console.log("WQT:", (await priceOracle.tokens("WQT")).price / 1e18, valid - cur + wqt_upd);
+        console.log("USDT:", (await priceOracle.tokens("USDT")).price / 1e18, valid - cur + usdt_upd);
     });

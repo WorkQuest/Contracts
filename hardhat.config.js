@@ -1,7 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('@nomiclabs/hardhat-ethers')
 require('@nomiclabs/hardhat-web3')
-require('solidity-coverage')
+// require('solidity-coverage')
 require('hardhat-docgen')
 require("@nomiclabs/hardhat-etherscan")
 require('@openzeppelin/hardhat-upgrades')

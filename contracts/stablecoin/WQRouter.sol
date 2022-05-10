@@ -232,10 +232,10 @@ contract WQRouter is
         uint256 price = oracle.getTokenPriceUSD(symbol);
         uint256 debtAmount = (collateralAmount *
             price *
-            10 **
+            (10 **
                 (18 -
                     IERC20MetadataUpgradeable(tokens[symbol].token)
-                        .decimals())) / collateralRatio;
+                        .decimals()))) / collateralRatio;
         userCollateral.debtAmount += debtAmount;
         tokens[symbol].totalDebt += debtAmount;
 

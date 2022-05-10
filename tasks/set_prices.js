@@ -2,6 +2,7 @@ task("set_prices", "Set all prices of tokens")
     .addOptionalParam("eth", "ETH price")
     .addOptionalParam("bnb", "BNB price")
     .addOptionalParam("wqt", "WQT price")
+    .addOptionalParam("usdt", "USDT price")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
         const accounts = await ethers.getSigners();
@@ -31,7 +32,7 @@ task("set_prices", "Set all prices of tokens")
             symbols.push("USDT");
             prices.push(await ethers.utils.parseEther(args.usdt));
         }
-        console.log(symbols, prices);
+        // console.log(symbols, prices);
         let message = web3.utils.soliditySha3(
             { t: 'uint256', v: nonce },
             { t: 'uint256', v: prices },
