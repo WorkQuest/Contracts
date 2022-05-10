@@ -10,15 +10,17 @@ async function main() {
 
   const network = hre.network.name;
   const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-  for (const k in envConfig) { process.env[k] = envConfig[k]; }
-  if (!process.env.STAKING_NATIVE) {
-    throw new Error(`Please set your STAKING_NATIVE in a .env-${network} file`);
+  for (const k in envConfig) {
+    process.env[k] = envConfig[k]
+  }
+  if (!process.env.STABLE_BRIDGE) {
+    throw new Error(`Please set your STABLE_BRIDGE in a .env-${network} file`);
   }
 
   console.log("Upgrade...");
-  const WQStakingNative = await ethers.getContractFactory("WQStakingWQT");
-  const staking_native = await upgrades.upgradeProxy(process.env.STAKING_NATIVE, WQStakingNative, { kind: 'uups' });
-  console.log("WQStakingNative has been upgraded to:", staking_native.address);
+  const WQBridge = await ethers.getContractFactory("contracts/WQBridgeStable.sol:WQBridge");
+  const bridge = await upgrades.upgradeProxy(process.env.STABLE_BRIDGE, WQBridge, { kind: "transparent" });
+  console.log("Bridge has been upgraded to:", bridge.address);
 }
 
 main()

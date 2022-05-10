@@ -8,7 +8,6 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WQPriceOracle.sol';
 import './WQRouterInterface.sol';
 
@@ -354,10 +353,13 @@ contract WQCollateralAuction is
      */
     function getLiquidatedCollaterallAmount() public view returns (uint256) {
         string memory symbol = token.symbol();
+        uint256 factor = 10**(18 - token.decimals());
         uint256 price = oracle.getTokenPriceUSD(symbol);
-        uint256 collateral = router.getCollateral(symbol) * price;
+        uint256 collateral = router.getCollateral(symbol) * price * factor;
         uint256 debt = router.getDebt(symbol);
-        if (collateral < liquidateThreshold * debt && collateral > 1e8 * debt) {
+        if (
+            collateral < liquidateThreshold * debt && collateral > 1e18 * debt
+        ) {
             return (3e18 * debt - 2 * collateral) / price;
         }
         return 0;
@@ -392,7 +394,8 @@ contract WQCollateralAuction is
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
         lot.saleAmount = amount;
-        lot.endCost = (price * amount) / 1e18;
+        uint256 factor = 10**(18 - token.decimals());
+        lot.endCost = (price * amount * factor) / 1e18;
         lot.endTime = block.timestamp + auctionDuration;
         lot.status = LotStatus.Auctioned;
         emit AuctionStarted(priceIndex, index, amount, lot.endCost);

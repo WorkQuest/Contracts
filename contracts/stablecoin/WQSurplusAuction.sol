@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
 import './WQPriceOracle.sol';
 import './WQRouterInterface.sol';
 
@@ -27,7 +27,7 @@ contract WQSurplusAuction is
         uint256 index;
         uint256 amount;
         uint256 endTime;
-        address payable buyer;
+        address buyer;
         LotStatus status;
         string symbol;
     }
@@ -48,7 +48,7 @@ contract WQSurplusAuction is
     /// @dev Total amount of surplus auctioned
     uint256 public totalAuctioned;
 
-    mapping(string => bool) public tokens;
+    mapping(string => IERC20MetadataUpgradeable) public tokens;
 
     /// @dev Queue
     mapping(uint256 => LotInfo) public lots;
@@ -101,7 +101,8 @@ contract WQSurplusAuction is
         returns (uint256)
     {
         uint256 collateral = router.getCollateral(symbol) *
-            oracle.getTokenPriceUSD(symbol);
+            oracle.getTokenPriceUSD(symbol) *
+            10**(18 - tokens[symbol].decimals());
         uint256 debt = router.getDebt(symbol);
         if ((collateral * 2) / 3e18 > debt) {
             return (collateral * 2) / 3e18 - debt;
@@ -117,7 +118,10 @@ contract WQSurplusAuction is
         external
         nonReentrant
     {
-        require(tokens[symbol], 'WQAuction: This token is disabled');
+        require(
+            tokens[symbol] != IERC20MetadataUpgradeable(address(0)),
+            'WQAuction: This token is disabled'
+        );
         require(amount > 0, 'WQAuction: Incorrect amount value');
         if (lots[amount].status == LotStatus.Auctioned) {
             require(
@@ -147,7 +151,7 @@ contract WQSurplusAuction is
         }
         lots[amount] = LotInfo({
             index: index,
-            buyer: payable(0),
+            buyer: address(0),
             amount: amount,
             endTime: block.timestamp + auctionDuration,
             status: LotStatus.Auctioned,
@@ -190,10 +194,10 @@ contract WQSurplusAuction is
             );
         }
         totalAuctioned -= lot.amount;
-        lot.buyer = payable(msg.sender);
+        lot.buyer = msg.sender;
         lot.status = LotStatus.Selled;
         router.transferSurplus{value: msg.value}(
-            payable(msg.sender),
+            msg.sender,
             lot.amount,
             cost,
             lot.symbol
@@ -275,11 +279,11 @@ contract WQSurplusAuction is
      * @dev Set enabled tokens
      * @param symbol Symbol of token
      */
-    function setToken(bool enabled, string calldata symbol)
+    function setToken(address token, string calldata symbol)
         external
         onlyRole(ADMIN_ROLE)
     {
-        tokens[symbol] = enabled;
+        tokens[symbol] = IERC20MetadataUpgradeable(token);
     }
 
     /**

@@ -36,7 +36,7 @@ async function main() {
     }
 
     console.log("Deploying...");
-    const WQStaking = await ethers.getContractFactory("WQStakingNative");
+    const WQStaking = await ethers.getContractFactory("WQStakingWQT");
     const staking = await upgrades.deployProxy(
         WQStaking,
         [

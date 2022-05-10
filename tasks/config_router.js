@@ -49,9 +49,9 @@ task("config_router", "Config router")
         // await router.updateAnnualInterestRate(process.env.ROUTER_ANNUAL_INTEREST_RATE);
         await router.setDebtAuction(process.env.DEBT_AUCTION);
         await router.setSurplusAuction(process.env.SURPLUS_AUCTION);
-        // await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
-        // await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
+        await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
+        await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
         // await router.setToken(1, process.env.WQT_TOKEN, process.env.WQT_AUCTION, process.env.WQT_AUCTION_MIN_RATIO, "WQT");
-        // await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
+        await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
         console.log("Done")
     });

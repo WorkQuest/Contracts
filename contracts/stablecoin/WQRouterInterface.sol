@@ -46,7 +46,7 @@ interface WQRouterInterface {
     ) external payable;
 
     function transferSurplus(
-        address payable to,
+        address to,
         uint256 amount,
         uint256 cost,
         string calldata symbol

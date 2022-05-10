@@ -35,8 +35,8 @@ task("config_surplus_auction", "Config surplus auction")
         // await auction.setAuctionDuration(process.env.SURPLUS_AUCTION_DURATION);
         // await auction.setMaxLotAmountFactor(process.env.SURPLUS_MAX_LOT_AMOUNT_FACTOR);
         // await auction.setRouter(process.env.ROUTER);
-        await auction.setToken(1, "ETH");
-        await auction.setToken(1, "BNB");
-        await auction.setToken(1, "USDT");
+        await auction.setToken(process.env.ETH_TOKEN, "ETH");
+        await auction.setToken(process.env.BNB_TOKEN, "BNB");
+        await auction.setToken(process.env.USDT_TOKEN, "USDT");
         console.log("Done.")
     });

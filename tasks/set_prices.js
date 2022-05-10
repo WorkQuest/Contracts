@@ -27,6 +27,10 @@ task("set_prices", "Set all prices of tokens")
             symbols.push("WQT");
             prices.push(await ethers.utils.parseEther(args.wqt));
         }
+        if (args.usdt) {
+            symbols.push("USDT");
+            prices.push(await ethers.utils.parseEther(args.usdt));
+        }
         console.log(symbols, prices);
         let message = web3.utils.soliditySha3(
             { t: 'uint256', v: nonce },

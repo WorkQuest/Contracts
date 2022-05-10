@@ -5,7 +5,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
 import './WQPriceOracle.sol';
 import './WQRouterInterface.sol';
 
@@ -15,8 +15,6 @@ contract WQDebtAuction is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    using AddressUpgradeable for address payable;
-
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
@@ -30,7 +28,7 @@ contract WQDebtAuction is
         uint256 index;
         uint256 amount;
         uint256 endTime;
-        address payable buyer;
+        address buyer;
         LotStatus status;
         string symbol;
     }
@@ -51,8 +49,7 @@ contract WQDebtAuction is
 
     /// @dev Total amount of debt auctioned
     uint256 public totalAuctioned;
-
-    mapping(string => bool) public tokens;
+    mapping(string => IERC20MetadataUpgradeable) public tokens;
 
     /// @dev Queue of lots
     mapping(uint256 => LotInfo) public lots;
@@ -101,7 +98,8 @@ contract WQDebtAuction is
      */
     function getDebtAmount(string memory symbol) public view returns (uint256) {
         uint256 collateral = router.getCollateral(symbol) *
-            oracle.getTokenPriceUSD(symbol);
+            oracle.getTokenPriceUSD(symbol) *
+            10**(18 - tokens[symbol].decimals());
         uint256 debt = router.getDebt(symbol);
         if (debt > (collateral * 2) / 3e18) {
             return debt - (collateral * 2) / 3e18;
@@ -117,7 +115,10 @@ contract WQDebtAuction is
         external
         nonReentrant
     {
-        require(tokens[symbol], 'WQAuction: This token is disabled');
+        require(
+            tokens[symbol] != IERC20MetadataUpgradeable(address(0)),
+            'WQAuction: This token is disabled'
+        );
         require(amount > 0, 'WQAuction: Incorrect amount value');
         if (lots[amount].status == LotStatus.Auctioned) {
             require(
@@ -145,12 +146,11 @@ contract WQDebtAuction is
             amounts.push(amount);
             index = amounts.length - 1;
         }
-
         lots[amount] = LotInfo({
             index: index,
             amount: amount,
             endTime: block.timestamp + auctionDuration,
-            buyer: payable(0),
+            buyer: address(0),
             status: LotStatus.Auctioned,
             symbol: symbol
         });
@@ -186,7 +186,7 @@ contract WQDebtAuction is
             );
         }
         totalAuctioned -= lot.amount;
-        lot.buyer = payable(msg.sender);
+        lot.buyer = msg.sender;
         lot.status = LotStatus.Selled;
         router.transferDebt(msg.sender, cost, lot.amount, lot.symbol);
         emit LotBuyed(lot.index, lot.amount);
@@ -266,11 +266,11 @@ contract WQDebtAuction is
      * @dev Set enabled tokens
      * @param symbol Symbol of token
      */
-    function setToken(bool enabled, string calldata symbol)
+    function setToken(address token, string calldata symbol)
         external
         onlyRole(ADMIN_ROLE)
     {
-        tokens[symbol] = enabled;
+        tokens[symbol] = IERC20MetadataUpgradeable(token);
     }
 
     /**

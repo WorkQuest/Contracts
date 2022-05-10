@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
@@ -229,19 +230,19 @@ contract WQRouter is
         userCollateral.collateralAmount += collateralAmount;
         tokens[symbol].totalCollateral += collateralAmount;
         uint256 price = oracle.getTokenPriceUSD(symbol);
-        uint256 debtAmount = (collateralAmount * price) / collateralRatio;
+        uint256 debtAmount = (collateralAmount *
+            price *
+            10 **
+                (18 -
+                    IERC20MetadataUpgradeable(tokens[symbol].token)
+                        .decimals())) / collateralRatio;
         userCollateral.debtAmount += debtAmount;
         tokens[symbol].totalDebt += debtAmount;
 
         //Add lot to collateralAuction
         (uint256 priceIndex, uint256 index) = tokens[symbol]
             .collateralAuction
-            .addLot(
-                payable(msg.sender),
-                price,
-                collateralAmount,
-                collateralRatio
-            );
+            .addLot(msg.sender, price, collateralAmount, collateralRatio);
         // Save indexes of lot
         _addUserLot(msg.sender, priceIndex, index, symbol);
 
@@ -295,8 +296,12 @@ contract WQRouter is
                 ) == uint8(1),
                 'WQRouter: Status not new'
             );
-            uint256 extraDebt = ((price - lotPrice) * lotAmount) /
-                collateralRatio;
+            uint256 extraDebt = ((price - lotPrice) *
+                lotAmount *
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals())) / collateralRatio;
 
             tokens[symbol].totalDebt += extraDebt;
             userCollateral.debtAmount += extraDebt;
@@ -329,7 +334,7 @@ contract WQRouter is
         uint256 priceIndex,
         uint256 index,
         string calldata symbol
-    ) external payable nonReentrant onlyEnabledToken(symbol) {
+    ) external nonReentrant onlyEnabledToken(symbol) {
         isLotExist(priceIndex, index, symbol);
         uint256 newPriceIndex;
         uint256 newIndex;
@@ -351,8 +356,12 @@ contract WQRouter is
                 ) == uint8(1),
                 'WQRouter: Status not new'
             );
-            uint256 returnDebt = ((lotPrice - price) * lotAmount) /
-                collateralRatio;
+            uint256 returnDebt = ((lotPrice - price) *
+                lotAmount *
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals())) / collateralRatio;
             tokens[symbol].totalDebt -= returnDebt;
             userCollateral.debtAmount -= returnDebt;
             (newPriceIndex, newIndex) = tokens[symbol]
@@ -441,7 +450,7 @@ contract WQRouter is
         uint256 index,
         uint256 debtPart,
         string calldata symbol
-    ) external payable nonReentrant onlyEnabledToken(symbol) {
+    ) external nonReentrant onlyEnabledToken(symbol) {
         isLotExist(priceIndex, index, symbol);
         uint256 collateralPart;
         {
@@ -463,7 +472,13 @@ contract WQRouter is
                 (fixedRate +
                     (annualInterestRate * (block.timestamp - createdAt)) /
                     YEAR)) / 1e18;
-            collateralPart = (debtPart * collateralRatio) / price;
+            collateralPart =
+                (debtPart * collateralRatio) /
+                price /
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals());
             tokens[symbol].totalDebt -= debtPart;
             tokens[symbol].totalCollateral -= collateralPart;
             UserCollateral storage userCollateral = collaterals[symbol][
@@ -619,7 +634,12 @@ contract WQRouter is
             collaterals[symbol][owner].collateralAmount -= collateralPart;
             tokens[symbol].totalCollateral -= collateralPart;
             collaterals[symbol][owner].debtAmount -=
-                (collateralPart * lotPrice) /
+                (collateralPart *
+                    lotPrice *
+                    10 **
+                        (18 -
+                            IERC20MetadataUpgradeable(tokens[symbol].token)
+                                .decimals())) /
                 collateralRatio;
             tokens[symbol].totalDebt -= amount;
             {
@@ -647,7 +667,12 @@ contract WQRouter is
         emit Removed(
             msg.sender,
             collateralPart,
-            (collateralPart * lotPrice) / collateralRatio,
+            (collateralPart *
+                lotPrice *
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals())) / collateralRatio,
             priceIndex,
             index,
             symbol
@@ -698,7 +723,7 @@ contract WQRouter is
      * @dev Transfer WQT from user and mint him WUSD
      */
     function transferSurplus(
-        address payable user,
+        address user,
         uint256 amount,
         uint256 cost,
         string calldata symbol

@@ -11,7 +11,7 @@ async function main() {
 
     const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-    for (const k in envConfig) {process.env[k] = envConfig[k]}
+    for (const k in envConfig) { process.env[k] = envConfig[k] }
 
     if (!process.env.STAKING_REWARD_TOTAL) {
         throw new Error(`Please set your STAKING_REWARD_TOTAL in a .env-${network} file`);
@@ -34,23 +34,23 @@ async function main() {
     if (!process.env.STAKING_MAX_STAKE) {
         throw new Error(`Please set your STAKING_MAX_STAKE in a .env-${network} file`);
     }
-    if (!process.env.WQT_TOKEN) {
-        throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
+    if (!process.env.WUSD_TOKEN) {
+        throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
     }
 
     console.log("Deploying...");
-    const WQStaking = await ethers.getContractFactory("WQStaking");
+    const WQStaking = await ethers.getContractFactory("WQStakingWUSD");
     const staking = await upgrades.deployProxy(
         WQStaking,
         [process.env.STAKING_START_TIME,
-         process.env.STAKING_REWARD_TOTAL,
-         process.env.STAKING_DISTRIBUTION_TIME,
-         process.env.STAKING_STAKE_PERIOD,
-         process.env.STAKING_CLAIM_PERIOD,
-         process.env.STAKING_MIN_STAKE,
-         process.env.STAKING_MAX_STAKE,
-         process.env.WQT_TOKEN,
-         process.env.WQT_TOKEN],
+        process.env.STAKING_REWARD_TOTAL,
+        process.env.STAKING_DISTRIBUTION_TIME,
+        process.env.STAKING_STAKE_PERIOD,
+        process.env.STAKING_CLAIM_PERIOD,
+        process.env.STAKING_MIN_STAKE,
+        process.env.STAKING_MAX_STAKE,
+        process.env.WUSD_TOKEN
+        ],
         { initializer: 'initialize', kind: 'uups' }
     );
     console.log("Proxy of Staking has been deployed to:", staking.address);

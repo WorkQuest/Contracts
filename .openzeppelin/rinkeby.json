@@ -10196,13 +10196,13 @@
           {
             "contract": "WQBridge",
             "label": "tokens",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)8129_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)8120_storage)",
             "src": "contracts/WQBridge.sol:64"
           },
           {
             "contract": "WQBridge",
             "label": "swaps",
-            "type": "t_mapping(t_bytes32,t_struct(SwapData)8120_storage)",
+            "type": "t_mapping(t_bytes32,t_struct(SwapData)8111_storage)",
             "src": "contracts/WQBridge.sol:67"
           }
         ],
@@ -10219,13 +10219,13 @@
           "t_bool": {
             "label": "bool"
           },
-          "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)8129_storage)": {
+          "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)8120_storage)": {
             "label": "mapping(string => struct WQBridge.TokenSettings)"
           },
           "t_string_storage": {
             "label": "string"
           },
-          "t_struct(TokenSettings)8129_storage": {
+          "t_struct(TokenSettings)8120_storage": {
             "label": "struct WQBridge.TokenSettings",
             "members": [
               {
@@ -10249,13 +10249,13 @@
           "t_address": {
             "label": "address"
           },
-          "t_mapping(t_bytes32,t_struct(SwapData)8120_storage)": {
+          "t_mapping(t_bytes32,t_struct(SwapData)8111_storage)": {
             "label": "mapping(bytes32 => struct WQBridge.SwapData)"
           },
           "t_bytes32": {
             "label": "bytes32"
           },
-          "t_struct(SwapData)8120_storage": {
+          "t_struct(SwapData)8111_storage": {
             "label": "struct WQBridge.SwapData",
             "members": [
               {
@@ -10264,11 +10264,375 @@
               },
               {
                 "label": "state",
-                "type": "t_enum(State)8114"
+                "type": "t_enum(State)8105"
               }
             ]
           },
-          "t_enum(State)8114": {
+          "t_enum(State)8105": {
+            "label": "enum WQBridge.State",
+            "members": [
+              "Empty",
+              "Initialized",
+              "Redeemed"
+            ]
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          }
+        }
+      }
+    },
+    "a8fafa6a7b32bcf68562c5124e2adf1796b2125b82d9a467b039fd910fb44bf0": {
+      "address": "0xb04066EBbb58efcBA89e704F3049bBf582A4c6A6",
+      "txHash": "0x65025d12ce71e4ed13f9f644c255d34ba7adc131417ab646f267fcd0dbe78a6d",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:235"
+          },
+          {
+            "contract": "PausableUpgradeable",
+            "label": "_paused",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "contract": "PausableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:102"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "chainId",
+            "type": "t_uint256",
+            "src": "contracts/WQBridgeStable.sol:55"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "pool",
+            "type": "t_address_payable",
+            "src": "contracts/WQBridgeStable.sol:57"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "chains",
+            "type": "t_mapping(t_uint256,t_bool)",
+            "src": "contracts/WQBridgeStable.sol:60"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "tokens",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)9113_storage)",
+            "src": "contracts/WQBridgeStable.sol:63"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "swaps",
+            "type": "t_mapping(t_bytes32,t_struct(SwapData)9104_storage)",
+            "src": "contracts/WQBridgeStable.sol:66"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_address_payable": {
+            "label": "address payable"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)9113_storage)": {
+            "label": "mapping(string => struct WQBridge.TokenSettings)"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_struct(TokenSettings)9113_storage": {
+            "label": "struct WQBridge.TokenSettings",
+            "members": [
+              {
+                "label": "token",
+                "type": "t_address"
+              },
+              {
+                "label": "enabled",
+                "type": "t_bool"
+              },
+              {
+                "label": "native",
+                "type": "t_bool"
+              },
+              {
+                "label": "lockable",
+                "type": "t_bool"
+              }
+            ]
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_mapping(t_bytes32,t_struct(SwapData)9104_storage)": {
+            "label": "mapping(bytes32 => struct WQBridge.SwapData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(SwapData)9104_storage": {
+            "label": "struct WQBridge.SwapData",
+            "members": [
+              {
+                "label": "nonce",
+                "type": "t_uint256"
+              },
+              {
+                "label": "state",
+                "type": "t_enum(State)9098"
+              }
+            ]
+          },
+          "t_enum(State)9098": {
+            "label": "enum WQBridge.State",
+            "members": [
+              "Empty",
+              "Initialized",
+              "Redeemed"
+            ]
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          }
+        }
+      }
+    },
+    "175e813efc8c35088ccc224f0a015891c7c9421f2f501cec8f9dba7fb66aa3c5": {
+      "address": "0xb70F5087027D6831EA344000cf429b3F8ab556DB",
+      "txHash": "0x0c34b013b945969dd4bd57257bc34f8c2880597f9e4d2ae86bae02e145238dd0",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:235"
+          },
+          {
+            "contract": "PausableUpgradeable",
+            "label": "_paused",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "contract": "PausableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:102"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "chainId",
+            "type": "t_uint256",
+            "src": "contracts/WQBridgeStable.sol:55"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "pool",
+            "type": "t_address_payable",
+            "src": "contracts/WQBridgeStable.sol:57"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "chains",
+            "type": "t_mapping(t_uint256,t_bool)",
+            "src": "contracts/WQBridgeStable.sol:60"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "tokens",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)9113_storage)",
+            "src": "contracts/WQBridgeStable.sol:63"
+          },
+          {
+            "contract": "WQBridge",
+            "label": "swaps",
+            "type": "t_mapping(t_bytes32,t_struct(SwapData)9104_storage)",
+            "src": "contracts/WQBridgeStable.sol:66"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_address_payable": {
+            "label": "address payable"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)9113_storage)": {
+            "label": "mapping(string => struct WQBridge.TokenSettings)"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_struct(TokenSettings)9113_storage": {
+            "label": "struct WQBridge.TokenSettings",
+            "members": [
+              {
+                "label": "token",
+                "type": "t_address"
+              },
+              {
+                "label": "enabled",
+                "type": "t_bool"
+              },
+              {
+                "label": "native",
+                "type": "t_bool"
+              },
+              {
+                "label": "lockable",
+                "type": "t_bool"
+              }
+            ]
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_mapping(t_bytes32,t_struct(SwapData)9104_storage)": {
+            "label": "mapping(bytes32 => struct WQBridge.SwapData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(SwapData)9104_storage": {
+            "label": "struct WQBridge.SwapData",
+            "members": [
+              {
+                "label": "nonce",
+                "type": "t_uint256"
+              },
+              {
+                "label": "state",
+                "type": "t_enum(State)9098"
+              }
+            ]
+          },
+          "t_enum(State)9098": {
             "label": "enum WQBridge.State",
             "members": [
               "Empty",

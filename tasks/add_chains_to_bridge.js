@@ -2,9 +2,8 @@ task("add_chains_to_bridge", "Add chain settings to bridge")
     .addParam("chain", "The chain ID")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
-        const accounts = await ethers.getSigners();
-        const sender = accounts[0].address;
-        console.log("Sender address: ", sender);
+        const acc = await ethers.getSigners();
+        console.log("Sender address: ", acc[0].address);
         const network = hre.network.name;
         const fs = require('fs');
         const dotenv = require('dotenv');

@@ -25,20 +25,16 @@ async function main() {
 
     console.log("Deploying...");
 
-    const Bridge = await hre.ethers.getContractFactory("contracts/WQBridge.sol:WQBridge");
-    const bridge = await upgrades.deployProxy(
-        Bridge,
+    const Bridge = await hre.ethers.getContractFactory("contracts/WQBridgeStable.sol:WQBridge");
+    const bridge = await upgrades.deployProxy(Bridge,
         [
             process.env.CHAIN_ID,
             process.env.BRIDGE_POOL,
             process.env.BRIDGE_VALIDATOR
-        ],
-        { initializer: 'initialize' }
-    );
-
+        ], { initializer: 'initialize', kind: "transparent" });
     console.log("WorkQuest Bridge has been deployed to:", bridge.address);
 
-    envConfig["BRIDGE"] = bridge.address;
+    envConfig["STABLE_BRIDGE"] = bridge.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 }
 
