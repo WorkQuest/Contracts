@@ -30,6 +30,7 @@ contract WQSavingProduct is
         uint256 rewardDistributed;
         uint256 unlockDate;
         uint256 duration;
+        uint256 serviceComission;
     }
 
     uint256 public contributed;
@@ -103,13 +104,16 @@ contract WQSavingProduct is
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
             wallet.duration = lockTime;
+            wallet.serviceComission = 0;
         }
         wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
         contributed += amount;
-        uint256 comission = (amount * feePerMonth * lockTime) / MONTH / 1e18;
+        wallet.serviceComission +=
+            (amount * feePerMonth * (wallet.unlockDate - block.timestamp)) /
+            MONTH /
+            1e18;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
-        wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit Received(msg.sender, amount);
     }
 
@@ -130,9 +134,15 @@ contract WQSavingProduct is
             wallet.unlockDate = 0;
         }
         contributed -= amount;
-        uint256 comission = (amount * feeWithdraw) / 1e18;
-        wusd.safeTransfer(msg.sender, amount - comission);
-        wusd.safeTransfer(feeReceiver, comission);
+        uint256 closeComission = (amount * feeWithdraw) / 1e18;
+        uint256 serviceComission = (amount * wallet.serviceComission) /
+            wallet.amount;
+        wallet.serviceComission -= serviceComission;
+        wusd.safeTransfer(
+            msg.sender,
+            amount - closeComission - serviceComission
+        );
+        wusd.safeTransfer(feeReceiver, closeComission + serviceComission);
         emit Withdrew(msg.sender, amount);
     }
 

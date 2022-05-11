@@ -74,19 +74,19 @@ contract WorkQuest {
     event JobFinished();
 
     /// @notice Event emitted when
-    event ArbitrationStarted();
+    event ArbitrationStarted(uint256 timestamp);
 
     /// @notice Event emitted when
-    event ArbitrationRework();
+    event ArbitrationRework(uint256 timestamp);
 
     /// @notice Event emitted when
-    event ArbitrationDecreaseCost();
+    event ArbitrationDecreaseCost(uint256 timestamp);
 
     /// @notice Event emitted when
-    event ArbitrationAcceptWork();
+    event ArbitrationAcceptWork(uint256 timestamp);
 
     /// @notice Event emitted when
-    event ArbitrationRejectWork();
+    event ArbitrationRejectWork(uint256 timestamp);
 
     bool private initialized;
 
@@ -241,7 +241,7 @@ contract WorkQuest {
         );
         require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');
         status = JobStatus.Arbitration;
-        emit ArbitrationStarted();
+        emit ArbitrationStarted(block.timestamp);
     }
 
     /**
@@ -256,7 +256,7 @@ contract WorkQuest {
         deadline = block.timestamp + 3 days;
         status = JobStatus.InProgress;
         payable(msg.sender).sendValue(address(this).balance);
-        emit ArbitrationRework();
+        emit ArbitrationRework(block.timestamp);
     }
 
     /**
@@ -278,7 +278,7 @@ contract WorkQuest {
         forfeit = _forfeit;
         _transferFunds();
         payable(msg.sender).sendValue(address(this).balance);
-        emit ArbitrationDecreaseCost();
+        emit ArbitrationDecreaseCost(block.timestamp);
     }
 
     /**
@@ -293,7 +293,7 @@ contract WorkQuest {
         status = JobStatus.Finished;
         _transferFunds();
         payable(msg.sender).sendValue(address(this).balance);
-        emit ArbitrationAcceptWork();
+        emit ArbitrationAcceptWork(block.timestamp);
     }
 
     /**
@@ -310,7 +310,7 @@ contract WorkQuest {
         IERC20(factory.wusd()).safeTransfer(employer, cost - comission);
         IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
         payable(msg.sender).sendValue(address(this).balance);
-        emit ArbitrationRejectWork();
+        emit ArbitrationRejectWork(block.timestamp);
     }
 
     function _transferFunds() internal {
