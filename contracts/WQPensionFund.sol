@@ -171,7 +171,7 @@ contract WQPensionFund is
             'WQPensionFund: Lock time is not over yet'
         );
         require(amount <= wallet.amount, 'WQPensionFund: Amount is invalid');
-        uint256 reward = getRewards(msg.sender);
+        uint256 reward = (amount * getRewards(msg.sender)) / wallet.amount;
         wallet.rewardDistributed += reward;
         rewardsDistributed += reward;
 
