@@ -197,7 +197,7 @@ contract WQDAOVoting is
      */
     function addProposal(uint256 nonce, string memory _description) external {
         require(
-            getPastVotes(msg.sender, block.number) >= proposalThreshold,
+            getPastVotes(msg.sender, block.number - 1) >= proposalThreshold,
             'WQDAO: Proposer votes below proposal threshold'
         );
 
@@ -496,7 +496,9 @@ contract WQDAOVoting is
         if (_vaults[delegator] == WQDAOVault(payable(0))) {
             _vaults[delegator] = new WQDAOVault(payable(msg.sender));
         }
-        _vaults[delegator].transfer(_frozed[delegator]);
+        if (_frozed[delegator] > 0) {
+            _vaults[delegator].transfer(_frozed[delegator]);
+        }
         payable(_vaults[delegator]).sendValue(amount);
         emit DelegateChanged(delegator, _delegates[delegator], delegatee);
         _moveVotingPower(_delegates[delegator], address(0), _frozed[delegator]);
@@ -512,6 +514,9 @@ contract WQDAOVoting is
     function _undelegate(address delegator) internal {
         emit DelegateChanged(delegator, _delegates[delegator], address(0));
         _moveVotingPower(_delegates[delegator], address(0), _frozed[delegator]);
+        if (_frozed[delegator] > 0) {
+            _vaults[delegator].transfer(_frozed[delegator]);
+        }
         _frozed[delegator] = 0;
         delete _delegates[msg.sender];
     }
