@@ -300,7 +300,7 @@ contract WQDAOVoting is
         Proposal storage proposal = proposals[_proposalId];
         if (
             proposal.forVotes > proposal.againstVotes &&
-            proposal.numVoters > minimumQuorum
+            proposal.numVoters >= minimumQuorum
         ) {
             proposal.succeded = true;
         } else proposal.defeated = true;
@@ -373,6 +373,10 @@ contract WQDAOVoting is
     {
         require(_proposalId < proposalCount, 'WQDAO: Invalid proposal id');
         Proposal storage proposal = proposals[_proposalId];
+        require(
+            block.timestamp >= proposal.expireTime,
+            'WQDAO: Voting is not expired yet'
+        );
         require(proposal.active == true, 'WQDAO: Voting is closed');
         proposal.active = false;
         calcState(_proposalId);
