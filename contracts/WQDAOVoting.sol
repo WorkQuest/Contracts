@@ -515,6 +515,10 @@ contract WQDAOVoting is
         _undelegate(msg.sender);
     }
 
+    function vault(address delegator) external view returns (WQDAOVault) {
+        return _vaults[delegator];
+    }
+
     function _undelegate(address delegator) internal {
         emit DelegateChanged(delegator, _delegates[delegator], address(0));
         _moveVotingPower(_delegates[delegator], address(0), _frozed[delegator]);

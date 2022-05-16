@@ -11,7 +11,7 @@ import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.
 import './WQBridgeTokenInterface.sol';
 import './WQBridgePool.sol';
 
-contract WQBridge is
+contract WQBridgeStable is
     Initializable,
     AccessControlUpgradeable,
     PausableUpgradeable

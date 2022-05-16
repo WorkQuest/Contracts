@@ -147,10 +147,12 @@ contract WQReferral is
             userAccount.earnedAmount += earnedAmount;
             if (userAccount.earnedAmount >= earnedThreshold) {
                 userAccount.paid = true;
-                uint256 bonusAmount = (referralBonus * 1e18) /
-                    oracle.getTokenPriceUSD('WQT');
-                referrals[userAccount.affiliat].rewardTotal += bonusAmount;
-                emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
+                referrals[userAccount.affiliat].rewardTotal += referralBonus;
+                emit PaidReferral(
+                    referral,
+                    userAccount.affiliat,
+                    referralBonus
+                );
             }
         }
     }
@@ -165,9 +167,11 @@ contract WQReferral is
             address(this).balance > rewardAmount,
             'WQReferral: Balance on contract too low'
         );
+        uint256 bonusAmount = (rewardAmount * 1e18) /
+            oracle.getTokenPriceUSD('WQT');
         referrals[msg.sender].rewardPaid = referrals[msg.sender].rewardTotal;
-        payable(msg.sender).sendValue(rewardAmount);
-        emit RewardClaimed(msg.sender, rewardAmount);
+        payable(msg.sender).sendValue(bonusAmount);
+        emit RewardClaimed(msg.sender, bonusAmount);
     }
 
     /** @dev returns availible reward for claim
