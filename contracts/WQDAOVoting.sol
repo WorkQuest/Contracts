@@ -102,6 +102,10 @@ contract WQDAOVoting is
     // The total number of proposals
     uint256 public proposalCount;
 
+    address payable public feeReceiver;
+
+    uint256 public fee;
+
     //The record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
 
@@ -169,7 +173,8 @@ contract WQDAOVoting is
         uint256 _minimumQuorum,
         uint256 _votingPeriod,
         uint256 _proposalThreshold,
-        uint256 _voteThreshold
+        uint256 _voteThreshold,
+        uint256 _fee
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -183,6 +188,7 @@ contract WQDAOVoting is
         votingPeriod = _votingPeriod;
         proposalThreshold = _proposalThreshold;
         voteThreshold = _voteThreshold;
+        fee = _fee;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -311,7 +317,7 @@ contract WQDAOVoting is
      * @param _proposalId The id of the proposal to vote on
      * @param _support The support value for the vote
      */
-    function doVote(uint256 _proposalId, bool _support) public {
+    function doVote(uint256 _proposalId, bool _support) public payable {
         emit VoteCast(
             msg.sender,
             _proposalId,
@@ -347,6 +353,10 @@ contract WQDAOVoting is
             block.timestamp < proposal.expireTime,
             'WQDAO: Proposal expired'
         );
+        require(
+            msg.value == (votes * fee) / 1e18,
+            'WQDAO: Insufficient value of fee'
+        );
 
         if (_support) {
             proposal.forVotes += votes;
@@ -359,7 +369,7 @@ contract WQDAOVoting is
         receipt.hasVoted = true;
         receipt.support = _support;
         receipt.votes = votes;
-
+        feeReceiver.sendValue(msg.value);
         return votes;
     }
 
@@ -638,5 +648,9 @@ contract WQDAOVoting is
 
     function setVoteThreshold(uint256 amount) external onlyRole(ADMIN_ROLE) {
         voteThreshold = amount;
+    }
+
+    function setFee(uint256 _fee) external onlyRole(ADMIN_ROLE) {
+        fee = _fee;
     }
 }
