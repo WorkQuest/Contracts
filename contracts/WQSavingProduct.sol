@@ -25,6 +25,7 @@ contract WQSavingProduct is
 
     struct DepositWallet {
         uint256 amount;
+        uint256 borrowed;
         uint256 rewardAllowed;
         uint256 rewardDebt;
         uint256 rewardDistributed;
@@ -160,10 +161,10 @@ contract WQSavingProduct is
 
     /**
      * @notice Get rewards amount of user
-     * @param user Address of user
+     * @param depositor Address of user
      */
-    function getRewards(address user) public view returns (uint256) {
-        DepositWallet storage wallet = wallets[user];
+    function getRewards(address depositor) public view returns (uint256) {
+        DepositWallet storage wallet = wallets[depositor];
         return
             ((wallet.amount * rewardsPerContributed) / 1e20) +
             wallet.rewardAllowed -
@@ -174,24 +175,25 @@ contract WQSavingProduct is
     /**
      * @notice Balance of funds on contract
      */
-    function balanceOf() external view override returns (uint256) {
-        return contributed - borrowed;
+    function balanceOf(address depositor) public view override returns (uint256) {
+        return wallets[depositor].amount - wallets[depositor].borrowed;
     }
 
     /**
      * @notice Borrow funds from contract. Service function.
      * @param amount Amount of coins
      */
-    function borrow(uint256 amount)
+    function borrow(address depositor, uint256 amount)
         external
         override
         nonReentrant
         onlyRole(BORROWER_ROLE)
     {
         require(
-            amount <= contributed - borrowed,
-            'WQSavingProduct: Insufficient amount'
+            amount <= balanceOf(depositor),
+            'WQSavingProduct: Insufficient amount in wallet'
         );
+        wallets[depositor].borrowed += amount;
         borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
@@ -204,6 +206,7 @@ contract WQSavingProduct is
      * @param duration Duration of lock time
      */
     function refund(
+        address depositor,
         uint256 amount,
         uint256 elapsedTime,
         uint256 duration
@@ -212,6 +215,7 @@ contract WQSavingProduct is
         uint256 rewards = (amount * (apys[duration] * elapsedTime)) /
             YEAR /
             1e18;
+        wallets[depositor].borrowed -= amount;
         borrowed -= amount;
         rewardsProduced += rewards;
         rewardsPerContributed += (rewards * 1e20) / contributed;

@@ -25,6 +25,7 @@ contract WQPensionFund is
 
     struct PensionWallet {
         uint256 amount;
+        uint256 borrowed;
         uint256 fee;
         uint256 unlockDate;
         uint256 createdAt;
@@ -191,8 +192,8 @@ contract WQPensionFund is
         emit Claimed(msg.sender, reward, block.timestamp);
     }
 
-    function getRewards(address user) public view returns (uint256) {
-        PensionWallet storage wallet = wallets[user];
+    function getRewards(address depositor) public view returns (uint256) {
+        PensionWallet storage wallet = wallets[depositor];
         return
             ((wallet.amount * rewardsPerContributed) / 1e20) +
             wallet.rewardAllowed -
@@ -225,29 +226,34 @@ contract WQPensionFund is
         wallet.unlockDate = block.timestamp + YEAR;
     }
 
-    function getFee(address user) external view returns (uint256) {
-        return wallets[user].fee;
+    function getFee(address depositor) external view returns (uint256) {
+        return wallets[depositor].fee;
     }
 
     /** Borrowing interface */
 
-    function balanceOf() external view override returns (uint256) {
-        return contributed - borrowed;
+    function balanceOf(address depositor)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return wallets[depositor].amount - wallets[depositor].borrowed;
     }
 
     function apys(uint256) external view override returns (uint256) {
         return apy;
     }
 
-    function borrow(uint256 amount)
+    function borrow(address depositor, uint256 amount)
         external
         override
         nonReentrant
         onlyRole(BORROWER_ROLE)
     {
         require(
-            amount <= contributed - borrowed,
-            'WQPension: Insufficient amount'
+            amount <= balanceOf(depositor),
+            'WQPension: Insufficient amount in wallet'
         );
         borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
@@ -255,6 +261,7 @@ contract WQPensionFund is
     }
 
     function refund(
+        address depositor,
         uint256 amount,
         uint256 elapsedTime,
         uint256
@@ -288,16 +295,16 @@ contract WQPensionFund is
     }
 
     function updateWallet(
-        address user,
+        address depositor,
         uint256 amount,
         uint256 unlockDate,
         uint256 createdAt,
         uint256 serviceComission
     ) external onlyRole(ADMIN_ROLE) {
-        wallets[user].amount = amount;
-        wallets[user].unlockDate = unlockDate;
-        wallets[user].createdAt = createdAt;
-        wallets[user].serviceComission = serviceComission;
+        wallets[depositor].amount = amount;
+        wallets[depositor].unlockDate = unlockDate;
+        wallets[depositor].createdAt = createdAt;
+        wallets[depositor].serviceComission = serviceComission;
     }
 
     /**

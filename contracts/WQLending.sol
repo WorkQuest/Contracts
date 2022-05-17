@@ -24,6 +24,7 @@ contract WQLending is
 
     struct DepositWallet {
         uint256 amount;
+        uint256 borrowed;
         uint256 rewardAllowed;
         uint256 rewardDebt;
         uint256 rewardDistributed;
@@ -139,10 +140,10 @@ contract WQLending is
 
     /**
      * @notice Get rewards amount of user
-     * @param user Address of user
+     * @param depositor Address of depositor
      */
-    function getRewards(address user) public view returns (uint256) {
-        DepositWallet storage wallet = wallets[user];
+    function getRewards(address depositor) public view returns (uint256) {
+        DepositWallet storage wallet = wallets[depositor];
         return
             ((wallet.amount * rewardsPerContributed) / 1e20) +
             wallet.rewardAllowed -
@@ -153,8 +154,13 @@ contract WQLending is
     /**
      * @notice Balance of funds on contract
      */
-    function balanceOf() external view override returns (uint256) {
-        return contributed - borrowed;
+    function balanceOf(address depositor)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return wallets[depositor].amount - wallets[depositor].borrowed;
     }
 
     /**
@@ -168,15 +174,15 @@ contract WQLending is
      * @notice Borrow funds from contract. Service function.
      * @param amount Amount of coins
      */
-    function borrow(uint256 amount)
+    function borrow(address depositor, uint256 amount)
         external
         override
         nonReentrant
         onlyRole(BORROWER_ROLE)
     {
         require(
-            amount <= contributed - borrowed,
-            'WQLending: Insufficient amount'
+            amount <= balanceOf(depositor),
+            'WQLending: Insufficient amount in wallet'
         );
         borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
@@ -189,6 +195,7 @@ contract WQLending is
      * @param elapsedTime Time elapsed since the beginning of the borrowing
      */
     function refund(
+        address depositor,
         uint256 amount,
         uint256 elapsedTime,
         uint256

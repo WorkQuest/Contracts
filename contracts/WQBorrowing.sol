@@ -23,6 +23,7 @@ contract WQBorrowing is
     uint256 public constant YEAR = 31536000;
 
     struct BorrowInfo {
+        address depositor;
         uint256 collateral;
         uint256 credit;
         uint256 borrowedAt;
@@ -102,6 +103,7 @@ contract WQBorrowing is
      */
     function borrow(
         uint256 nonce,
+        address depositor,
         uint256 collateralAmount,
         uint256 fundIndex,
         uint256 duration,
@@ -117,7 +119,7 @@ contract WQBorrowing is
             loan.collateral == 0,
             'WQBorrowing: You are not refunded credit'
         );
-
+        loan.depositor = depositor;
         loan.collateral = collateralAmount;
         loan.borrowedAt = block.timestamp;
         loan.duration = duration;
@@ -128,7 +130,7 @@ contract WQBorrowing is
             (collateralAmount * oracle.getTokenPriceUSD(symbol) * 2) /
             3e18;
         require(
-            loan.credit <= loan.fund.balanceOf(),
+            loan.credit <= loan.fund.balanceOf(depositor),
             'WQBorrowing: Insufficient amount in fund'
         );
 
@@ -139,7 +141,7 @@ contract WQBorrowing is
             collateralAmount
         );
         // Get coins from fund
-        loan.fund.borrow(loan.credit);
+        loan.fund.borrow(depositor, loan.credit);
         // Send wusd credit
         wusd.safeTransfer(msg.sender, loan.credit);
 
@@ -164,15 +166,15 @@ contract WQBorrowing is
     /**
      * @notice Buy collateral
      * @param nonce Nonce value
-     * @param user Address of user
+     * @param borrower Address of borrower
      * @param returnAmount Return value of WUSD
      */
     function buyCollateral(
         uint256 nonce,
-        address user,
+        address borrower,
         uint256 returnAmount
     ) external nonReentrant {
-        BorrowInfo storage loan = borrowers[user];
+        BorrowInfo storage loan = borrowers[borrower];
         require(
             loan.collateral > 0,
             'WQBorrowing: You are not borrowed moneys'
@@ -187,7 +189,7 @@ contract WQBorrowing is
             'WQBorrowing: The collateral price is insufficient to repay the credit'
         );
         _refund(
-            user,
+            borrower,
             msg.sender,
             returnAmount,
             (returnAmount * 1e18) / currentPrice
@@ -199,12 +201,12 @@ contract WQBorrowing is
      * @notice Refund loan
      */
     function _refund(
-        address user,
+        address borrower,
         address buyer,
         uint256 debtAmount,
         uint256 returnCollateral
     ) internal {
-        BorrowInfo storage loan = borrowers[user];
+        BorrowInfo storage loan = borrowers[borrower];
         require(
             tokens[loan.symbol] != IERC20Upgradeable(address(0)),
             'WQBorrowing: Token is disabled'
@@ -227,6 +229,7 @@ contract WQBorrowing is
         }
         wusd.safeApprove(address(loan.fund), debtAmount + rewards);
         loan.fund.refund(
+            loan.depositor,
             debtAmount,
             block.timestamp - loan.borrowedAt,
             loan.duration
@@ -235,13 +238,13 @@ contract WQBorrowing is
         tokens[loan.symbol].safeTransfer(buyer, returnCollateral);
     }
 
-    function getCurrentFee(address user) public view returns (uint256) {
-        BorrowInfo storage loan = borrowers[user];
+    function getCurrentFee(address borrower) public view returns (uint256) {
+        BorrowInfo storage loan = borrowers[borrower];
         return _getCurrentFee(loan.credit, loan.apy, loan.borrowedAt);
     }
 
-    function getRewards(address user) external view returns (uint256) {
-        BorrowInfo storage loan = borrowers[user];
+    function getRewards(address borrower) external view returns (uint256) {
+        BorrowInfo storage loan = borrowers[borrower];
         return
             _getRewards(
                 loan.credit,
