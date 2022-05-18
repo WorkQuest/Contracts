@@ -42,7 +42,6 @@ async function main() {
     [
       process.env.PENSION_LOCK_TIME,
       process.env.PENSION_DEFAULT_FEE,
-      process.env.PENSION_APY,
       process.env.WUSD_TOKEN,
       process.env.PENSION_FEE_RECEIVER,
       process.env.PENSION_FEE_PER_MONTH,
@@ -53,6 +52,13 @@ async function main() {
 
   envConfig["PENSION_FUND"] = pension_fund.address;
   fs.writeFileSync(`.env-${network}`, stringify(envConfig));
+
+  await pension_fund.setApy(360, parseEther("0.0644"));
+  await pension_fund.setApy(540, parseEther("0.0644"));
+  await pension_fund.setApy(720, parseEther("0.0644"));
+  await pension_fund.setApy(900, parseEther("0.0644"));
+  await pension_fund.setApy(1080, parseEther("0.0644"));
+  console.log("APY setting complete");
 }
 
 main()

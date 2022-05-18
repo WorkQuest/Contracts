@@ -27,18 +27,12 @@ contract WQSavingProduct is
         uint256 amount;
         uint256 borrowed;
         uint256 rewardAllowed;
-        uint256 rewardDebt;
         uint256 rewardDistributed;
         uint256 unlockDate;
         uint256 duration;
         uint256 serviceComission;
     }
 
-    uint256 public contributed;
-    uint256 public rewardsPerContributed;
-    uint256 public rewardsProduced;
-    uint256 public rewardsDistributed;
-    uint256 public borrowed;
     IERC20Upgradeable public wusd;
 
     /// @notice Fee settings
@@ -107,9 +101,7 @@ contract WQSavingProduct is
             wallet.duration = lockTime;
             wallet.serviceComission = 0;
         }
-        wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
-        contributed += amount;
         wallet.serviceComission +=
             (amount * feePerMonth * (wallet.unlockDate - block.timestamp)) /
             MONTH /
@@ -129,12 +121,10 @@ contract WQSavingProduct is
             'WQSavingProduct: Lock time is not over yet'
         );
         require(amount <= wallet.amount, 'WQSavingProduct: Amount is invalid');
-        wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
         if (wallet.amount == 0) {
             wallet.unlockDate = 0;
         }
-        contributed -= amount;
         uint256 closeComission = (amount * feeWithdraw) / 1e18;
         uint256 serviceComission = (amount * wallet.serviceComission) /
             wallet.amount;
@@ -154,7 +144,6 @@ contract WQSavingProduct is
         require(block.timestamp >= wallets[msg.sender].unlockDate);
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
-        rewardsDistributed += reward;
         wusd.safeTransfer(msg.sender, reward);
         emit Claimed(msg.sender, reward);
     }
@@ -165,17 +154,18 @@ contract WQSavingProduct is
      */
     function getRewards(address depositor) public view returns (uint256) {
         DepositWallet storage wallet = wallets[depositor];
-        return
-            ((wallet.amount * rewardsPerContributed) / 1e20) +
-            wallet.rewardAllowed -
-            wallet.rewardDistributed -
-            wallet.rewardDebt;
+        return wallet.rewardAllowed - wallet.rewardDistributed;
     }
 
     /**
      * @notice Balance of funds on contract
      */
-    function balanceOf(address depositor) public view override returns (uint256) {
+    function balanceOf(address depositor)
+        public
+        view
+        override
+        returns (uint256)
+    {
         return wallets[depositor].amount - wallets[depositor].borrowed;
     }
 
@@ -194,7 +184,6 @@ contract WQSavingProduct is
             'WQSavingProduct: Insufficient amount in wallet'
         );
         wallets[depositor].borrowed += amount;
-        borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
     }
@@ -216,9 +205,7 @@ contract WQSavingProduct is
             YEAR /
             1e18;
         wallets[depositor].borrowed -= amount;
-        borrowed -= amount;
-        rewardsProduced += rewards;
-        rewardsPerContributed += (rewards * 1e20) / contributed;
+        wallets[depositor].rewardAllowed += rewards;
         wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
         emit Refunded(msg.sender, amount);
     }

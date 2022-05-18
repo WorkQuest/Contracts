@@ -47,11 +47,11 @@ async function main() {
     envConfig["SAVING_PRODUCT"] = saving.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 
-    await saving.setApy(7, parseEther("0.0531"));
-    await saving.setApy(14, parseEther("0.0548"));
-    await saving.setApy(30, parseEther("0.0566"));
-    await saving.setApy(90, parseEther("0.06"));
-    await saving.setApy(180, parseEther("0.065"));
+    await saving.setApy(60, parseEther("0.0675"));
+    await saving.setApy(90, parseEther("0.0692"));
+    await saving.setApy(120, parseEther("0.071"));
+    await saving.setApy(150, parseEther("0.0744"));
+    await saving.setApy(180, parseEther("0.0794"));
     console.log("APY setting complete");
 }
 

@@ -66,11 +66,26 @@ async function main() {
     envConfig["BORROWING"] = borrowing.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
 
-    await borrowing.setApy(7, parseEther("0.0451"));
-    await borrowing.setApy(14, parseEther("0.0467"));
-    await borrowing.setApy(30, parseEther("0.0482"));
-    await borrowing.setApy(90, parseEther("0.0511"));
-    await borrowing.setApy(180, parseEther("0.0523"));
+    //lending
+    await borrowing.setApy(7, parseEther("0.1594"));
+    await borrowing.setApy(14, parseEther("0.1626"));
+    await borrowing.setApy(21, parseEther("0.1652"));
+    await borrowing.setApy(28, parseEther("0.1714"));
+    await borrowing.setApy(35, parseEther("0.1738"));
+
+    //saving
+    await borrowing.setApy(60, parseEther("0.0963"));
+    await borrowing.setApy(90, parseEther("0.098"));
+    await borrowing.setApy(120, parseEther("0.0998"));
+    await borrowing.setApy(150, parseEther("0.1032"));
+    await borrowing.setApy(180, parseEther("0.1082"));
+
+    //pension
+    await borrowing.setApy(360, parseEther("0.115"));
+    await borrowing.setApy(540, parseEther("0.1244"));
+    await borrowing.setApy(720, parseEther("0.1247"));
+    await borrowing.setApy(900, parseEther("0.1391"));
+    await borrowing.setApy(1080, parseEther("0.1535"));
     console.log("APY setting complete");
 
     await borrowing.setToken(process.env.ETH_TOKEN, "ETH");

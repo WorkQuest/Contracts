@@ -26,18 +26,12 @@ contract WQLending is
         uint256 amount;
         uint256 borrowed;
         uint256 rewardAllowed;
-        uint256 rewardDebt;
         uint256 rewardDistributed;
         uint256 unlockDate;
         uint256 duration;
     }
 
-    uint256 public contributed;
-    uint256 public rewardsPerContributed;
-    uint256 public rewardsProduced;
-    uint256 public rewardsDistributed;
-    uint256 public borrowed;
-    uint256 internal apy;
+    mapping(uint256 => uint256) public apys;
     IERC20Upgradeable public wusd;
 
     /// @notice Fee settings
@@ -66,7 +60,6 @@ contract WQLending is
     constructor() initializer {}
 
     function initialize(
-        uint256 _apy,
         address _wusd,
         address _feeReceiver,
         uint256 _fee
@@ -78,7 +71,6 @@ contract WQLending is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        apy = _apy;
         wusd = IERC20Upgradeable(_wusd);
         feeReceiver = _feeReceiver;
         fee = _fee;
@@ -99,9 +91,7 @@ contract WQLending is
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
             wallet.duration = lockTime;
         }
-        wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
-        contributed += amount;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
         emit Received(msg.sender, amount);
     }
@@ -117,9 +107,10 @@ contract WQLending is
             'WQSavingProduct: Lock time is not over yet'
         );
         require(amount <= wallet.amount, 'WQDeposit: Amount is invalid');
-        wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         wallet.amount -= amount;
-        contributed -= amount;
+        if (wallet.amount == 0) {
+            wallet.unlockDate = 0;
+        }
         uint256 comission = (amount * fee) / 1e18;
         wusd.safeTransfer(msg.sender, amount - comission);
         wusd.safeTransfer(feeReceiver, comission);
@@ -133,7 +124,6 @@ contract WQLending is
         require(block.timestamp >= wallets[msg.sender].unlockDate);
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
-        rewardsDistributed += reward;
         wusd.safeTransfer(msg.sender, reward);
         emit Claimed(msg.sender, reward);
     }
@@ -144,11 +134,7 @@ contract WQLending is
      */
     function getRewards(address depositor) public view returns (uint256) {
         DepositWallet storage wallet = wallets[depositor];
-        return
-            ((wallet.amount * rewardsPerContributed) / 1e20) +
-            wallet.rewardAllowed -
-            wallet.rewardDistributed -
-            wallet.rewardDebt;
+        return wallet.rewardAllowed - wallet.rewardDistributed;
     }
 
     /**
@@ -161,13 +147,6 @@ contract WQLending is
         returns (uint256)
     {
         return wallets[depositor].amount - wallets[depositor].borrowed;
-    }
-
-    /**
-     * @notice Get apy value
-     */
-    function apys(uint256) external view override returns (uint256) {
-        return apy;
     }
 
     /**
@@ -184,7 +163,7 @@ contract WQLending is
             amount <= balanceOf(depositor),
             'WQLending: Insufficient amount in wallet'
         );
-        borrowed += amount;
+        wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
     }
@@ -198,12 +177,13 @@ contract WQLending is
         address depositor,
         uint256 amount,
         uint256 elapsedTime,
-        uint256
+        uint256 duration
     ) external override nonReentrant onlyRole(BORROWER_ROLE) {
-        uint256 rewards = (amount * (apy * elapsedTime)) / YEAR / 1e18;
-        borrowed -= amount;
-        rewardsProduced += rewards;
-        rewardsPerContributed += (rewards * 1e20) / contributed;
+        uint256 rewards = (amount * (apys[duration] * elapsedTime)) /
+            YEAR /
+            1e18;
+        wallets[depositor].borrowed -= amount;
+        wallets[depositor].rewardAllowed += rewards;
         wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
         emit Refunded(msg.sender, amount);
     }
@@ -212,8 +192,11 @@ contract WQLending is
      * @notice Set APY value
      * @param _apy APY value
      */
-    function setApy(uint256 _apy) external onlyRole(ADMIN_ROLE) {
-        apy = _apy;
+    function setApy(uint256 duration, uint256 _apy)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        apys[duration] = _apy;
     }
 
     /**

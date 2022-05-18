@@ -54,13 +54,13 @@ contract WQBorrowing is
 
     event Borrowed(
         uint256 nonce,
-        address user,
+        address borrower,
         uint256 collateral,
         uint256 credit,
         string symbol
     );
 
-    event Refunded(uint256 nonce, address user, uint256 amount);
+    event Refunded(uint256 nonce, address borrower, uint256 amount);
 
     event Received(uint256 amount);
 
@@ -238,7 +238,7 @@ contract WQBorrowing is
         tokens[loan.symbol].safeTransfer(buyer, returnCollateral);
     }
 
-    function getCurrentFee(address borrower) public view returns (uint256) {
+    function getCurrentFee(address borrower) external view returns (uint256) {
         BorrowInfo storage loan = borrowers[borrower];
         return _getCurrentFee(loan.credit, loan.apy, loan.borrowedAt);
     }

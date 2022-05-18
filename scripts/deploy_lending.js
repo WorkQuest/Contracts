@@ -30,7 +30,6 @@ async function main() {
     const lending = await upgrades.deployProxy(
         Lending,
         [
-            process.env.LENDING_APY,
             process.env.WUSD_TOKEN,
             process.env.LENDING_FEE_RECEIVER,
             process.env.LENDING_FEE
@@ -40,6 +39,13 @@ async function main() {
 
     envConfig["LENDING"] = lending.address;
     fs.writeFileSync(`.env-${network}`, stringify(envConfig));
+
+    await lending.setApy(7, parseEther("0.1210"));
+    await lending.setApy(14, parseEther("0.1242"));
+    await lending.setApy(21, parseEther("0.1268"));
+    await lending.setApy(28, parseEther("0.1330"));
+    await lending.setApy(35, parseEther("0.1354"));
+    console.log("APY setting complete");
 }
 
 main()

@@ -30,19 +30,14 @@ contract WQPensionFund is
         uint256 unlockDate;
         uint256 createdAt;
         uint256 rewardAllowed;
-        uint256 rewardDebt;
         uint256 rewardDistributed;
         uint256 serviceComission;
     }
 
     uint256 public lockTime;
     uint256 public defaultFee;
-    uint256 public contributed;
-    uint256 public rewardsPerContributed;
-    uint256 public rewardsProduced;
-    uint256 public rewardsDistributed;
-    uint256 public borrowed;
-    uint256 internal apy;
+
+    mapping(uint256 => uint256) public apys;
     IERC20Upgradeable public wusd;
 
     /// @notice Fee settings
@@ -103,7 +98,6 @@ contract WQPensionFund is
     function initialize(
         uint256 _lockTime,
         uint256 _defaultFee,
-        uint256 _apy,
         address _wusd,
         address _feeReceiver,
         uint256 _feePerMonth,
@@ -121,7 +115,6 @@ contract WQPensionFund is
 
         lockTime = _lockTime;
         defaultFee = _defaultFee;
-        apy = _apy;
         wusd = IERC20Upgradeable(_wusd);
         feeReceiver = _feeReceiver;
         feePerMonth = _feePerMonth;
@@ -150,13 +143,11 @@ contract WQPensionFund is
             wallet.serviceComission = 0;
             emit WalletUpdated(worker, wallet.fee, wallet.unlockDate);
         }
-        wallet.rewardDebt += (amount * rewardsPerContributed) / 1e20;
         wallet.amount += amount;
         wallet.serviceComission +=
             (amount * feePerMonth * (wallet.unlockDate - block.timestamp)) /
             MONTH /
             1e18;
-        contributed += amount;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
         emit Received(worker, amount, block.timestamp);
     }
@@ -174,15 +165,14 @@ contract WQPensionFund is
         require(amount <= wallet.amount, 'WQPensionFund: Amount is invalid');
         uint256 reward = (amount * getRewards(msg.sender)) / wallet.amount;
         wallet.rewardDistributed += reward;
-        rewardsDistributed += reward;
-
-        wallet.rewardAllowed += (amount * rewardsPerContributed) / 1e20;
         uint256 closeComission = (amount * feeWithdraw) / 1e18;
         uint256 serviceComission = (amount * wallet.serviceComission) /
             wallet.amount;
         wallet.amount -= amount;
+        if (wallet.amount == 0) {
+            wallet.unlockDate = 0;
+        }
         wallet.serviceComission -= serviceComission;
-        contributed -= amount;
         wusd.safeTransfer(
             msg.sender,
             amount + reward - closeComission - serviceComission
@@ -194,11 +184,7 @@ contract WQPensionFund is
 
     function getRewards(address depositor) public view returns (uint256) {
         PensionWallet storage wallet = wallets[depositor];
-        return
-            ((wallet.amount * rewardsPerContributed) / 1e20) +
-            wallet.rewardAllowed -
-            wallet.rewardDistributed -
-            wallet.rewardDebt;
+        return wallet.rewardAllowed - wallet.rewardDistributed;
     }
 
     /**
@@ -241,10 +227,6 @@ contract WQPensionFund is
         return wallets[depositor].amount - wallets[depositor].borrowed;
     }
 
-    function apys(uint256) external view override returns (uint256) {
-        return apy;
-    }
-
     function borrow(address depositor, uint256 amount)
         external
         override
@@ -255,7 +237,7 @@ contract WQPensionFund is
             amount <= balanceOf(depositor),
             'WQPension: Insufficient amount in wallet'
         );
-        borrowed += amount;
+        wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount, block.timestamp);
     }
@@ -264,12 +246,13 @@ contract WQPensionFund is
         address depositor,
         uint256 amount,
         uint256 elapsedTime,
-        uint256
+        uint256 duration
     ) external override nonReentrant onlyRole(BORROWER_ROLE) {
-        uint256 rewards = (amount * (apy * elapsedTime)) / YEAR / 1e18;
-        borrowed -= amount;
-        rewardsProduced += rewards;
-        rewardsPerContributed += (rewards * 1e20) / contributed;
+        uint256 rewards = (amount * (apys[duration] * elapsedTime)) /
+            YEAR /
+            1e18;
+        wallets[depositor].borrowed -= amount;
+        wallets[depositor].rewardAllowed += rewards;
         wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
         emit Refunded(msg.sender, amount, block.timestamp);
     }
@@ -288,10 +271,13 @@ contract WQPensionFund is
 
     /**
      * @notice Set APY value
-     * @param _apy APY value
+     * @param apy APY value
      */
-    function setApy(uint256 _apy) external onlyRole(ADMIN_ROLE) {
-        apy = _apy;
+    function setApy(uint256 duration, uint256 apy)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        apys[duration] = apy;
     }
 
     function updateWallet(
