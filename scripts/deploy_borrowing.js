@@ -32,9 +32,6 @@ async function main() {
     if (!process.env.BNB_TOKEN) {
         throw new Error(`Please set your BNB_TOKEN in a .env-${network} file`);
     }
-    // if (!process.env.WQT_TOKEN) {
-    //     throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
-    // }
     if (!process.env.WUSD_TOKEN) {
         throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
     }

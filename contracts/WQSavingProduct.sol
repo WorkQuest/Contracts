@@ -141,7 +141,10 @@ contract WQSavingProduct is
      * @notice Claim rewards
      */
     function claim() external nonReentrant {
-        require(block.timestamp >= wallets[msg.sender].unlockDate);
+        require(
+            block.timestamp >= wallets[msg.sender].unlockDate,
+            'WQSavingProduct: Claim not allowed yet'
+        );
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
         wusd.safeTransfer(msg.sender, reward);
@@ -173,15 +176,19 @@ contract WQSavingProduct is
      * @notice Borrow funds from contract. Service function.
      * @param amount Amount of coins
      */
-    function borrow(address depositor, uint256 amount)
-        external
-        override
-        nonReentrant
-        onlyRole(BORROWER_ROLE)
-    {
+    function borrow(
+        address depositor,
+        uint256 amount,
+        uint256 duration
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
         require(
             amount <= balanceOf(depositor),
             'WQSavingProduct: Insufficient amount in wallet'
+        );
+        require(
+            block.timestamp + duration * 1 days <=
+                wallets[depositor].unlockDate,
+            'WQSavingProduct: Invalid duration'
         );
         wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);

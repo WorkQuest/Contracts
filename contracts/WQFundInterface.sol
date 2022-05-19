@@ -7,7 +7,7 @@ interface WQFundInterface {
 
     function balanceOf(address depositor) external view returns (uint256);
 
-    function borrow(address depositor, uint256 amount) external;
+    function borrow(address depositor, uint256 amount, uint256 duration) external;
 
     function refund(
         address depositor,

@@ -28,7 +28,6 @@ contract WQLending is
         uint256 rewardAllowed;
         uint256 rewardDistributed;
         uint256 unlockDate;
-        uint256 duration;
     }
 
     mapping(uint256 => uint256) public apys;
@@ -86,10 +85,10 @@ contract WQLending is
      * @notice Deposit native coins to contract
      */
     function deposit(uint256 lockTime, uint256 amount) external nonReentrant {
+        require(apys[lockTime] != 0, 'WQLending: lockTime is invalid');
         DepositWallet storage wallet = wallets[msg.sender];
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
-            wallet.duration = lockTime;
         }
         wallet.amount += amount;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
@@ -104,9 +103,9 @@ contract WQLending is
         DepositWallet storage wallet = wallets[msg.sender];
         require(
             block.timestamp >= wallet.unlockDate,
-            'WQSavingProduct: Lock time is not over yet'
+            'WQLending: Lock time is not over yet'
         );
-        require(amount <= wallet.amount, 'WQDeposit: Amount is invalid');
+        require(amount <= wallet.amount, 'WQLending: Amount is invalid');
         wallet.amount -= amount;
         if (wallet.amount == 0) {
             wallet.unlockDate = 0;
@@ -121,7 +120,10 @@ contract WQLending is
      * @notice Claim rewards
      */
     function claim() external nonReentrant {
-        require(block.timestamp >= wallets[msg.sender].unlockDate);
+        require(
+            block.timestamp >= wallets[msg.sender].unlockDate,
+            'WQLending: Claim not allowed yet'
+        );
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
         wusd.safeTransfer(msg.sender, reward);
@@ -153,15 +155,19 @@ contract WQLending is
      * @notice Borrow funds from contract. Service function.
      * @param amount Amount of coins
      */
-    function borrow(address depositor, uint256 amount)
-        external
-        override
-        nonReentrant
-        onlyRole(BORROWER_ROLE)
-    {
+    function borrow(
+        address depositor,
+        uint256 amount,
+        uint256 duration
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
         require(
             amount <= balanceOf(depositor),
             'WQLending: Insufficient amount in wallet'
+        );
+        require(
+            block.timestamp + duration * 1 days <=
+                wallets[depositor].unlockDate,
+            'WQLending: Invalid duration'
         );
         wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);

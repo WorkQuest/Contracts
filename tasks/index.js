@@ -41,3 +41,4 @@ require('./config_promotion.js');
 require('./config_referral.js');
 require('./config_workquest.js');
 require('./config_borrowing.js');
+require('./config_pension.js');

@@ -133,6 +133,7 @@ contract WQBorrowing is
             loan.credit <= loan.fund.balanceOf(depositor),
             'WQBorrowing: Insufficient amount in fund'
         );
+        require(loan.fund.apys(duration) > 0, 'WQBorrowing: Invalid duration');
 
         // Take tokens
         tokens[symbol].safeTransferFrom(
@@ -141,7 +142,7 @@ contract WQBorrowing is
             collateralAmount
         );
         // Get coins from fund
-        loan.fund.borrow(depositor, loan.credit);
+        loan.fund.borrow(depositor, loan.credit, duration);
         // Send wusd credit
         wusd.safeTransfer(msg.sender, loan.credit);
 
@@ -218,11 +219,17 @@ contract WQBorrowing is
             loan.fund.apys(loan.duration),
             loan.borrowedAt
         );
+        uint256 comission = _getCurrentFee(
+            debtAmount,
+            loan.apy,
+            loan.borrowedAt
+        );
         // Take wusd
+
         wusd.safeTransferFrom(
             msg.sender,
             address(this),
-            debtAmount + _getCurrentFee(debtAmount, loan.apy, loan.borrowedAt)
+            debtAmount + comission
         );
         if (wusd.allowance(address(this), address(loan.fund)) > 0) {
             wusd.safeApprove(address(loan.fund), 0);
@@ -234,6 +241,7 @@ contract WQBorrowing is
             block.timestamp - loan.borrowedAt,
             loan.duration
         );
+        wusd.safeTransfer(feeReceiver, comission - rewards);
         //Send tokens
         tokens[loan.symbol].safeTransfer(buyer, returnCollateral);
     }

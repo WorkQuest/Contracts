@@ -160,9 +160,9 @@ contract WQPensionFund is
         PensionWallet storage wallet = wallets[msg.sender];
         require(
             block.timestamp >= wallet.unlockDate,
-            'WQPensionFund: Lock time is not over yet'
+            'WQPension: Lock time is not over yet'
         );
-        require(amount <= wallet.amount, 'WQPensionFund: Amount is invalid');
+        require(amount <= wallet.amount, 'WQPension: Amount is invalid');
         uint256 reward = (amount * getRewards(msg.sender)) / wallet.amount;
         wallet.rewardDistributed += reward;
         uint256 closeComission = (amount * feeWithdraw) / 1e18;
@@ -207,7 +207,7 @@ contract WQPensionFund is
         PensionWallet storage wallet = wallets[msg.sender];
         require(
             block.timestamp >= wallet.unlockDate,
-            'WQPensionFund: Lock time is not over yet'
+            'WQPension: Lock time is not over yet'
         );
         wallet.unlockDate = block.timestamp + YEAR;
     }
@@ -227,15 +227,19 @@ contract WQPensionFund is
         return wallets[depositor].amount - wallets[depositor].borrowed;
     }
 
-    function borrow(address depositor, uint256 amount)
-        external
-        override
-        nonReentrant
-        onlyRole(BORROWER_ROLE)
-    {
+    function borrow(
+        address depositor,
+        uint256 amount,
+        uint256 duration
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
         require(
             amount <= balanceOf(depositor),
             'WQPension: Insufficient amount in wallet'
+        );
+        require(
+            block.timestamp + duration * 1 days <=
+                wallets[depositor].unlockDate,
+            'WQPension: Invalid duration'
         );
         wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);

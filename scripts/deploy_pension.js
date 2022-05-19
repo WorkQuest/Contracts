@@ -3,6 +3,7 @@ const hre = require("hardhat");
 const dotenv = require('dotenv');
 const fs = require('fs');
 const stringify = require('dotenv-stringify');
+const { parseEther } = require("ethers/lib/utils");
 
 async function main() {
   dotenv.config();
