@@ -47,7 +47,7 @@ contract WQBorrowing is
     mapping(string => IERC20Upgradeable) public tokens;
 
     /// @notice Borrowing info
-    mapping(address => BorrowInfo) public borrowers;
+    mapping(address => BorrowInfo[]) public borrowers;
 
     /// @notice List of addresses of funds
     WQFundInterface[] public funds;
@@ -55,12 +55,18 @@ contract WQBorrowing is
     event Borrowed(
         uint256 nonce,
         address borrower,
+        uint256 index,
         uint256 collateral,
         uint256 credit,
         string symbol
     );
 
-    event Refunded(uint256 nonce, address borrower, uint256 amount);
+    event Refunded(
+        uint256 nonce,
+        address borrower,
+        uint256 index,
+        uint256 amount
+    );
 
     event Received(uint256 amount);
 
@@ -96,7 +102,9 @@ contract WQBorrowing is
 
     /**
      * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
-     * @param collateralAmount Amount of collateral token
+     * @param nonce Number for claim events
+     * @param depositor Address of depositor's wallet
+     * @param credit Amount of credit
      * @param fundIndex Index of fund
      * @param duration Borrowing period
      * @param symbol Symbol of collateral token
@@ -104,7 +112,7 @@ contract WQBorrowing is
     function borrow(
         uint256 nonce,
         address depositor,
-        uint256 collateralAmount,
+        uint256 credit,
         uint256 fundIndex,
         uint256 duration,
         string calldata symbol
@@ -114,39 +122,49 @@ contract WQBorrowing is
             'WQBorrowing: This token is disabled to collateral'
         );
         require(apys[duration] > 0, 'WQBorrowing: Invalid duration');
-        BorrowInfo storage loan = borrowers[msg.sender];
         require(
-            loan.collateral == 0,
-            'WQBorrowing: You are not refunded credit'
+            funds[fundIndex].apys(duration) > 0,
+            'WQBorrowing: Invalid duration'
         );
-        loan.depositor = depositor;
-        loan.collateral = collateralAmount;
-        loan.borrowedAt = block.timestamp;
-        loan.duration = duration;
-        loan.apy = apys[duration];
-        loan.fund = funds[fundIndex];
-        loan.symbol = symbol;
-        loan.credit =
-            (collateralAmount * oracle.getTokenPriceUSD(symbol) * 2) /
-            3e18;
         require(
-            loan.credit <= loan.fund.balanceOf(depositor),
+            credit <= funds[fundIndex].balanceOf(depositor),
             'WQBorrowing: Insufficient amount in fund'
         );
-        require(loan.fund.apys(duration) > 0, 'WQBorrowing: Invalid duration');
+        uint256 collateralAmount = (credit * 3e18) /
+            oracle.getTokenPriceUSD(symbol) /
+            2;
+        borrowers[msg.sender].push(
+            BorrowInfo({
+                depositor: depositor,
+                collateral: collateralAmount,
+                borrowedAt: block.timestamp,
+                duration: duration,
+                apy: apys[duration],
+                fund: funds[fundIndex],
+                symbol: symbol,
+                credit: credit
+            })
+        );
 
-        // Take tokens
+        // Take collateral tokens
         tokens[symbol].safeTransferFrom(
             msg.sender,
             address(this),
             collateralAmount
         );
         // Get coins from fund
-        loan.fund.borrow(depositor, loan.credit, duration);
+        funds[fundIndex].borrow(depositor, credit, duration);
         // Send wusd credit
-        wusd.safeTransfer(msg.sender, loan.credit);
+        wusd.safeTransfer(msg.sender, credit);
 
-        emit Borrowed(nonce, msg.sender, collateralAmount, loan.credit, symbol);
+        emit Borrowed(
+            nonce,
+            msg.sender,
+            borrowers[msg.sender].length - 1,
+            collateralAmount,
+            credit,
+            symbol
+        );
     }
 
     /**
@@ -154,14 +172,21 @@ contract WQBorrowing is
      * @param nonce Nonce value
      * @param returnAmount Return value of WUSD
      */
-    function refund(uint256 nonce, uint256 returnAmount) external nonReentrant {
-        BorrowInfo storage loan = borrowers[msg.sender];
+    function refund(
+        uint256 index,
+        uint256 nonce,
+        uint256 returnAmount
+    ) external nonReentrant {
+        BorrowInfo storage loan = borrowers[msg.sender][index];
         require(loan.credit > 0, 'WQBorrowing: You are not borrowed moneys');
         uint256 tokenAmount = (loan.collateral * returnAmount) / loan.credit;
-        uint256 comission = (returnAmount * fee) / 1e18;
-        wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
-        _refund(msg.sender, msg.sender, returnAmount, tokenAmount);
-        emit Refunded(nonce, msg.sender, returnAmount);
+        _refund(index, msg.sender, msg.sender, returnAmount, tokenAmount);
+        wusd.safeTransferFrom(
+            msg.sender,
+            feeReceiver,
+            (returnAmount * fee) / 1e18
+        );
+        emit Refunded(nonce, msg.sender, index, returnAmount);
     }
 
     /**
@@ -171,11 +196,12 @@ contract WQBorrowing is
      * @param returnAmount Return value of WUSD
      */
     function buyCollateral(
+        uint256 index,
         uint256 nonce,
         address borrower,
         uint256 returnAmount
     ) external nonReentrant {
-        BorrowInfo storage loan = borrowers[borrower];
+        BorrowInfo storage loan = borrowers[borrower][index];
         require(
             loan.collateral > 0,
             'WQBorrowing: You are not borrowed moneys'
@@ -190,24 +216,26 @@ contract WQBorrowing is
             'WQBorrowing: The collateral price is insufficient to repay the credit'
         );
         _refund(
+            index,
             borrower,
             msg.sender,
             returnAmount,
             (returnAmount * 1e18) / currentPrice
         );
-        emit Refunded(nonce, msg.sender, returnAmount);
+        emit Refunded(nonce, msg.sender, index, returnAmount);
     }
 
     /**
      * @notice Refund loan
      */
     function _refund(
+        uint256 index,
         address borrower,
         address buyer,
         uint256 debtAmount,
         uint256 returnCollateral
     ) internal {
-        BorrowInfo storage loan = borrowers[borrower];
+        BorrowInfo storage loan = borrowers[borrower][index];
         require(
             tokens[loan.symbol] != IERC20Upgradeable(address(0)),
             'WQBorrowing: Token is disabled'
@@ -246,13 +274,21 @@ contract WQBorrowing is
         tokens[loan.symbol].safeTransfer(buyer, returnCollateral);
     }
 
-    function getCurrentFee(address borrower) external view returns (uint256) {
-        BorrowInfo storage loan = borrowers[borrower];
+    function getCurrentFee(address borrower, uint256 index)
+        external
+        view
+        returns (uint256)
+    {
+        BorrowInfo storage loan = borrowers[borrower][index];
         return _getCurrentFee(loan.credit, loan.apy, loan.borrowedAt);
     }
 
-    function getRewards(address borrower) external view returns (uint256) {
-        BorrowInfo storage loan = borrowers[borrower];
+    function getRewards(address borrower, uint256 index)
+        external
+        view
+        returns (uint256)
+    {
+        BorrowInfo storage loan = borrowers[borrower][index];
         return
             _getRewards(
                 loan.credit,
