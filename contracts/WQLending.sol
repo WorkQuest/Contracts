@@ -87,6 +87,10 @@ contract WQLending is
     function deposit(uint256 lockTime, uint256 amount) external nonReentrant {
         require(apys[lockTime] != 0, 'WQLending: lockTime is invalid');
         DepositWallet storage wallet = wallets[msg.sender];
+        require(
+            block.timestamp >= wallet.unlockDate,
+            'WQSavingProduct: already deposited'
+        );
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
         }
@@ -160,10 +164,7 @@ contract WQLending is
         uint256 amount,
         uint256 duration
     ) external override nonReentrant onlyRole(BORROWER_ROLE) {
-        require(
-            amount <= balanceOf(depositor),
-            'WQLending: Insufficient amount in wallet'
-        );
+        require(amount == balanceOf(depositor), 'WQLending: Invalid amount');
         require(
             block.timestamp + duration * 1 days <=
                 wallets[depositor].unlockDate,

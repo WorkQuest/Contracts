@@ -199,6 +199,8 @@ contract WQPensionFund is
             wallet.createdAt = block.timestamp;
             wallet.unlockDate = block.timestamp + lockTime;
         }
+
+        require(fee <= 1e18, 'WQPension: Invalid fee value');
         wallet.fee = fee;
         emit WalletUpdated(msg.sender, wallet.fee, wallet.unlockDate);
     }
@@ -288,13 +290,16 @@ contract WQPensionFund is
         address depositor,
         uint256 amount,
         uint256 unlockDate,
-        uint256 createdAt,
-        uint256 serviceComission
-    ) external onlyRole(ADMIN_ROLE) {
+        uint256 createdAt //,
+    )
+        external
+        // uint256 serviceComission
+        onlyRole(ADMIN_ROLE)
+    {
         wallets[depositor].amount = amount;
         wallets[depositor].unlockDate = unlockDate;
         wallets[depositor].createdAt = createdAt;
-        wallets[depositor].serviceComission = serviceComission;
+        // wallets[depositor].serviceComission = serviceComission;
     }
 
     /**
