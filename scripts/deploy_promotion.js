@@ -58,7 +58,7 @@ async function main() {
     await promotion.setQuestTariff(2, 5, parseEther("18"));
     await promotion.setQuestTariff(1, 5, parseEther("23"));
     await promotion.setQuestTariff(0, 5, parseEther("30"));
-    await promotion.setQuestTariff(1, 7, parseEther("18"));
+    await promotion.setQuestTariff(3, 7, parseEther("18"));
     await promotion.setQuestTariff(2, 7, parseEther("24"));
     await promotion.setQuestTariff(1, 7, parseEther("30"));
     await promotion.setQuestTariff(0, 7, parseEther("45"));

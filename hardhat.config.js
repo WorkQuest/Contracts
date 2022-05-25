@@ -73,6 +73,11 @@ module.exports = {
       accounts: { mnemonic: mnemonic },
       chainId: 20220112
     },
+    wqtestnet: {
+      url: "https://test-gate-02.workquest.co/rpc",
+      accounts: { mnemonic: mnemonic },
+      chainId: 1991
+    },
     bsctestnet: {
       url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet`,
       chainId: 97,

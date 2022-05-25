@@ -19,12 +19,12 @@ task("config_router", "Config router")
         if (!process.env.ROUTER_ANNUAL_INTEREST_RATE) {
             throw new Error(`Please set your ROUTER_ANNUAL_INTEREST_RATE in a .env-${network} file`);
         }
-        if (!process.env.DEBT_AUCTION) {
-            throw new Error(`Please set your DEBT_AUCTION in a .env-${network} file`);
-        }
-        if (!process.env.SURPLUS_AUCTION) {
-            throw new Error(`Please set your SURPLUS_AUCTION in a .env-${network} file`);
-        }
+        // if (!process.env.DEBT_AUCTION) {
+        //     throw new Error(`Please set your DEBT_AUCTION in a .env-${network} file`);
+        // }
+        // if (!process.env.SURPLUS_AUCTION) {
+        //     throw new Error(`Please set your SURPLUS_AUCTION in a .env-${network} file`);
+        // }
         if (!process.env.ETH_TOKEN) {
             throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
         }
@@ -49,10 +49,9 @@ task("config_router", "Config router")
         // await router.updateAnnualInterestRate(process.env.ROUTER_ANNUAL_INTEREST_RATE);
         // await router.setDebtAuction(process.env.DEBT_AUCTION);
         // await router.setSurplusAuction(process.env.SURPLUS_AUCTION);
-        // await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
-        // await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
-        // await router.setToken(1, process.env.WQT_TOKEN, process.env.WQT_AUCTION, process.env.WQT_AUCTION_MIN_RATIO, "WQT");
-        // await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
+        await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
+        await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
+        await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
 
         const wusd = await ethers.getContractAt("WQBridgeToken", process.env.WUSD_TOKEN);
         await wusd.grantRole(await wusd.MINTER_ROLE(), router.address);

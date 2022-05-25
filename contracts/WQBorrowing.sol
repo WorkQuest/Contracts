@@ -20,6 +20,7 @@ contract WQBorrowing is
     using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+    bytes32 public constant AUCTION_ROLE = keccak256('AUCTION_ROLE');
     uint256 public constant YEAR = 31536000;
 
     struct BorrowInfo {
@@ -74,11 +75,11 @@ contract WQBorrowing is
     constructor() initializer {}
 
     function initialize(
-        address _oracle,
         uint256 _fixedRate,
+        uint256 _fee,
+        address _oracle,
         address _wusd,
-        address _feeReceiver,
-        uint256 _fee
+        address _feeReceiver
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -87,6 +88,7 @@ contract WQBorrowing is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(AUCTION_ROLE, ADMIN_ROLE);
         oracle = WQPriceOracleInterface(_oracle);
         fixedRate = _fixedRate;
         wusd = IERC20Upgradeable(_wusd);
@@ -132,7 +134,11 @@ contract WQBorrowing is
         );
         uint256 collateralAmount = (credit * 3e18) /
             oracle.getTokenPriceUSD(symbol) /
-            2;
+            2 /
+            (10 **
+                (18 -
+                    IERC20MetadataUpgradeable(address(tokens[symbol]))
+                        .decimals()));
         borrowers[msg.sender].push(
             BorrowInfo({
                 depositor: depositor,
@@ -170,59 +176,77 @@ contract WQBorrowing is
     /**
      * @notice Refund loan
      * @param nonce Nonce value
-     * @param returnAmount Return value of WUSD
+     * @param amount Return amount of WUSD
      */
     function refund(
         uint256 index,
         uint256 nonce,
-        uint256 returnAmount
+        uint256 amount
     ) external nonReentrant {
         BorrowInfo storage loan = borrowers[msg.sender][index];
         require(loan.credit > 0, 'WQBorrowing: You are not borrowed moneys');
-        uint256 tokenAmount = (loan.collateral * returnAmount) / loan.credit;
-        _refund(index, msg.sender, msg.sender, returnAmount, tokenAmount);
-        wusd.safeTransferFrom(
+        _refund(
+            index,
             msg.sender,
-            feeReceiver,
-            (returnAmount * fee) / 1e18
+            msg.sender,
+            amount,
+            (loan.collateral * amount) / loan.credit
         );
-        emit Refunded(nonce, msg.sender, index, returnAmount);
+        wusd.safeTransferFrom(msg.sender, feeReceiver, (amount * fee) / 1e18);
+        emit Refunded(nonce, msg.sender, index, amount);
+    }
+
+    function startAuction(uint256 index, address borrower)
+        external
+        nonReentrant
+    {
+        BorrowInfo storage loan = borrowers[borrower][index];
+        require(
+            block.timestamp > loan.borrowedAt + loan.duration * 1 days,
+            'WQBorrowing: The collateral is not available for purchase'
+        );
     }
 
     /**
      * @notice Buy collateral
      * @param nonce Nonce value
      * @param borrower Address of borrower
-     * @param returnAmount Return value of WUSD
+     * @param amount Return amount of WUSD
      */
     function buyCollateral(
         uint256 index,
         uint256 nonce,
         address borrower,
-        uint256 returnAmount
-    ) external nonReentrant {
+        uint256 amount
+    ) external nonReentrant onlyRole(AUCTION_ROLE) {
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
             loan.collateral > 0,
             'WQBorrowing: You are not borrowed moneys'
         );
         require(
-            loan.borrowedAt + loan.duration * 1 days < block.timestamp,
+            block.timestamp > loan.borrowedAt + loan.duration * 1 days,
             'WQBorrowing: The collateral is not available for purchase'
         );
         uint256 currentPrice = oracle.getTokenPriceUSD(loan.symbol);
+        uint256 factor = 10 **
+            (18 -
+                IERC20MetadataUpgradeable(address(tokens[loan.symbol]))
+                    .decimals());
         require(
-            (loan.credit * 3e36) / (2 * loan.collateral * currentPrice) > 1e18,
+            (loan.credit * factor * 3e36) /
+                (2 * loan.collateral * currentPrice) >
+                1e18,
             'WQBorrowing: The collateral price is insufficient to repay the credit'
         );
         _refund(
             index,
             borrower,
             msg.sender,
-            returnAmount,
-            (returnAmount * 1e18) / currentPrice
+            amount,
+            (amount * 1e18) / currentPrice / factor
         );
-        emit Refunded(nonce, msg.sender, index, returnAmount);
+        emit Refunded(nonce, msg.sender, index, amount);
     }
 
     /**

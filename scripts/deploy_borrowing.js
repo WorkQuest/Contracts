@@ -50,11 +50,12 @@ async function main() {
     const borrowing = await upgrades.deployProxy(
         Borrowing,
         [
-            process.env.PRICE_ORACLE,
             process.env.BORROWING_FIXED_RATE,
+            process.env.BORROWING_FEE,
+            process.env.PRICE_ORACLE,
             process.env.WUSD_TOKEN,
             process.env.BORROWING_FEE_RECEIVER,
-            process.env.BORROWING_FEE
+
         ],
         { initializer: 'initialize' }
     );
