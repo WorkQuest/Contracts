@@ -77,6 +77,7 @@ contract WQSavingProduct is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(BORROWER_ROLE, ADMIN_ROLE);
         wusd = IERC20Upgradeable(_wusd);
         feeReceiver = _feeReceiver;
         feePerMonth = _feePerMonth;

@@ -40,6 +40,7 @@ contract WQBridgeToken is
         __ERC20_init(name, symbol);
         __ERC20Pausable_init();
         __AccessControl_init();
+        __UUPSUpgradeable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);

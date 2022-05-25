@@ -126,6 +126,7 @@ contract WQBridge is
     ) external initializer {
         __AccessControl_init();
         __Pausable_init();
+        __UUPSUpgradeable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
