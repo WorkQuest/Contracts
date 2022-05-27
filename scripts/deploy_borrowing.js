@@ -52,6 +52,7 @@ async function main() {
         [
             process.env.BORROWING_FIXED_RATE,
             process.env.BORROWING_FEE,
+            process.env.BORROWING_AUCTION_DURATION,
             process.env.PRICE_ORACLE,
             process.env.WUSD_TOKEN,
             process.env.BORROWING_FEE_RECEIVER,

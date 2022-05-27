@@ -194,6 +194,7 @@ contract WQPensionFund is
      * @dev unlockDate as current_timestamp + 3*365 days
      */
     function updateFee(uint256 fee) external {
+        require(fee <= 1e18, 'WQPensionFund: invalid fee value');
         PensionWallet storage wallet = wallets[msg.sender];
         if (wallet.createdAt == 0) {
             wallet.createdAt = block.timestamp;

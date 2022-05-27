@@ -30,7 +30,11 @@ contract WQBorrowing is
         uint256 borrowedAt;
         uint256 duration;
         uint256 apy;
+        uint256 saleAmount;
+        uint256 endCost;
+        uint256 endTime;
         WQFundInterface fund;
+        bool auctioned;
         string symbol;
     }
 
@@ -41,6 +45,13 @@ contract WQBorrowing is
     /// @notice Fee settings
     address public feeReceiver;
     uint256 public fee;
+
+    /// @dev Duration of collaterall auction
+    uint256 auctionDuration;
+    /// @dev Upper bound coefficient of auctioned collateral
+    uint256 public upperBoundCost;
+    /// @dev Lower bound coefficient of auctioned collateral
+    uint256 public lowerBoundCost;
 
     /// @notice Mapping of duration to APY coefficient
     mapping(uint256 => uint256) public apys;
@@ -62,14 +73,42 @@ contract WQBorrowing is
         string symbol
     );
 
-    event Refunded(
-        uint256 nonce,
+    event Refunded(address borrower, uint256 index, uint256 amount);
+
+    /**
+     * @dev Event emitted when dutch auction started
+     * @param borrower address of borrower
+     * @param index index value of lot
+     * @param amount Amount of tokens purchased
+     * @param endCost Cost of lot (WUSD)
+     */
+    event AuctionStarted(
         address borrower,
         uint256 index,
-        uint256 amount
+        uint256 amount,
+        uint256 endCost
     );
 
-    event Received(uint256 amount);
+    /**
+     * @dev Event emitted when lot cancelled (after end of auction time)
+     * @param borrower address of borrower
+     * @param index index value of lot
+     */
+    event LotCanceled(address borrower, uint256 index);
+
+    /**
+     * @dev Event emitted when lot buyed
+     * @param borrower address of borrower
+     * @param index index value of lot
+     * @param amount Amount of tokens purchased
+     * @param cost Cost of lot (WUSD)
+     */
+    event LotBuyed(
+        address borrower,
+        uint256 index,
+        uint256 amount,
+        uint256 cost
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -77,6 +116,7 @@ contract WQBorrowing is
     function initialize(
         uint256 _fixedRate,
         uint256 _fee,
+        uint256 _auctionDuration,
         address _oracle,
         address _wusd,
         address _feeReceiver
@@ -91,6 +131,7 @@ contract WQBorrowing is
         _setRoleAdmin(AUCTION_ROLE, ADMIN_ROLE);
         oracle = WQPriceOracleInterface(_oracle);
         fixedRate = _fixedRate;
+        auctionDuration = _auctionDuration;
         wusd = IERC20Upgradeable(_wusd);
         feeReceiver = _feeReceiver;
         fee = _fee;
@@ -143,12 +184,16 @@ contract WQBorrowing is
             BorrowInfo({
                 depositor: depositor,
                 collateral: collateralAmount,
+                credit: credit,
                 borrowedAt: block.timestamp,
                 duration: duration,
                 apy: apys[duration],
+                saleAmount: 0,
+                endCost: 0,
+                endTime: 0,
                 fund: funds[fundIndex],
-                symbol: symbol,
-                credit: credit
+                auctioned: false,
+                symbol: symbol
             })
         );
 
@@ -175,16 +220,12 @@ contract WQBorrowing is
 
     /**
      * @notice Refund loan
-     * @param nonce Nonce value
      * @param amount Return amount of WUSD
      */
-    function refund(
-        uint256 index,
-        uint256 nonce,
-        uint256 amount
-    ) external nonReentrant {
+    function refund(uint256 index, uint256 amount) external nonReentrant {
         BorrowInfo storage loan = borrowers[msg.sender][index];
         require(loan.credit > 0, 'WQBorrowing: You are not borrowed moneys');
+        require(!loan.auctioned, 'WQBorrowing: Collateral is auctioned now');
         _refund(
             index,
             msg.sender,
@@ -193,60 +234,104 @@ contract WQBorrowing is
             (loan.collateral * amount) / loan.credit
         );
         wusd.safeTransferFrom(msg.sender, feeReceiver, (amount * fee) / 1e18);
-        emit Refunded(nonce, msg.sender, index, amount);
-    }
-
-    function startAuction(uint256 index, address borrower)
-        external
-        nonReentrant
-    {
-        BorrowInfo storage loan = borrowers[borrower][index];
-        require(
-            block.timestamp > loan.borrowedAt + loan.duration * 1 days,
-            'WQBorrowing: The collateral is not available for purchase'
-        );
+        emit Refunded(msg.sender, index, amount);
     }
 
     /**
-     * @notice Buy collateral
-     * @param nonce Nonce value
+     * @dev Start or restart collateral auction
      * @param borrower Address of borrower
-     * @param amount Return amount of WUSD
+     * @param index Index value
+     * @param amount Amount of purchased collateral tokens
      */
-    function buyCollateral(
-        uint256 index,
-        uint256 nonce,
+    function startAuction(
         address borrower,
+        uint256 index,
         uint256 amount
-    ) external nonReentrant onlyRole(AUCTION_ROLE) {
+    ) external nonReentrant {
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
-            loan.collateral > 0,
-            'WQBorrowing: You are not borrowed moneys'
+            block.timestamp > loan.borrowedAt + loan.duration * 1 days,
+            'WQBorrowing: Collateral is not available for purchase'
         );
         require(
-            block.timestamp > loan.borrowedAt + loan.duration * 1 days,
-            'WQBorrowing: The collateral is not available for purchase'
+            block.timestamp > loan.endTime,
+            'WQBorrowing: Collateral is already auctioned'
         );
-        uint256 currentPrice = oracle.getTokenPriceUSD(loan.symbol);
+        uint256 price = oracle.getTokenPriceUSD(loan.symbol);
         uint256 factor = 10 **
             (18 -
                 IERC20MetadataUpgradeable(address(tokens[loan.symbol]))
                     .decimals());
         require(
-            (loan.credit * factor * 3e36) /
-                (2 * loan.collateral * currentPrice) >
+            (loan.credit * 3e36) / (2 * loan.collateral * factor * price) >
                 1e18,
-            'WQBorrowing: The collateral price is insufficient to repay the credit'
+            'WQBorrowing: Collateral price is insufficient to repay the credit'
         );
-        _refund(
-            index,
-            borrower,
-            msg.sender,
-            amount,
-            (amount * 1e18) / currentPrice / factor
+        require(
+            amount <= (loan.credit * 1e18) / price && amount <= loan.collateral,
+            'WQBorrowingAuction: Invalid amount'
         );
-        emit Refunded(nonce, msg.sender, index, amount);
+
+        loan.saleAmount = amount;
+        loan.endCost = (price * amount * factor) / 1e18;
+        loan.endTime = block.timestamp + auctionDuration;
+        loan.auctioned = true;
+        emit AuctionStarted(borrower, index, amount, loan.endCost);
+    }
+
+    /**
+     * @notice Buy collateral
+     * @param borrower Address of borrower
+     * @param index Index of borrowing
+     */
+    function buyCollateral(address borrower, uint256 index)
+        external
+        nonReentrant
+        onlyRole(AUCTION_ROLE)
+    {
+        BorrowInfo storage loan = borrowers[borrower][index];
+        require(loan.auctioned, 'WQBorrowing: The collateral is not auctioned');
+        require(
+            block.timestamp <= loan.endTime,
+            'WQAuction: Auction time is over'
+        );
+        uint256 cost = _getCurrentLotCost(loan);
+        uint256 amount = loan.saleAmount;
+        loan.endCost = 0;
+        loan.endTime = 0;
+        loan.saleAmount = 0;
+        loan.auctioned = false;
+        _refund(index, borrower, msg.sender, cost, amount);
+        emit Refunded(msg.sender, index, loan.saleAmount);
+    }
+
+    function cancelAuction(address borrower, uint256 index) external {
+        BorrowInfo storage loan = borrowers[borrower][index];
+        require(loan.auctioned, 'WQBorrowing: The collateral is not auctioned');
+        require(
+            block.timestamp > loan.endTime,
+            'WQAuction: Auction time is over'
+        );
+        loan.saleAmount = 0;
+        loan.endCost = 0;
+        loan.endTime = 0;
+        loan.auctioned = false;
+        emit LotCanceled(borrower, index);
+    }
+
+    function _getCurrentLotCost(BorrowInfo storage loan)
+        internal
+        view
+        returns (uint256)
+    {
+        return
+            (loan.endCost * lowerBoundCost) /
+            1e18 +
+            ((loan.endTime - block.timestamp) *
+                (upperBoundCost - lowerBoundCost) *
+                loan.endCost) /
+            auctionDuration /
+            1e18;
     }
 
     /**
@@ -353,6 +438,12 @@ contract WQBorrowing is
         return funds_;
     }
 
+    function isBorrowExpired(address borrower, uint256 index)
+        external
+        view
+        returns (bool)
+    {}
+
     /**
      * @notice Add address of fund
      * @param fund Address of fund
@@ -417,5 +508,32 @@ contract WQBorrowing is
      */
     function setFee(uint256 _fee) external onlyRole(ADMIN_ROLE) {
         fee = _fee;
+    }
+
+    /**
+     * @notice Set fee receiver address
+     * @param _auctionDuration Auction duration (in seconds)
+     */
+    function setAuctionDuration(uint256 _auctionDuration)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        auctionDuration = _auctionDuration;
+    }
+
+    /**
+     * @dev Set factor of start coefficient of cost for dutch auction
+     * @param percent Coefficient with 18 decimals, i.e. 120% is 1.2e18
+     */
+    function setUpperBoundCost(uint256 percent) external onlyRole(ADMIN_ROLE) {
+        upperBoundCost = percent;
+    }
+
+    /**
+     * @dev Set factor of end coefficient of cost for dutch auction
+     * @param percent Coefficient with 18 decimals, i.e. 95% is 0.95e18
+     */
+    function setLowerBoundCost(uint256 percent) external onlyRole(ADMIN_ROLE) {
+        lowerBoundCost = percent;
     }
 }
