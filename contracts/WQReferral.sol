@@ -148,6 +148,10 @@ contract WQReferral is
             if (userAccount.earnedAmount >= earnedThreshold) {
                 userAccount.paid = true;
                 referrals[userAccount.affiliat].rewardTotal += referralBonus;
+                if (referrals[userAccount.affiliat].affiliat != address(0)) {
+                    referrals[referrals[userAccount.affiliat].affiliat]
+                        .rewardTotal += referralBonus;
+                }
                 emit PaidReferral(
                     referral,
                     userAccount.affiliat,

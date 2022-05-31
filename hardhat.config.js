@@ -69,7 +69,7 @@ module.exports = {
       url: "http://127.0.0.1:8545/"
     },
     wqdevnet: {
-      url: "https://dev-node-fra1.workquest.co/",
+      url: "https://dev-node-ams3.workquest.co/",
       accounts: { mnemonic: mnemonic },
       chainId: 20220112
     },

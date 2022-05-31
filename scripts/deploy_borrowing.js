@@ -26,6 +26,15 @@ async function main() {
     if (!process.env.BORROWING_FEE) {
         throw new Error(`Please set your BORROWING_FEE in a .env-${network} file`);
     }
+    if (!process.env.BORROWING_AUCTION_DURATION) {
+        throw new Error(`Please set your BORROWING_AUCTION_DURATION in a .env-${network} file`);
+    }
+    if (!process.env.BORROWING_AUCTION_UPPER_BOUND_COST) {
+        throw new Error(`Please set your BORROWING_AUCTION_UPPER_BOUND_COST in a .env-${network} file`);
+    }
+    if (!process.env.BORROWING_AUCTION_LOWER_BOUND_COST) {
+        throw new Error(`Please set your BORROWING_AUCTION_LOWER_BOUND_COST in a .env-${network} file`);
+    }
     if (!process.env.ETH_TOKEN) {
         throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
     }
@@ -53,6 +62,8 @@ async function main() {
             process.env.BORROWING_FIXED_RATE,
             process.env.BORROWING_FEE,
             process.env.BORROWING_AUCTION_DURATION,
+            process.env.BORROWING_AUCTION_UPPER_BOUND_COST,
+            process.env.BORROWING_AUCTION_LOWER_BOUND_COST,
             process.env.PRICE_ORACLE,
             process.env.WUSD_TOKEN,
             process.env.BORROWING_FEE_RECEIVER,
