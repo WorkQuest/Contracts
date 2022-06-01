@@ -230,13 +230,12 @@ contract WorkQuest {
     /**
      * @notice Employer or worker send job to arbitration
      */
-    /// FIXME: replace to 3 days
     function arbitration() external payable {
         require(
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
                 (msg.sender == worker &&
                     status == JobStatus.WaitJobVerify &&
-                    block.timestamp > timeDone + 1 minutes), //3 days),
+                    block.timestamp > timeDone + 3 minutes), //FIXME: 3 days
             errMsg
         );
         require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');
@@ -257,28 +256,6 @@ contract WorkQuest {
         status = JobStatus.InProgress;
         payable(msg.sender).sendValue(address(this).balance);
         emit ArbitrationRework(block.timestamp);
-    }
-
-    /**
-     * @notice Employer decreased jobs cost
-     * @param _forfeit Forfeit amount
-     */
-
-    function arbitrationDecreaseCost(uint256 _forfeit) external {
-        require(
-            factory.hasRole(ARBITER_ROLE, msg.sender) &&
-                status == JobStatus.Arbitration,
-            errMsg
-        );
-        require(
-            _forfeit <= cost,
-            'WorkQuest: forfeit must be least or equal job cost'
-        );
-        status = JobStatus.Finished;
-        forfeit = _forfeit;
-        _transferFunds();
-        payable(msg.sender).sendValue(address(this).balance);
-        emit ArbitrationDecreaseCost(block.timestamp);
     }
 
     /**
