@@ -345,6 +345,7 @@ contract WorkQuest {
             IERC20(factory.wusd()).safeTransfer(employer, forfeit);
         }
         WQReferralInterface(factory.referral()).calcReferral(worker, newCost);
+        // WQReferralInterface(factory.referral()).calcReferral(employer, newCost);
         IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
     }
 }

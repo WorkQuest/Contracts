@@ -271,7 +271,8 @@ contract WQBorrowing is
             'WQBorrowing: Collateral price is insufficient to repay the credit'
         );
         require(
-            amount <= (loan.credit * 1e18) / price && amount <= loan.collateral,
+            amount <= (loan.credit * upperBoundCost) / price &&
+                amount <= loan.collateral,
             'WQBorrowing: Invalid amount'
         );
 
