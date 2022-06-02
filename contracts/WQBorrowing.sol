@@ -444,12 +444,6 @@ contract WQBorrowing is
         return funds_;
     }
 
-    function isBorrowExpired(address borrower, uint256 index)
-        external
-        view
-        returns (bool)
-    {}
-
     /**
      * @notice Add address of fund
      * @param fund Address of fund
