@@ -25,7 +25,7 @@ async function main() {
 
     console.log("Deploying...");
 
-    const Bridge = await hre.ethers.getContractFactory("contracts/WQBridgeStable.sol:WQBridge");
+    const Bridge = await hre.ethers.getContractFactory("WQBridgeStable");
     const bridge = await upgrades.deployProxy(Bridge,
         [
             process.env.CHAIN_ID,

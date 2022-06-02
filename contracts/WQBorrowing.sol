@@ -368,7 +368,6 @@ contract WQBorrowing is
             loan.borrowedAt
         );
         // Take wusd
-
         wusd.safeTransferFrom(
             msg.sender,
             address(this),
@@ -385,7 +384,7 @@ contract WQBorrowing is
             loan.duration
         );
         wusd.safeTransfer(feeReceiver, comission - rewards);
-        //Send tokens
+        //Send collateral tokens
         tokens[loan.symbol].safeTransfer(buyer, returnCollateral);
     }
 
