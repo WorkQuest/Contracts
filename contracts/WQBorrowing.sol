@@ -270,8 +270,9 @@ contract WQBorrowing is
             (loan.collateral * factor * price) / loan.credit > 1e18,
             'WQBorrowing: Collateral price is insufficient to repay the credit'
         );
+        //Strictly less in first condition for to be able to refund credit
         require(
-            amount <= (loan.credit * 1e36) / upperBoundCost / price / factor &&
+            amount < (loan.credit * 1e36) / upperBoundCost / price / factor &&
                 amount <= loan.collateral,
             'WQBorrowing: Invalid amount'
         );
