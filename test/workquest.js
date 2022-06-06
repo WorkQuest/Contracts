@@ -100,7 +100,6 @@ describe('Work Quest test', () => {
             [
                 PENSION_LOCK_TIME,
                 PENSION_DEFAULT_FEE,
-                PENSION_APY,
                 wusd_token.address,
                 feeReceiver.address,
                 PENSION_FEE_PER_MONTH,
@@ -127,7 +126,12 @@ describe('Work Quest test', () => {
         const WQReferralContract = await hre.ethers.getContractFactory('WQReferral');
         referral = await upgrades.deployProxy(
             WQReferralContract,
-            [priceOracle.address, validator.address, twentyWQT, parseEther("1000")],
+            [
+                priceOracle.address,
+                validator.address,
+                twentyWQT,
+                parseEther("1000")
+            ],
             { initializer: 'initialize', kind: 'transparent' }
         )
         await referral.deployed();
@@ -136,6 +140,7 @@ describe('Work Quest test', () => {
         const WorkQuestFactory = await hre.ethers.getContractFactory('WorkQuestFactory');
         work_quest_factory = await upgrades.deployProxy(WorkQuestFactory,
             [
+                WORKQUEST_FEE,
                 WORKQUEST_FEE,
                 WORKQUEST_FEE,
                 feeReceiver.address,

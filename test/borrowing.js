@@ -15,7 +15,7 @@ const PENSION_FEE_WITHDRAW = "5000000000000000";
 const BORROWING_FEE = "5000000000000000";
 const AUCTION_DURATION = 1800;
 const UPPER_BOUND_COST = "1200000000000000000";
-const LOWER_BOUND_COST = "990000000000000000";
+const LOWER_BOUND_COST = "950000000000000000";
 
 describe("Borrowing test", () => {
     let nonce = 1;
@@ -114,7 +114,7 @@ describe("Borrowing test", () => {
         await wusd_token.mint(depositor.address, parseEther("330"));
         await wusd_token.connect(depositor).approve(pension.address, parseEther("330"));
         await pension.connect(depositor).contribute(depositor.address, parseEther("300"));
-
+        await wusd_token.mint(buyer.address, parseEther("200"));
     });
 
     describe('Borrowing: deploy', () => {
@@ -157,24 +157,42 @@ describe("Borrowing test", () => {
 
     describe('Borrow: auction collateral', () => {
         it('STEP 1: Start auction', async () => {
-            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("1"), 0, 7, "ETH");
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"));
+            let lot_info = await borrowing.borrowers(borrower.address, 0);
+            expect(lot_info.saleAmount).equal(parseEther("0.5"));
+            expect(lot_info.endCost).equal(parseEther("150"));
+            expect(lot_info.endTime).equal(await getTimestamp() + AUCTION_DURATION);
+
         });
+
         it('STEP 2: Buy collateral', async () => {
-            //     await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("1"), 0, 7, "ETH");
-            //     await wusd_token.mint(buyer.address, parseEther("212"));
-            //     await wusd_token.connect(buyer).approve(borrowing.address, parseEther("212"));
-            //     await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
-            //     let balanceBefore = await wusd_token.balanceOf(buyer.address);
-            //     let balanceEthBefore = await eth_token.balanceOf(buyer.address);
-            //     await oracleSetPrice(parseEther("200"), "ETH");
-            //     await borrowing.connect(buyer).buyCollateral(borrower.address, parseEther("200"));
-            //     let balanceAfter = await wusd_token.balanceOf(buyer.address);
-            //     let balanceEthAfter = await eth_token.balanceOf(buyer.address);
-            //     expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('1.00');
-            //     expect(((balanceBefore - balanceAfter) / 1e18).toFixed(2)).equal('211.62');
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"));
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 1440]);
+            await hre.ethers.provider.send("evm_mine", []);
+            expect(
+                await borrowing.getCurrentLotCost(borrower.address, 0)
+            ).equal(parseEther("150"));
+            await wusd_token.connect(buyer).approve(borrowing.address, parseEther("200"));
+            await borrowing.connect(buyer).buyCollateral(borrower.address, 0);
         });
+
         it('STEP 3: Cancel auction', async () => {
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"));
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 1801]);
+            await borrowing.connect(buyer).cancelAuction(borrower.address, 0);
+            let lot_info = await borrowing.borrowers(borrower.address, 0);
+            expect(lot_info.saleAmount).equal(0);
+            expect(lot_info.endCost).equal(0);
+            expect(lot_info.endTime).equal(0);
         });
     });
 
@@ -224,6 +242,45 @@ describe("Borrowing test", () => {
             await expect(
                 borrowing.connect(borrower).refund(0, parseEther("200"))
             ).revertedWith("ERC20: insufficient allowance");
+        });
+    });
+
+    describe('Auction collateral: failed execution', () => {
+        it('STEP 1: Start auction when time of credit not over yet', async () => {
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 6 * 24 * 60 * 60]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await expect(
+                borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"))
+            ).revertedWith("WQBorrowing: Collateral is not available for purchase");
+        });
+
+        it('STEP 2: Start auction when auction started yet', async () => {
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60 + 1]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"))
+            await expect(
+                borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"))
+            ).revertedWith("WQBorrowing: Collateral is already auctioned");
+        });
+
+        it('STEP 3: Start auction when price of collateral is insufficient to repay the credit', async () => {
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60 + 1]);
+            await oracleSetPrice(parseEther("200"), "ETH");
+            await expect(
+                borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"))
+            ).revertedWith("WQBorrowing: Collateral price is insufficient to repay the credit");
+        });
+
+        it('STEP 4: Start auction of a too many of tokens', async () => {
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60 + 1]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await expect(
+                borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.67"))
+            ).revertedWith("WQBorrowing: Too many amount of tokens");
         });
     });
 });

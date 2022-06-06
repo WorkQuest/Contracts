@@ -20,11 +20,13 @@ describe('Vote test', () => {
     let userTwo;
     let userThree;
     let userFour;
-    let proposalThreshold = parseEther('10001');
+    let proposalThreshold = parseEther('10000');
+    let votingThreshold = parseEther('100');
     let oneK = parseEther('1000');
     let minimumQuorum = 3;
     let votingPeriod = ethers.BigNumber.from('86400'); // one day
     let nonce = 0;
+    let fee = "1000000000000000";
 
     beforeEach(async () => {
         [owner, userOne, userTwo, userThree, userFour] = await ethers.getSigners();
@@ -34,7 +36,10 @@ describe('Vote test', () => {
             [
                 owner.address,
                 minimumQuorum,
-                votingPeriod
+                votingPeriod,
+                proposalThreshold,
+                votingThreshold,
+                fee
             ],
             { initializer: 'initialize', kind: 'transparent' });
         await vote.deployed();

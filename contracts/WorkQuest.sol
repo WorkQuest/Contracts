@@ -235,7 +235,7 @@ contract WorkQuest {
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
                 (msg.sender == worker &&
                     status == JobStatus.WaitJobVerify &&
-                    block.timestamp > timeDone + 3 minutes), //FIXME: 3 days
+                    block.timestamp > timeDone + 3 days),
             errMsg
         );
         require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');

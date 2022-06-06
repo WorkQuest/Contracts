@@ -7,7 +7,7 @@ const { parseEther } = require("ethers/lib/utils");
 const { parse } = require("dotenv");
 const web3 = new Web3(hre.network.provider);
 
-const LENDING_APY = parseEther("0.0431");
+const LENDING_APY = parseEther("0.1210");
 const YEAR = 31536000;
 const DAY = 86400;
 const oneK = parseEther("1000");
@@ -42,13 +42,13 @@ describe("Lending test", () => {
         lending = await upgrades.deployProxy(
             Lending,
             [
-                LENDING_APY,
                 wusd_token.address,
                 accounts[3].address,
                 LENDING_FEE
             ],
             { initializer: 'initialize', kind: 'transparent' }
         );
+        await lending.setApy(7, LENDING_APY);
         await lending.grantRole(await lending.BORROWER_ROLE(), accounts[2].address);
 
         await wusd_token.connect(accounts[1]).approve(lending.address, oneK);
@@ -57,7 +57,7 @@ describe("Lending test", () => {
 
     describe('STEP 1: Lending: deploy', () => {
         it('Should be set all variables and roles', async () => {
-            expect(await lending.apys(0)).equal(LENDING_APY);
+            expect(await lending.apys(7)).equal(LENDING_APY);
             expect(await lending.hasRole(await lending.DEFAULT_ADMIN_ROLE(), accounts[0].address)).equal(true);
             expect(await lending.hasRole(await lending.ADMIN_ROLE(), accounts[0].address)).equal(true);
             expect(await lending.hasRole(await lending.UPGRADER_ROLE(), accounts[0].address)).equal(true);

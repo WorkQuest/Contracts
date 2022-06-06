@@ -254,7 +254,7 @@ contract WQBorrowing is
     ) external nonReentrant {
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
-            block.timestamp > loan.borrowedAt + loan.duration * 1 minutes, // FIXME: 1 days
+            block.timestamp > loan.borrowedAt + loan.duration * 1 days,
             'WQBorrowing: Collateral is not available for purchase'
         );
         require(
@@ -274,7 +274,7 @@ contract WQBorrowing is
         require(
             amount < (loan.credit * 1e36) / upperBoundCost / price / factor &&
                 amount <= loan.collateral,
-            'WQBorrowing: Invalid amount'
+            'WQBorrowing: Too many amount of tokens'
         );
 
         loan.saleAmount = amount;
