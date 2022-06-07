@@ -270,7 +270,7 @@ contract WQBorrowing is
             (loan.collateral * factor * price) / loan.credit > 1e18,
             'WQBorrowing: Collateral price is insufficient to repay the credit'
         );
-        //Strictly less in first condition for to be able to refund credit
+        //HACK: Strictly less in first condition for to be able to refund credit
         require(
             amount < (loan.credit * 1e36) / upperBoundCost / price / factor &&
                 amount <= loan.collateral,
@@ -295,7 +295,7 @@ contract WQBorrowing is
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
             block.timestamp <= loan.endTime,
-            'WQAuction: Auction time is over'
+            'WQBorrowing: Auction time is over'
         );
         uint256 cost = _getCurrentLotCost(loan);
         uint256 amount = loan.saleAmount;
@@ -310,7 +310,7 @@ contract WQBorrowing is
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
             block.timestamp > loan.endTime,
-            'WQAuction: Auction time is over'
+            'WQBorrowing: Auction time is not over yet'
         );
         loan.saleAmount = 0;
         loan.endCost = 0;

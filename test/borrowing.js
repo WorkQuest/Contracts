@@ -282,5 +282,26 @@ describe("Borrowing test", () => {
                 borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.67"))
             ).revertedWith("WQBorrowing: Too many amount of tokens");
         });
+
+        it('STEP 5: Buy collateral when time over', async () => {
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60 + 1]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"));
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + AUCTION_DURATION + 1]);
+            await expect(
+                borrowing.connect(buyer).buyCollateral(borrower.address, 0)
+            ).revertedWith("WQBorrowing: Auction time is over");
+        });
+
+        it('STEP 5: Cancel auction when time not over yet', async () => {
+            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60 + 1]);
+            await oracleSetPrice(parseEther("300"), "ETH");
+            await borrowing.connect(buyer).startAuction(borrower.address, 0, parseEther("0.5"));
+            await expect(
+                borrowing.connect(buyer).cancelAuction(borrower.address, 0)
+            ).revertedWith("WQBorrowing: Auction time is not over yet");
+        });
     });
 });
