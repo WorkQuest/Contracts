@@ -295,7 +295,7 @@ contract WQBorrowing is
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
             block.timestamp <= loan.endTime,
-            'WQAuction: Auction time is over'
+            'WQBorrowing: Auction time is over'
         );
         uint256 cost = _getCurrentLotCost(loan);
         uint256 amount = loan.saleAmount;
@@ -310,7 +310,7 @@ contract WQBorrowing is
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
             block.timestamp > loan.endTime,
-            'WQAuction: Auction time is over'
+            'WQBorrowing: Auction time is not over yet'
         );
         loan.saleAmount = 0;
         loan.endCost = 0;
