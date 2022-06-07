@@ -283,7 +283,7 @@ describe("Borrowing test", () => {
             ).revertedWith("WQBorrowing: Too many amount of tokens");
         });
 
-        it('STEP 5: Buy collateral when time over', async () => {
+        it('STEP 5: Buy collateral when time is over', async () => {
             await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60 + 1]);
             await oracleSetPrice(parseEther("300"), "ETH");
@@ -294,7 +294,7 @@ describe("Borrowing test", () => {
             ).revertedWith("WQBorrowing: Auction time is over");
         });
 
-        it('STEP 5: Cancel auction when time not over yet', async () => {
+        it('STEP 6: Cancel auction when time is not over yet', async () => {
             await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 7 * 24 * 60 * 60 + 1]);
             await oracleSetPrice(parseEther("300"), "ETH");

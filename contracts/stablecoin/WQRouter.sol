@@ -62,8 +62,8 @@ contract WQRouter is
     /**
      * @notice Stability fee settings
      */
-    uint256 fixedRate;
-    uint256 annualInterestRate;
+    uint256 public fixedRate;
+    uint256 public annualInterestRate;
     address feeReceiver;
 
     mapping(string => TokenSettings) public tokens;

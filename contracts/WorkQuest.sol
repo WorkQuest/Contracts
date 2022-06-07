@@ -235,7 +235,7 @@ contract WorkQuest {
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
                 (msg.sender == worker &&
                     status == JobStatus.WaitJobVerify &&
-                    block.timestamp > timeDone + 3 days),
+                    block.timestamp > timeDone + 1 minutes), // FIXME: 3 days
             errMsg
         );
         require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');
@@ -322,7 +322,7 @@ contract WorkQuest {
             IERC20(factory.wusd()).safeTransfer(employer, forfeit);
         }
         WQReferralInterface(factory.referral()).calcReferral(worker, newCost);
-        // WQReferralInterface(factory.referral()).calcReferral(employer, newCost);
+        WQReferralInterface(factory.referral()).calcReferral(employer, newCost);
         IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
     }
 }

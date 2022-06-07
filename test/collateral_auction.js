@@ -231,7 +231,8 @@ describe('Collateral auction test', () => {
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
 
-            await router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL, { value: parseEther("10") });
+            await wusd_token.connect(user1).approve(router.address, parseEther("10"));
+            await router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL);
 
             let collateralInfo = await router.collaterals(SYMBOL, user1.address);
             expect(collateralInfo.collateralAmount).equal(parseEther("1"));
@@ -280,25 +281,25 @@ describe('Collateral auction test', () => {
         });
 
         it("STEP1: Get liquidated collaterall amount when price decreased", async () => {
-            await oracleSetPrice(parseEther("20"), SYMBOL);
+            await oracleSetPrice(parseEther("20.000000000000000001"), SYMBOL);
             expect(
                 await auction.getLiquidatedCollaterallAmount()
-            ).equal(parseEther("1"));
+            ).equal(parseEther("0.999999999999999999"));
         });
         it("STEP2: Start collateral auction", async () => {
-            await oracleSetPrice(parseEther("20"), SYMBOL);
-            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"));
+            await oracleSetPrice(parseEther("20.000000000000000001"), SYMBOL);
+            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.999999999999999999"));
             let lot_info = await auction.lots(ETH_PRICE, 0);
             expect(lot_info.status).equal(LotStatus.Auctioned);
-            expect(lot_info.saleAmount).equal(parseEther("1"));
-            expect(lot_info.endCost).equal(parseEther("20"));
+            expect(lot_info.saleAmount).equal(parseEther("0.999999999999999999"));
+            expect(lot_info.endCost).equal(parseEther("19.99999999999999998"));
             expect(lot_info.endTime).equal(await getCurrentTimestamp() + parseInt(COLLATERAL_AUCTION_DURATION));
         });
         it("STEP3: Buy collateral", async () => {
             await wusd_token.mint(user2.address, parseEther("23"));
             await wusd_token.connect(user2).approve(router.address, parseEther("23"))
-            await oracleSetPrice(parseEther("20"), SYMBOL);
-            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"));
+            await oracleSetPrice(parseEther("20.000000000000000001"), SYMBOL);
+            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.999999999999999999"));
             let lot_info = await auction.lots(ETH_PRICE, 0);
             await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot_info.endTime)]);
 
@@ -313,13 +314,13 @@ describe('Collateral auction test', () => {
 
             lot_info = await auction.lots(ETH_PRICE, 0);
             expect(lot_info.buyer).equal(user2.address);
-            expect(lot_info.amount).equal(0);
+            expect(lot_info.amount).equal(1);
             expect(lot_info.saleAmount).equal(0);
-            expect(lot_info.status).equal(LotStatus.Liquidated);
+            expect(lot_info.status).equal(LotStatus.New);
         });
         it("STEP4: Cancel auction", async () => {
-            await await oracleSetPrice(parseEther("20"), SYMBOL);
-            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"));
+            await await oracleSetPrice(parseEther("20.000000000000000001"), SYMBOL);
+            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.999999999999999999"));
             let lot_info = await auction.lots(ETH_PRICE, 0);
             await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot_info.endTime) + 1]);
 
@@ -338,16 +339,16 @@ describe('Collateral auction test', () => {
             await weth.connect(user1).approve(router.address, parseEther("2"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await router.connect(user1).produceWUSD(parseEther("0.5"), parseEther("1.5"), SYMBOL);
-            await oracleSetPrice(parseEther("20"), SYMBOL);
+            await oracleSetPrice(parseEther("20.000000000000000001"), SYMBOL);
         });
         it("STEP1: Start auction when total auctioned greater liquidated amount", async () => {
-            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"))
+            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.999999999999999999"))
             await expect(
                 auction.connect(user2).startAuction(ETH_PRICE, 1, parseEther("0.500000000000000001"))
             ).revertedWith("WQAuction: Amount of tokens purchased is greater than the amount liquidated");
         });
         it("STEP2: Start auction when price:(oldPrice/ratio) less than liquidationThreshold", async () => {
-            await oracleSetPrice(parseEther("19"), SYMBOL);
+            await oracleSetPrice(parseEther("15"), SYMBOL);
             await expect(
                 auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"))
             ).revertedWith("WQAuction: This lot is not available for sale");
@@ -383,7 +384,7 @@ describe('Collateral auction test', () => {
             await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot_info.endTime)]);
             await expect(
                 auction.connect(user2).buyLot(ETH_PRICE, 0)
-            ).revertedWith("WQAuction: Insufficient amount");
+            ).revertedWith("ERC20: burn amount exceeds balance");
         });
         it("STEP8: Cancel lot when lot is not auctioned", async () => {
             await expect(
