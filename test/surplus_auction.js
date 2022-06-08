@@ -33,6 +33,7 @@ describe('Surplus auction test', () => {
     let priceOracle;
     let weth;
     let wqt;
+    let wusd;
     let router;
     let collateralAuction;
     let surplusAuction;
@@ -84,23 +85,29 @@ describe('Surplus auction test', () => {
         await weth.transfer(user1.address, parseEther("1000"));
         await weth.transfer(user2.address, parseEther("1000"));
 
-        const WQT = await ethers.getContractFactory('WQT');
-        wqt = await WQT.deploy();
+        const WUSD = await ethers.getContractFactory('WQBridgeToken');
+        wusd = await upgrades.deployProxy(WUSD,
+            [
+                "WUSD Stablecoin",
+                "WUSD",
+                18
+            ],
+            { kind: 'transparent' }
+        );
 
         const Router = await ethers.getContractFactory('WQRouter');
         router = await upgrades.deployProxy(Router,
             [
                 priceOracle.address,
-                wqt.address,
+                wusd.address,
                 STABILITY_FEE,
                 ANNUAL_INTEREST_RATE,
                 feeReceiver.address
             ],
             { kind: 'transparent' });
-        // Transfer wqt tokens
-        await wqt.transfer(router.address, parseEther("10000"));
-        await wqt.transfer(user1.address, parseEther("10000"));
-        await wqt.transfer(user2.address, parseEther("10000"));
+
+        await wusd.grantRole(await wusd.MINTER_ROLE(), router.address);
+        await wusd.grantRole(await wusd.BURNER_ROLE(), router.address);
 
         const ColateralAuction = await ethers.getContractFactory('WQCollateralAuction');
         collateralAuction = await upgrades.deployProxy(
@@ -130,6 +137,7 @@ describe('Surplus auction test', () => {
                 MAX_LOT_AMOUNT_FACTOR
             ],
             { kind: 'transparent' });
+        await surplusAuction.setToken(weth.address, SYMBOL);
 
         await router.setSurplusAuction(surplusAuction.address);
     });
@@ -166,7 +174,7 @@ describe('Surplus auction test', () => {
             await oracleSetPrice(UPPER_ETH_PRICE, SYMBOL);
         });
         it('STEP1: Start auction: success', async () => {
-            expect(await surplusAuction.getSurplusAmount()).equal("6666666666666666666");
+            expect(await surplusAuction.getSurplusAmount(SYMBOL)).equal("6666666666666666666");
             await surplusAuction.startAuction(parseEther("6"), SYMBOL);
             expect(await surplusAuction.totalAuctioned()).equal(parseEther("6"));
 
@@ -203,7 +211,6 @@ describe('Surplus auction test', () => {
             await weth.connect(user1).approve(router.address, parseEther("1"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(UPPER_ETH_PRICE, SYMBOL);
-            await wqt.connect(user2).approve(router.address, parseEther("10000"));
         });
         it('STEP1: Buy lot: success', async () => {
             await surplusAuction.startAuction(parseEther("6"), SYMBOL);
@@ -217,11 +224,11 @@ describe('Surplus auction test', () => {
             await oracleSetPrice(UPPER_ETH_PRICE, SYMBOL);
             await oracleSetPrice(WQT_PRICE, "WQT");
 
-            let balanceWUSDBefore = await ethers.provider.getBalance(user2.address);
-            let balanceWQTBefore = await wqt.balanceOf(user2.address);
-            await surplusAuction.connect(user2).buyLot(parseEther("6"), 0);
-            let balanceWUSDAfter = await ethers.provider.getBalance(user2.address);
-            let balanceWQTAfter = await wqt.balanceOf(user2.address);
+            let balanceWUSDBefore = await wusd.balanceOf(user2.address);
+            let balanceWQTBefore = await web3.eth.getBalance(user2.address);
+            await surplusAuction.connect(user2).buyLot(parseEther("6"), 0, {value: parseEther("19.83")});
+            let balanceWUSDAfter = await wusd.balanceOf(user2.address);
+            let balanceWQTAfter = await web3.eth.getBalance(user2.address);
 
             expect(((balanceWUSDAfter - balanceWUSDBefore) / 1e18).toFixed(2)).equal("6.00");
             expect(((balanceWQTBefore - balanceWQTAfter) / 1e18).toFixed(2)).equal("19.83");
@@ -276,9 +283,9 @@ describe('Surplus auction test', () => {
             ).equal(ONE_ADDRESS);
         });
         it("STEP3: Set wqt token address", async () => {
-            await surplusAuction.setToken(ONE_ADDRESS);
+            await surplusAuction.setToken(ONE_ADDRESS, "OLO");
             expect(
-                await surplusAuction.token()
+                await surplusAuction.tokens("OLO")
             ).equal(ONE_ADDRESS);
         });
         it("STEP4: Set duration of auction", async () => {

@@ -37,14 +37,16 @@ contract WQPromotion is
         address quest,
         PaidTariff tariff,
         uint256 period,
-        uint256 promotedAt
+        uint256 promotedAt,
+        uint256 amount
     );
 
     event PromotedUser(
         address user,
         PaidTariff tariff,
         uint256 period,
-        uint256 promotedAt
+        uint256 promotedAt,
+        uint256 amount
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -88,7 +90,13 @@ contract WQPromotion is
             feeReceiver,
             questTariff[tariff][period]
         );
-        emit PromotedQuest(quest, tariff, period, block.timestamp);
+        emit PromotedQuest(
+            quest,
+            tariff,
+            period,
+            block.timestamp,
+            questTariff[tariff][period]
+        );
     }
 
     function promoteUser(PaidTariff tariff, uint256 period)
@@ -101,7 +109,13 @@ contract WQPromotion is
             feeReceiver,
             usersTariff[tariff][period]
         );
-        emit PromotedUser(msg.sender, tariff, period, block.timestamp);
+        emit PromotedUser(
+            msg.sender,
+            tariff,
+            period,
+            block.timestamp,
+            usersTariff[tariff][period]
+        );
     }
 
     /**
