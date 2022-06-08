@@ -338,30 +338,31 @@ describe('Collateral auction test', () => {
             await oracleSetPrice(ETH_PRICE, SYMBOL);
             await weth.connect(user1).approve(router.address, parseEther("2"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
+            await oracleSetPrice(parseEther("25"), SYMBOL);
             await router.connect(user1).produceWUSD(parseEther("0.5"), parseEther("1.5"), SYMBOL);
             await oracleSetPrice(parseEther("20.000000000000000001"), SYMBOL);
         });
         it("STEP1: Start auction when total auctioned greater liquidated amount", async () => {
             await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.999999999999999999"))
             await expect(
-                auction.connect(user2).startAuction(ETH_PRICE, 1, parseEther("0.500000000000000001"))
+                auction.connect(user2).startAuction(parseEther("25"), 0, parseEther("0.500000000000000001"))
             ).revertedWith("WQAuction: Amount of tokens purchased is greater than the amount liquidated");
         });
         it("STEP2: Start auction when price:(oldPrice/ratio) less than liquidationThreshold", async () => {
-            await oracleSetPrice(parseEther("15"), SYMBOL);
+            await oracleSetPrice(parseEther("19"), SYMBOL);
             await expect(
-                auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"))
+                auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.1"))
             ).revertedWith("WQAuction: This lot is not available for sale");
         });
         it("STEP3: Start auction when status of lot is not New or Selled", async () => {
-            await auction.connect(user2).startAuction(ETH_PRICE, 1, parseEther("0.5"));
+            await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.1"));
             await expect(
-                auction.connect(user2).startAuction(ETH_PRICE, 1, parseEther("0.5"))
+                auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("0.1"))
             ).revertedWith("WQAuction: Status is not New");
         });
         it("STEP4: Start auction when amount of bid is greater then lot amount", async () => {
             await expect(
-                auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1.000000000000000001"))
+                auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1.01"))
             ).revertedWith("WQAuction: Amount of tokens purchased is greater than lot amount");
         });
         it("STEP5: Buy lot when lot is not auctioned", async () => {
