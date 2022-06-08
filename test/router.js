@@ -268,7 +268,7 @@ describe('Router test', () => {
             await auction.startAuction(ETH_PRICE, 0, parseEther("0.1"));
             await hre.ethers.provider.send("evm_mine", []);
             await expect(
-                router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL, { value: parseEther("10") })
+                router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL)
             ).to.be.revertedWith("WQRouter: Status not new");
         });
     });
