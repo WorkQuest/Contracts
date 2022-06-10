@@ -92,7 +92,7 @@ contract WQLending is
             'WQSavingProduct: already deposited'
         );
         if (wallet.unlockDate == 0) {
-            wallet.unlockDate = block.timestamp + lockTime * 1 days;
+            wallet.unlockDate = block.timestamp + (lockTime + 3) * 1 days;
         }
         wallet.amount += amount;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
@@ -106,7 +106,7 @@ contract WQLending is
     function withdraw(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
         require(
-            block.timestamp >= wallet.unlockDate,
+            block.timestamp > wallet.unlockDate,
             'WQLending: Lock time is not over yet'
         );
         require(amount <= wallet.amount, 'WQLending: Amount is invalid');

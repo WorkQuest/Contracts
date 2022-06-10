@@ -67,58 +67,56 @@ describe("Lending test", () => {
     describe('Lending: success execution', () => {
         it('STEP 1: deposit and create users wallet', async () => {
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
-            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
+            await lending.connect(accounts[1]).deposit(7, parseEther('1'));
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
             let wallet_info = await lending.wallets(accounts[1].address);
             expect(wallet_info.amount).equal(parseEther('1'));
-            expect(wallet_info.rewardAllowed).equal(parseEther('0'));
-            expect(wallet_info.rewardDebt).equal(parseEther('0'));
-            expect(wallet_info.rewardDistributed).equal(parseEther('0'));
-            expect(balanceBefore - balanceAfter).equal(parseEther('1.00'));
+            expect(wallet_info.rewardAllowed).equal(0);
+            expect(wallet_info.rewardDistributed).equal(0);
+            expect(balanceBefore - balanceAfter).equal(parseEther('1'));
         });
 
         it('STEP 2: withdraw', async () => {
-            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
+            await lending.connect(accounts[1]).deposit(7, parseEther('1'));
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
-            await ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + DAY]);
+            await ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + 10 * DAY + 1]);
             await lending.connect(accounts[1]).withdraw(parseEther('1'));
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
             let wallet_info = await lending.wallets(accounts[1].address);
-            expect(wallet_info.amount).equal(parseEther('0'));
-            expect(wallet_info.rewardAllowed).equal(parseEther('0'));
-            expect(wallet_info.rewardDebt).equal(parseEther('0'));
-            expect(wallet_info.rewardDistributed).equal(parseEther('0'));
-            expect(balanceAfter - balanceBefore).equal(parseEther('1.00'));
+            expect(wallet_info.amount).equal(0);
+            expect(wallet_info.rewardAllowed).equal(0);
+            expect(wallet_info.rewardDistributed).equal(0);
+            expect(balanceAfter - balanceBefore).equal(parseEther('0.999'));
         });
 
         it('STEP 3: borrow funds', async () => {
-            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
-            await lending.connect(accounts[2]).borrow(parseEther('1'));
-            expect(await lending.borrowed()).equal(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(7, parseEther('1'));
+            await lending.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7);
+            expect((await lending.wallets(accounts[1].address)).borrowed).equal(parseEther('1'));
         });
 
         it('STEP 4: refund loans', async () => {
-            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
-            await lending.connect(accounts[2]).borrow(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(7, parseEther('1'));
+            await lending.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7);
             let currrent = await getTimestamp();
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [currrent + YEAR]);
-            await lending.connect(accounts[2]).refund(parseEther('1'), YEAR, 0);
-            expect(await lending.rewardsProduced()).equal(parseEther('0.0431'));
+            await lending.connect(accounts[2]).refund(accounts[1].address, parseEther('1'), YEAR, 7);
+            expect((await lending.wallets(accounts[1].address)).rewardAllowed).equal(parseEther('0.121'));
         });
 
         it('STEP 5: claim rewards', async () => {
-            await lending.connect(accounts[1]).deposit(1, parseEther('1'));
-            await lending.connect(accounts[2]).borrow(parseEther('1'));
+            await lending.connect(accounts[1]).deposit(7, parseEther('1'));
+            await lending.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7);
             let currrent = await getTimestamp();
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [currrent + YEAR]);
-            await lending.connect(accounts[2]).refund(parseEther('1'), YEAR, 0);
+            await lending.connect(accounts[2]).refund(accounts[1].address, parseEther('1'), YEAR, 7);
             let wallet_info = await lending.wallets(accounts[1].address);
             expect(wallet_info.amount).equal(parseEther('1'));
-            expect(await lending.rewardsProduced()).equal(parseEther('0.0431'));
+            expect((await lending.wallets(accounts[1].address)).rewardAllowed).equal(parseEther('0.121'));
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
             await lending.connect(accounts[1]).claim();
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
-            expect(balanceAfter - balanceBefore).equal(parseEther('0.0431'));
+            expect(balanceAfter - balanceBefore).equal(parseEther('0.121'));
         });
     });
 
@@ -126,13 +124,13 @@ describe("Lending test", () => {
         it('STEP 1: withdraw exceed amount', async () => {
             await expect(
                 lending.withdraw(parseEther('1'))
-            ).revertedWith("WQDeposit: Amount is invalid");
+            ).revertedWith("WQLending: Amount is invalid");
         });
 
         it('STEP 2: borrow exceed amount', async () => {
             await expect(
-                lending.connect(accounts[2]).borrow(parseEther('1'))
-            ).revertedWith("WQLending: Insufficient amount");
+                lending.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7)
+            ).revertedWith("WQLending: Invalid amount");
         });
     });
 });
