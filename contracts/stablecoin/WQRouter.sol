@@ -729,10 +729,8 @@ contract WQRouter is
     function transferSurplus(
         address user,
         uint256 amount,
-        uint256 cost,
         string calldata symbol
     ) external payable onlySurplusAuction {
-        require(msg.value >= cost, 'WQRouter: Insuficient value');
         tokens[symbol].totalDebt += amount;
         wusd.mint(user, amount);
     }

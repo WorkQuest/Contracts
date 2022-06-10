@@ -5,6 +5,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import './WQPriceOracle.sol';
 import './WQRouterInterface.sol';
 
@@ -14,6 +15,7 @@ contract WQSurplusAuction is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
+    using AddressUpgradeable for address payable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
@@ -193,15 +195,18 @@ contract WQSurplusAuction is
                 'WQAuction: Current cost is greater maximum'
             );
         }
+        require(msg.value >= cost, 'WQAuction: Insuficient value');
         totalAuctioned -= lot.amount;
         lot.buyer = msg.sender;
         lot.status = LotStatus.Selled;
-        router.transferSurplus{value: msg.value}(
+        router.transferSurplus{value: cost}(
             msg.sender,
             lot.amount,
-            cost,
             lot.symbol
         );
+        if (msg.value > cost) {
+            payable(msg.sender).sendValue(msg.value - cost);
+        }
         emit LotBuyed(lot.index, lot.amount);
     }
 

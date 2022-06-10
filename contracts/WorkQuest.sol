@@ -80,9 +80,6 @@ contract WorkQuest {
     event ArbitrationRework(uint256 timestamp);
 
     /// @notice Event emitted when
-    event ArbitrationDecreaseCost(uint256 timestamp);
-
-    /// @notice Event emitted when
     event ArbitrationAcceptWork(uint256 timestamp);
 
     /// @notice Event emitted when
