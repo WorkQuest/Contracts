@@ -6,7 +6,7 @@ const Web3 = require('web3');
 const { parseEther } = require("ethers/lib/utils");
 const { wordlists } = require("@ethersproject/wordlists");
 const web3 = new Web3(hre.network.provider);
-const SEVEN_DAYS = 7 * 24 * 60 * 60;
+const SEVEN_DAYS = 14 * 24 * 60 * 60;
 const YEAR = 31536000;
 const oneK = parseEther("1000");
 const SAVING_PRODUCT_FEE_PER_MONTH = "1200000000000000";
@@ -75,55 +75,53 @@ describe("Saving Product test", () => {
     describe('Saving Product: success execution', () => {
         it('STEP 1: Deposit', async () => {
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
-            await saving.connect(accounts[1]).deposit(7, parseEther('1'));
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
             let wallet_info = await saving.wallets(accounts[1].address);
             expect(wallet_info.amount).equal(parseEther('1'));
-            expect(wallet_info.rewardAllowed).equal(parseEther('0'));
-            expect(wallet_info.rewardDebt).equal(parseEther('0'));
-            expect(wallet_info.rewardDistributed).equal(parseEther('0'));
+            expect(wallet_info.rewardAllowed).equal(0);
+            expect(wallet_info.rewardDistributed).equal(0);
             expect(wallet_info.unlockDate).equal(await getTimestamp() + SEVEN_DAYS);
             expect(balanceBefore - balanceAfter).equal(parseEther('1'));
         });
 
         it('STEP 2: Withdraw', async () => {
-            await saving.connect(accounts[1]).deposit(7, parseEther('1'));
-            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + SEVEN_DAYS]);
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
+            await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + SEVEN_DAYS + 1]);
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
             await saving.connect(accounts[1]).withdraw(parseEther('1'));
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
             let wallet_info = await saving.wallets(accounts[1].address);
-            expect(wallet_info.amount).equal(parseEther('0'));
-            expect(wallet_info.rewardAllowed).equal(parseEther('0'));
-            expect(wallet_info.rewardDebt).equal(parseEther('0'));
-            expect(wallet_info.rewardDistributed).equal(parseEther('0'));
-            expect(balanceAfter - balanceBefore).equal(parseEther('1'));
+            expect(wallet_info.amount).equal(0);
+            expect(wallet_info.rewardAllowed).equal(0);
+            expect(wallet_info.rewardDistributed).equal(0);
+            expect(balanceAfter - balanceBefore).equal(parseEther('0.99444'));
         });
 
         it('STEP 3: Borrow funds', async () => {
-            await saving.connect(accounts[1]).deposit(7, parseEther('1'));
-            await saving.connect(accounts[2]).borrow(parseEther('1'));
-            expect(await saving.borrowed()).equal(parseEther('1'));
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
+            await saving.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7);
+            expect((await saving.wallets(accounts[1].address)).borrowed).equal(parseEther('1'));
         });
 
         it('STEP 4: Refund loans', async () => {
-            await saving.connect(accounts[1]).deposit(7, parseEther('1'));
-            await saving.connect(accounts[2]).borrow(parseEther('1'));
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
+            await saving.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7);
             let current = await getTimestamp();
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [current + YEAR]);
-            await saving.connect(accounts[2]).refund(parseEther('1'), YEAR, 7);
-            expect(await saving.rewardsProduced()).equal(parseEther('0.0531'));
+            await saving.connect(accounts[2]).refund(accounts[1].address, parseEther('1'), YEAR, 7);
+            expect((await saving.wallets(accounts[1].address)).rewardAllowed).equal(parseEther('0.0531'));
         });
 
         it('STEP 5: Claim rewards', async () => {
-            await saving.connect(accounts[1]).deposit(7, parseEther('1'));
-            await saving.connect(accounts[2]).borrow(parseEther('1'));
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
+            await saving.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7);
             let current = await getTimestamp();
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [current + YEAR]);
-            await saving.connect(accounts[2]).refund(parseEther('1'), YEAR, 7);
+            await saving.connect(accounts[2]).refund(accounts[1].address, parseEther('1'), YEAR, 7);
             let wallet_info = await saving.wallets(accounts[1].address);
             expect(wallet_info.amount).equal(parseEther('1'));
-            expect(await saving.rewardsProduced()).equal(parseEther('0.0531'));
+            expect(wallet_info.rewardAllowed).equal(parseEther('0.0531'));
             let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
             await saving.connect(accounts[1]).claim();
             let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
@@ -139,7 +137,7 @@ describe("Saving Product test", () => {
         });
 
         it('STEP 2: Withdraw when funds locked', async () => {
-            await saving.connect(accounts[1]).deposit(7, parseEther('1'));
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
             await expect(
                 saving.connect(accounts[1]).withdraw(parseEther('1'))
             ).revertedWith("WQSavingProduct: Lock time is not over yet");
@@ -147,17 +145,24 @@ describe("Saving Product test", () => {
 
         it('STEP 3: Borrow exceed amount', async () => {
             await expect(
-                saving.connect(accounts[2]).borrow(parseEther('1'))
-            ).revertedWith("WQSavingProduct: Insufficient amount");
+                saving.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7)
+            ).revertedWith("WQSavingProduct: Invalid amount");
+        });
+
+        it('STEP 3: Borrow with invalid duration', async () => {
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
+            await expect(
+                saving.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 15)
+            ).revertedWith("WQSavingProduct: Invalid duration");
         });
 
         it('STEP 4: Refund with invalid duration', async () => {
-            await saving.connect(accounts[1]).deposit(7, parseEther('1'));
-            await saving.connect(accounts[2]).borrow(parseEther('1'));
+            await saving.connect(accounts[1]).deposit(14, parseEther('1'));
+            await saving.connect(accounts[2]).borrow(accounts[1].address, parseEther('1'), 7);
             let currrent = await getTimestamp();
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [currrent + YEAR]);
             await expect(
-                saving.connect(accounts[2]).refund(parseEther('1'), YEAR, 6)
+                saving.connect(accounts[2]).refund(accounts[1].address, parseEther('1'), YEAR, 6)
             ).revertedWith("WQSavingProduct: invalid duration");;
         });
     });

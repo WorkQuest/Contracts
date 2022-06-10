@@ -122,17 +122,17 @@ contract WQSavingProduct is
     function withdraw(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
         require(
-            block.timestamp >= wallet.unlockDate,
+            block.timestamp > wallet.unlockDate,
             'WQSavingProduct: Lock time is not over yet'
         );
         require(amount <= wallet.amount, 'WQSavingProduct: Amount is invalid');
+        uint256 closeComission = (amount * feeWithdraw) / 1e18;
+        uint256 serviceComission = (amount * wallet.serviceComission) /
+            wallet.amount;
         wallet.amount -= amount;
         if (wallet.amount == 0) {
             wallet.unlockDate = 0;
         }
-        uint256 closeComission = (amount * feeWithdraw) / 1e18;
-        uint256 serviceComission = (amount * wallet.serviceComission) /
-            wallet.amount;
         wallet.serviceComission -= serviceComission;
         wusd.safeTransfer(
             msg.sender,
