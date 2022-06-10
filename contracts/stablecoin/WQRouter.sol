@@ -207,6 +207,10 @@ contract WQRouter is
         onlyRole(UPGRADER_ROLE)
     {}
 
+    receive() external payable {
+        emit Received(msg.value);
+    }
+
     /**
      * @dev Deposit colateral tokens and take WUSD
      * @dev amount of WUSD = collateralAmount * price / collateralRatio

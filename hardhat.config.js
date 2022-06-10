@@ -74,7 +74,7 @@ module.exports = {
       chainId: 20220112
     },
     wqtestnet: {
-      url: "https://test-gate-01.workquest.co/rpc",
+      url: "https://testnet-gate.workquest.co/rpc/",
       accounts: { mnemonic: mnemonic },
       chainId: 1991
     },

@@ -1,6 +1,6 @@
 const Web3 = require('web3')
 const { expect } = require('chai')
-const { ethers } = require('hardhat')
+const { ethers, web3 } = require('hardhat')
 require('@nomiclabs/hardhat-waffle')
 const { parseEther } = require('ethers/lib/utils')
 
@@ -32,7 +32,7 @@ const LotStatus = Object.freeze({
 describe('Debt auction test', () => {
     let priceOracle;
     let weth;
-    let wqt;
+    let wusd;
     let router;
     let collateralAuction;
     let debtAuction;
@@ -84,21 +84,29 @@ describe('Debt auction test', () => {
         await weth.transfer(user1.address, parseEther("1000"));
         await weth.transfer(user2.address, parseEther("1000"));
 
-        const WQT = await ethers.getContractFactory('WQT');
-        wqt = await WQT.deploy();
+        const WUSD = await ethers.getContractFactory('WQBridgeToken');
+        wusd = await upgrades.deployProxy(WUSD,
+            [
+                "WUSD Stablecoin",
+                "WUSD",
+                18
+            ],
+            { kind: 'transparent' }
+        );
+        await wusd.grantRole(await wusd.MINTER_ROLE(), owner.address);
 
         const Router = await ethers.getContractFactory('WQRouter');
         router = await upgrades.deployProxy(Router,
             [
                 priceOracle.address,
-                wqt.address,
+                wusd.address,
                 STABILITY_FEE,
                 ANNUAL_INTEREST_RATE,
                 feeReceiver.address
             ],
             { kind: 'transparent' });
-        // Transfer wqt tokens
-        await wqt.transfer(router.address, parseEther("10000"));
+        await wusd.grantRole(await wusd.MINTER_ROLE(), router.address);
+        await wusd.grantRole(await wusd.BURNER_ROLE(), router.address);
 
         const ColateralAuction = await ethers.getContractFactory('WQCollateralAuction');
         collateralAuction = await upgrades.deployProxy(
@@ -129,6 +137,7 @@ describe('Debt auction test', () => {
                 MAX_LOT_AMOUNT_FACTOR
             ],
             { kind: 'transparent' });
+        await debtAuction.setToken(weth.address, SYMBOL);
         await router.setDebtAuction(debtAuction.address);
     });
 
@@ -163,7 +172,7 @@ describe('Debt auction test', () => {
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
         });
         it('STEP1: Start auction: success', async () => {
-            expect(await debtAuction.getDebtAmount()).equal("6666666666666666667");
+            expect(await debtAuction.getDebtAmount(SYMBOL)).equal("6666666666666666667");
             await debtAuction.startAuction(parseEther("6"), SYMBOL);
             expect(await debtAuction.totalAuctioned()).equal(parseEther("6"));
 
@@ -202,6 +211,13 @@ describe('Debt auction test', () => {
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
         });
         it('STEP1: Buy lot: success', async () => {
+            // Transfer wqt tokens
+            await web3.eth.sendTransaction({
+                from: owner.address,
+                to: router.address,
+                value: parseEther("100").toString()
+            });
+            await wusd.mint(user2.address, parseEther("1000"));
             await debtAuction.startAuction(parseEther("6"), SYMBOL);
             let lot = await debtAuction.lots(parseEther("6"));
             expect(lot.status).equal(LotStatus.Auctioned);
@@ -211,14 +227,14 @@ describe('Debt auction test', () => {
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
             await oracleSetPrice(WQT_PRICE, "WQT");
 
-            let balanceWUSDBefore = await ethers.provider.getBalance(user2.address);
-            let balanceWQTBefore = await wqt.balanceOf(user2.address);
-            await debtAuction.connect(user2).buyLot(parseEther("6"), 0, { value: parseEther("6") });
-            let balanceWUSDAfter = await ethers.provider.getBalance(user2.address);
-            let balanceWQTAfter = await wqt.balanceOf(user2.address);
+            let balanceWUSDBefore = await wusd.balanceOf(user2.address);
+            let balanceWQTBefore = await web3.eth.getBalance(user2.address);
+            await debtAuction.connect(user2).buyLot(parseEther("6"), 0);
+            let balanceWUSDAfter = await wusd.balanceOf(user2.address);
+            let balanceWQTAfter = await web3.eth.getBalance(user2.address);
 
             expect(((balanceWUSDBefore - balanceWUSDAfter) / 1e18).toFixed(2)).equal("6.00");
-            expect(((balanceWQTAfter - balanceWQTBefore) / 1e18).toFixed(2)).equal("17.68");
+            expect(((balanceWQTAfter - balanceWQTBefore) / 1e18).toFixed(2)).equal("17.67");
             await expect(
                 debtAuction.getCurrentLotCost(parseEther("6"))
             ).revertedWith("WQAuction: This lot is not auctioned");
@@ -248,16 +264,16 @@ describe('Debt auction test', () => {
                 debtAuction.connect(user2).buyLot(parseEther("6"), 0)
             ).revertedWith("WQAuction: Auction of this lot is temporarily suspended");
         });
-        it('STEP5: Buy lot when amount value is insufficient: fail', async () => {
+        it('STEP5: Buy lot when WUSD amount is insufficient: fail', async () => {
             await debtAuction.startAuction(parseEther("6"), SYMBOL);
             await expect(
-                debtAuction.connect(user2).buyLot(parseEther("6"), 0, { value: parseEther("5.999999999999999999") })
-            ).revertedWith("WQAuction: Insufficient amount");
+                debtAuction.connect(user2).buyLot(parseEther("6"), 0)
+            ).revertedWith("ERC20: burn amount exceeds balance");
         });
         it('STEP6: Buy lot when cost is least minimum that minimum: fail', async () => {
             await debtAuction.startAuction(parseEther("6"), SYMBOL);
             await expect(
-                debtAuction.connect(user2).buyLot(parseEther("6"), parseEther("22"), { value: parseEther("6") })
+                debtAuction.connect(user2).buyLot(parseEther("6"), parseEther("22"))
             ).revertedWith("WQAuction: Current cost is least minimum");
         });
     });
