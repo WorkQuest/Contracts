@@ -387,7 +387,7 @@ contract WQDAOVoting is
             block.timestamp >= proposal.expireTime,
             'WQDAO: Voting is not expired yet'
         );
-        require(proposal.active == true, 'WQDAO: Voting is closed');
+        require(proposal.active, 'WQDAO: Voting is closed');
         proposal.active = false;
         calcState(_proposalId);
         emit ProposalExecuted(
@@ -406,10 +406,7 @@ contract WQDAOVoting is
         onlyRole(CHAIRPERSON_ROLE)
     {
         require(_proposalId < proposalCount, 'WQDAO: Invalid proposal id');
-        require(
-            proposals[_proposalId].active == true,
-            'WQDAO: Voting is closed'
-        );
+        require(proposals[_proposalId].active, 'WQDAO: Voting is closed');
         proposals[_proposalId].active = false;
         proposals[_proposalId].succeded = false;
         proposals[_proposalId].defeated = true;

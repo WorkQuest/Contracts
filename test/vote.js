@@ -1,13 +1,19 @@
 const { expect } = require('chai');
-const { time } = require('console');
-const exp = require('constants');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const { ethers, upgrades, web3 } = require('hardhat');
 const envConfig = dotenv.parse(fs.readFileSync('.env'));
 const { parseEther } = require("ethers/lib/utils");
-const startTime = Math.floor(Date.now() / 1000);
 const moreThanDay = 86460;
+const proposalThreshold = parseEther('30');
+const votingThreshold = parseEther('10');
+const oneK = parseEther('20');
+const minimumQuorum = 3;
+const votingPeriod = ethers.BigNumber.from('86400'); // one day
+const fee = "1000000000000000";
+const fee_proposal = "30000000000000000";
+const fee_voting = "10000000000000000";
+const fee_oneK = "20000000000000000";
 
 for (const k in envConfig) {
     process.env[k] = envConfig[k]
@@ -19,18 +25,13 @@ describe('Vote test', () => {
     let userOne;
     let userTwo;
     let userThree;
-    let userFour;
-    let proposalThreshold = parseEther('10000');
-    let votingThreshold = parseEther('100');
-    let oneK = parseEther('1000');
-    let minimumQuorum = 3;
-    let votingPeriod = ethers.BigNumber.from('86400'); // one day
     let nonce = 0;
-    let fee = "1000000000000000";
+
+    let vote;
 
     beforeEach(async () => {
-        [owner, userOne, userTwo, userThree, userFour] = await ethers.getSigners();
-        await web3.eth.sendTransaction({ from: userTwo.address, to: userOne.address, value: parseEther("2") })
+        [owner, userOne, userTwo, userThree] = await ethers.getSigners();
+
         const DAOBallot = await ethers.getContractFactory('WQDAOVoting');
         vote = await upgrades.deployProxy(DAOBallot,
             [
@@ -43,6 +44,7 @@ describe('Vote test', () => {
             ],
             { initializer: 'initialize', kind: 'transparent' });
         await vote.deployed();
+        await vote.connect(userOne).delegate(userOne.address, { value: proposalThreshold });
     });
 
     describe('Proposals', () => {
@@ -57,49 +59,54 @@ describe('Vote test', () => {
             nonce++;
             await expect(
                 vote.connect(userTwo).addProposal(nonce, "Too poor can't proposal is not right")
-            ).to.revertedWith('Proposer votes below proposal threshold')
+            ).to.revertedWith('WQDAO: Proposer votes below proposal threshold')
         });
     });
 
     describe('Voting', () => {
         it('Should properly vote with enough votes', async () => {
             nonce++;
+            await vote.connect(userThree).delegate(userThree.address, { value: oneK });
             await vote.connect(userOne).addProposal(nonce, "Should properly vote with enough votes");
-            await vote.connect(userThree).doVote(0, true);
+            await vote.connect(userThree).doVote(0, true, { value: fee_oneK });
             expect(
                 (await vote.getReceipt(0, userThree.address)).votes
             ).to.equal(oneK);
         });
 
         it("Shouldn't vote with wrong id", async () => {
-            await expect(vote.doVote(0, true)).to.revertedWith('Invalid proposal id');
+            await expect(vote.connect(userOne).doVote(0, true, { value: fee_proposal })).to.revertedWith('Invalid proposal id');
         });
 
         it("Shouldn't vote on expired votes", async () => {
             nonce++;
+            await vote.connect(userThree).delegate(userThree.address, { value: oneK });
             await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
             await ethers.provider.send("evm_increaseTime", [moreThanDay]);
             await ethers.provider.send("evm_mine", []);
             await expect(
-                vote.connect(userThree).doVote(0, true)
+                vote.connect(userThree).doVote(0, true, { value: fee_oneK })
             ).to.revertedWith('Proposal expired');
         });
 
         it("Shouldn't vote multiple times", async () => {
             nonce++;
+            await vote.connect(userThree).delegate(userThree.address, { value: oneK });
             await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
-            await vote.connect(userThree).doVote(0, true);
+            await vote.connect(userThree).doVote(0, true, { value: fee_oneK });
             await expect(
-                vote.connect(userThree).doVote(0, true)
+                vote.connect(userThree).doVote(0, true, { value: fee_oneK })
             ).to.revertedWith('Voter has already voted');
         });
 
         it("Shouldn't vote on executed votes", async () => {
             await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
+            await ethers.provider.send("evm_increaseTime", [moreThanDay]);
+            await ethers.provider.send("evm_mine", []);
             await vote.executeVoting(0);
             await expect(
-                vote.connect(userOne).doVote(0, true)
-            ).to.revertedWith('Voting is closed')
+                vote.connect(userOne).doVote(0, true, { value: fee_proposal })
+            ).to.revertedWith('WQDAO: Voting is closed')
         });
     });
 
@@ -121,6 +128,8 @@ describe('Vote test', () => {
 
         it("Shouldn't execute already executed proposal", async () => {
             await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
+            await ethers.provider.send("evm_increaseTime", [moreThanDay]);
+            await ethers.provider.send("evm_mine", []);
             await vote.executeVoting(0)
             await expect(
                 vote.executeVoting(0)
@@ -134,18 +143,26 @@ describe('Vote test', () => {
 
         it('Should properly execute proposal', async () => {
             nonce++;
+            await vote.connect(userTwo).delegate(userTwo.address, { value: votingThreshold });
+            await vote.connect(userThree).delegate(userThree.address, { value: oneK });
             await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
-            await vote.doVote(0, true);
-            await vote.connect(userOne).doVote(0, false);
-            await vote.connect(userTwo).doVote(0, false);
+            await vote.connect(userThree).doVote(0, true, { value: fee_oneK });
+            await vote.connect(userOne).doVote(0, false, { value: fee_proposal });
+            await vote.connect(userTwo).doVote(0, false, { value: fee_voting });
+            await ethers.provider.send("evm_increaseTime", [moreThanDay]);
+            await ethers.provider.send("evm_mine", []);
             await vote.executeVoting(0);
             expect(await vote.state(0)).to.equal(0);
         });
 
         it("Should return 'defeated' if not enough quorum", async () => {
             nonce++;
+            await vote.connect(userThree).delegate(userThree.address, { value: oneK });
             await vote.connect(userOne).addProposal(nonce, 'Drink on thursdays');
-            await vote.connect(userThree).doVote(0, true);
+            await vote.connect(userThree).doVote(0, true, { value: fee_oneK });
+            await vote.connect(userOne).doVote(0, true, { value: fee_proposal });
+            await ethers.provider.send("evm_increaseTime", [moreThanDay]);
+            await ethers.provider.send("evm_mine", []);
             await vote.executeVoting(0);
             expect(await vote.state(0)).to.equal(0);
         });
