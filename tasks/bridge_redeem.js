@@ -19,15 +19,15 @@ task("bridge_redeem", "Redeem token on bridge")
         // nonce, amount, recipient, chainFrom, chainTo, symbol
         message = await web3.utils.soliditySha3(
             { t: 'uint', v: 2 },
-            { t: 'uint', v: "1000000000" },
+            { t: 'uint', v: "10000000000000000000" },
             { t: 'address', v: "0xE24f99419d788003c0D5212f05F47B1572cDC38a" },
             { t: 'uint256', v: 2 },
             { t: 'uint256', v: 1 },
-            { t: 'string', v: "USDT" }
+            { t: 'string', v: "WQT" }
         );
         let signature = await web3.eth.sign(message, validator);
         let sig = ethers.utils.splitSignature(signature);
         // nonce, chainFrom, amount, recipient, v, r, s, symbol
-        console.log(await bridge.redeem(2, 2, "1000000000", "0xE24f99419d788003c0D5212f05F47B1572cDC38a", sig.v, sig.r, sig.s, "USDT"));
+        console.log(await bridge.redeem(100500, 2, "10000000000000000000", "0xE24f99419d788003c0D5212f05F47B1572cDC38a", sig.v, sig.r, sig.s, "WQT"));
         console.log("Done");
     });

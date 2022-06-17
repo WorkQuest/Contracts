@@ -92,6 +92,7 @@ contract WQBridgeToken is
      * - `amount` amount of tokens.
      */
     function burn(address from, uint256 amount) external onlyRole(BURNER_ROLE) {
+        _spendAllowance(from, _msgSender(), amount);
         _burn(from, amount);
     }
 

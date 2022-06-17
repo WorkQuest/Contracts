@@ -227,6 +227,7 @@ describe('Debt auction test', () => {
             await oracleSetPrice(LOWER_ETH_PRICE, SYMBOL);
             await oracleSetPrice(WQT_PRICE, "WQT");
 
+            await wusd.connect(user2).approve(router.address, parseEther("6"));
             let balanceWUSDBefore = await wusd.balanceOf(user2.address);
             let balanceWQTBefore = await web3.eth.getBalance(user2.address);
             await debtAuction.connect(user2).buyLot(parseEther("6"), 0);
@@ -234,7 +235,7 @@ describe('Debt auction test', () => {
             let balanceWQTAfter = await web3.eth.getBalance(user2.address);
 
             expect(((balanceWUSDBefore - balanceWUSDAfter) / 1e18).toFixed(2)).equal("6.00");
-            expect(((balanceWQTAfter - balanceWQTBefore) / 1e18).toFixed(2)).equal("17.67");
+            expect(((balanceWQTAfter - balanceWQTBefore) / 1e18).toFixed(2)).equal("17.68");
             await expect(
                 debtAuction.getCurrentLotCost(parseEther("6"))
             ).revertedWith("WQAuction: This lot is not auctioned");
@@ -265,7 +266,9 @@ describe('Debt auction test', () => {
             ).revertedWith("WQAuction: Auction of this lot is temporarily suspended");
         });
         it('STEP5: Buy lot when WUSD amount is insufficient: fail', async () => {
+            await wusd.connect(user2).approve(router.address, parseEther("6"));
             await debtAuction.startAuction(parseEther("6"), SYMBOL);
+
             await expect(
                 debtAuction.connect(user2).buyLot(parseEther("6"), 0)
             ).revertedWith("ERC20: burn amount exceeds balance");

@@ -253,7 +253,7 @@ describe('Collateral auction test', () => {
         it('STEP4: Decrease lot amount (removeCollateral)', async () => {
             await weth.connect(user1).approve(router.address, parseEther("1"));
             await router.connect(user1).produceWUSD(parseEther("1"), parseEther("1.5"), SYMBOL);
-            await wusd_token.connect(user1).approve(router.address, parseEther("2"));
+            await wusd_token.connect(user1).approve(router.address, parseEther("12"));
             await router.connect(user1).removeCollateral(ETH_PRICE, 0, parseEther("10"), SYMBOL);
 
             let collateralInfo = await router.collaterals(SYMBOL, user1.address);
@@ -380,6 +380,7 @@ describe('Collateral auction test', () => {
         });
         it("STEP7: Buy lot when WUSD value is insufficient", async () => {
             await wusd_token.mint(user2.address, parseEther("3"));
+            await wusd_token.connect(user2).approve(router.address, parseEther("25"));
             await auction.connect(user2).startAuction(ETH_PRICE, 0, parseEther("1"));
             let lot_info = await auction.lots(ETH_PRICE, 0);
             await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(lot_info.endTime)]);

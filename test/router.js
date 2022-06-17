@@ -231,6 +231,7 @@ describe('Router test', () => {
         });
 
         it('STEP1: Should take from user debt', async () => {
+            await wusd_token.connect(user1).approve(router.address, parseEther("10"));
             let balanceWUSDBefore = BigInt(await wusd_token.balanceOf(user1.address));
             await router.connect(user1).disposeDebt(ETH_PRICE, 0, SYMBOL);
             let balanceWUSDAfter = BigInt(await wusd_token.balanceOf(user1.address));
@@ -280,7 +281,7 @@ describe('Router test', () => {
         });
 
         it('STEP1: Should removed part of collateral', async () => {
-            await wusd_token.connect(user1).approve(router.address, parseEther("1"));
+            await wusd_token.connect(user1).approve(router.address, parseEther("11"));
             let balanceWUSDBefore = BigInt(await wusd_token.balanceOf(user1.address));
             let balanceETHBefore = BigInt(await weth.balanceOf(user1.address));
             await router.connect(user1).removeCollateral(ETH_PRICE, 0, parseEther("10"), SYMBOL);
