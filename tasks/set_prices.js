@@ -34,7 +34,7 @@ task("set_prices", "Set all prices of tokens")
         }
         // console.log(symbols, prices);
         let message = web3.utils.soliditySha3(
-            { t: 'uint256', v: nonce },
+            { t: 'uint256', v: nonce.toString() },
             { t: 'uint256', v: prices },
             { t: 'string', v: symbols }
         );

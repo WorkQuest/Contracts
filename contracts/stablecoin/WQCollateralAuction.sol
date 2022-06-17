@@ -435,6 +435,73 @@ contract WQCollateralAuction is
         lot.saleAmount = 0;
     }
 
+    function recalcLot(uint256 priceIndex, uint256 index)
+        external
+        nonReentrant
+    {
+        LotInfo storage lot = lots[priceIndex][index];
+        require(
+            lot.status == LotStatus.Auctioned,
+            'WQAuction: Lot is not auctioned'
+        );
+        require(
+            block.timestamp > lot.endTime,
+            'WQAuction: Auction time is not over yet'
+        );
+        totalAuctioned -= lot.saleAmount;
+        lot.saleAmount = 0;
+        lot.endCost = 0;
+        lot.endTime = 0;
+        lot.status = LotStatus.New;
+        uint256 price = oracle.getTokenPriceUSD(token.symbol());
+        uint256 newPriceIndex = getPriceIndex(price);
+        lot.ratio = (price * lot.ratio) / lot.price;
+        lot.price = price;
+        if (priceIndex != newPriceIndex) {
+            if (lots[newPriceIndex].length == 0) {
+                prices.push(newPriceIndex);
+                priceIndexes[newPriceIndex] = prices.length - 1;
+            }
+            lots[newPriceIndex].push(lots[priceIndex][index]);
+            _removeLot(priceIndex, index);
+            router.moveUserLot(
+                lot.user,
+                lot.amount,
+                lot.price,
+                priceIndex,
+                index,
+                newPriceIndex,
+                lots[newPriceIndex].length - 1,
+                token.symbol()
+            );
+        }
+
+        emit LotCanceled(priceIndex, index, lot.saleAmount, lot.endCost);
+    }
+
+    /**
+     * @dev Cancel auction when time is over
+     * @param priceIndex Price index value
+     * @param index Index value
+     */
+    function cancelAuction(uint256 priceIndex, uint256 index) external {
+        LotInfo storage lot = lots[priceIndex][index];
+        require(
+            lot.status == LotStatus.Auctioned,
+            'WQAuction: Lot is not auctioned'
+        );
+        require(
+            block.timestamp > lot.endTime,
+            'WQAuction: Auction time is not over yet'
+        );
+        totalAuctioned -= lot.saleAmount;
+        lot.saleAmount = 0;
+        lot.endCost = 0;
+        lot.endTime = 0;
+        lot.status = LotStatus.New;
+        emit LotCanceled(priceIndex, index, lot.saleAmount, lot.endCost);
+    }
+
     /**
      * @dev Get current cost of auctioned collateral
      * @param priceIndex Price index value
@@ -466,29 +533,6 @@ contract WQCollateralAuction is
                 lot.endCost) /
             auctionDuration /
             1e18;
-    }
-
-    /**
-     * @dev Cancel auction when time is over
-     * @param priceIndex Price index value
-     * @param index Index value
-     */
-    function cancelAuction(uint256 priceIndex, uint256 index) external {
-        LotInfo storage lot = lots[priceIndex][index];
-        require(
-            lot.status == LotStatus.Auctioned,
-            'WQAuction: Lot is not auctioned'
-        );
-        require(
-            block.timestamp > lot.endTime,
-            'WQAuction: Auction time is not over yet'
-        );
-        totalAuctioned -= lot.saleAmount;
-        lot.saleAmount = 0;
-        lot.endCost = 0;
-        lot.endTime = 0;
-        lot.status = LotStatus.New;
-        emit LotCanceled(priceIndex, index, lot.saleAmount, lot.endCost);
     }
 
     function getPriceIndexes(uint256 offset, uint256 limit)

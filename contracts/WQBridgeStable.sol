@@ -42,8 +42,8 @@ contract WQBridgeStable is
      * @return naive Is true if native coin, is false if ERC20 token
      */
     struct TokenSettings {
-        uint256 minAmount;
-        uint256 maxAmount;
+        // uint256 minAmount;
+        // uint256 maxAmount;
         address token;
         bool enabled;
         bool native;
@@ -147,10 +147,10 @@ contract WQBridgeStable is
             token.enabled,
             'WorkQuest Bridge: This token not registered or disabled'
         );
-        require(
-            amount >= token.minAmount && amount <= token.maxAmount,
-            'WorkQuest Bridge: Invalid amount'
-        );
+        // require(
+        //     amount >= token.minAmount && amount <= token.maxAmount,
+        //     'WorkQuest Bridge: Invalid amount'
+        // );
         bytes32 message = keccak256(
             abi.encodePacked(
                 nonce,
@@ -236,8 +236,8 @@ contract WQBridgeStable is
         bool enabled,
         bool native,
         bool lockable,
-        uint256 minAmount,
-        uint256 maxAmount,
+        // uint256 minAmount,
+        // uint256 maxAmount,
         string memory symbol
     ) public onlyRole(ADMIN_ROLE) {
         require(
@@ -245,8 +245,8 @@ contract WQBridgeStable is
             'WorkQuest Bridge: Symbol length must be greater than 0'
         );
         tokens[symbol] = TokenSettings({
-            minAmount: minAmount,
-            maxAmount: maxAmount,
+            // minAmount: minAmount,
+            // maxAmount: maxAmount,
             token: token,
             enabled: enabled,
             native: native,
