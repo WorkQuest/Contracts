@@ -78,6 +78,11 @@ module.exports = {
       accounts: { mnemonic: mnemonic },
       chainId: 1991
     },
+    wqmainnet: {
+      url: "https://mainnet-gate.workquest.co/",
+      accounts: { mnemonic: mnemonic },
+      chainId: 2009
+    },
     bsctestnet: {
       url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet`,
       chainId: 97,
@@ -147,7 +152,7 @@ module.exports = {
   docgen: {
     path: './doc',
     clear: true,
-    runOnCompile: true,
+    runOnCompile: false,
   }
 }
 
