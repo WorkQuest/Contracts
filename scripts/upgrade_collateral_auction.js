@@ -28,6 +28,12 @@ async function main() {
     }
     const bnb_auction = await upgrades.upgradeProxy(process.env.BNB_AUCTION, CollateralAuction);
     console.log("BNB collateral auction has been upgraded to:", bnb_auction.address);
+
+    if (!process.env.USDT_AUCTION) {
+        throw new Error(`Please set your USDT_AUCTION in a .env-${network} file`);
+    }
+    const usdt_auction = await upgrades.upgradeProxy(process.env.USDT_AUCTION, CollateralAuction);
+    console.log("USDT collateral auction has been upgraded to:", usdt_auction.address);
 }
 
 main()

@@ -13,6 +13,6 @@ task("dispose_debt", "Claim extra debt")
 
         const router = await ethers.getContractAt("WQRouter", process.env.ROUTER);
         const aue = await ethers.getContractAt("WQCollateralAuction", process.env.ETH_AUCTION);
-        let tx = await router.connect(accounts[parseInt(args.account)]).disposeDebt(await aue.getPriceIndex(args.price), args.index, "ETH", { value: "1000000000000000000000" });
+        let tx = await router.connect(accounts[parseInt(args.account)]).disposeDebt(await aue.getPriceIndex(args.price), args.index, "ETH");
         console.log(tx.hash);
     });

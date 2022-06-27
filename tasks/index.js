@@ -28,7 +28,6 @@ require('./auctions_info.js');
 require('./router_info.js');
 require('./buy_debt.js');
 require('./buy_surplus.js');
-require('./set_price.js');
 require('./prices.js');
 require('./claim_debt.js');
 require('./dispose_debt.js');
