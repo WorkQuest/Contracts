@@ -36,8 +36,8 @@
   },
   "proxies": [
     {
-      "address": "0xB9E0E9fB14D8891ee1Cbe3C107107B352a3F2fe7",
-      "txHash": "0xd5c80f4820ffe305fe90ede636ad9a85082a163e9daaa5ec05a23b7037231822",
+      "address": "0xe89508D74579A06A65B907c91F697CF4F8D9Fac7",
+      "txHash": "0x7d9a170b316a40cb7cfb8202b401e09fcb5a566649ed11d424141697cab5c2ff",
       "kind": "transparent"
     },
     {
