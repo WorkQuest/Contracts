@@ -51,7 +51,7 @@ function createNetworkConfig(network) {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
     gas: "auto",
-    gasPrice: 80000000000,
+    gasPrice: 5000000000,
     url: url
   };
 }
@@ -108,7 +108,7 @@ module.exports = {
       url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/polygon/mainnet`,
       chainId: 137,
       gas: "auto",
-      gasPrice: 5000000000,
+      gasPrice: 60000000000,
       accounts: { mnemonic: mnemonic }
     },
     mainnet: createNetworkConfig('mainnet'),

@@ -16,11 +16,8 @@ async function main() {
     if (!process.env.CHAIN_ID) {
         throw new Error(`Please set your CHAIN_ID in a .env-${network} file`);
     }
-    if (!process.env.BRIDGE_POOL) {
-        throw new Error(`Please set your BRIDGE_POOL in a .env-${network} file`);
-    }
-    if (!process.env.BRIDGE_VALIDATOR) {
-        throw new Error(`Please set your BRIDGE_VALIDATOR in a .env-${network} file`);
+    if (!process.env.STABLE_BRIDGE_TOKEN_RECEIVER) {
+        throw new Error(`Please set your STABLE_BRIDGE_TOKEN_RECEIVER in a .env-${network} file`);
     }
 
     console.log("Deploying...");
@@ -29,8 +26,7 @@ async function main() {
     const bridge = await upgrades.deployProxy(Bridge,
         [
             process.env.CHAIN_ID,
-            process.env.BRIDGE_POOL,
-            process.env.BRIDGE_VALIDATOR
+            process.env.STABLE_BRIDGE_TOKEN_RECEIVER
         ], { initializer: 'initialize', kind: "transparent" });
     console.log("WorkQuest Bridge has been deployed to:", bridge.address);
 
