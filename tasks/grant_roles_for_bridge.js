@@ -63,7 +63,7 @@ task("grant_roles_for_bridge", "Grant roles for bridge in tokens and pool")
 
         console.log("Grant validator role in bridge:", BRIDGE_ADDRESS);
         const bridge = await hre.ethers.getContractAt("WQBridge", BRIDGE_ADDRESS);
-        await bridge.grantRole(await bridge.VALIDATOR_ROLE(), process.env.BRIDGE_VALIDATOR);
+        // await bridge.grantRole(await bridge.VALIDATOR_ROLE(), process.env.BRIDGE_VALIDATOR);
         console.log(await bridge.hasRole(await bridge.VALIDATOR_ROLE(), process.env.BRIDGE_VALIDATOR));
         console.log("Done");
     });

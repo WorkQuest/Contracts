@@ -14,7 +14,7 @@ task("check_bridge_tokens", "Check token settings in bridge")
         }
 
         const bridge = await hre.ethers.getContractAt("WQBridge", process.env.BRIDGE);
-        let token_symbols = ['ETH', 'BNB', 'WQT'];
+        let token_symbols = ['ETH', 'BNB', 'WQT', 'USDT'];
 
         console.log("                    token                    ", "enabled", "native", "lockable");
         for (let i = 0; i < token_symbols.length; i++) {
