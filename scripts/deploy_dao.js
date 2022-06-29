@@ -32,6 +32,9 @@ async function main() {
   if (!process.env.DAO_FEE) {
     throw new Error(`Please set your DAO_FEE in a .env-${network} file`);
   }
+  if (!process.env.DAO_FEE_RECEIVER) {
+    throw new Error(`Please set your DAO_FEE_RECEIVER in a .env-${network} file`);
+  }
   console.log("Deploying...");
   const DAOBallot = await hre.ethers.getContractFactory("WQDAOVoting");
   const dao_ballot = await upgrades.deployProxy(DAOBallot,
@@ -41,7 +44,8 @@ async function main() {
       process.env.DAO_VOTING_PERIOD,
       process.env.DAO_PROPOSAL_THRESHOLD,
       process.env.DAO_VOTE_THRESHOLD,
-      process.env.DAO_FEE
+      process.env.DAO_FEE,
+      process.env.DAO_FEE_RECEIVER
     ], { initializer: 'initialize', kind: 'uups' })
   console.log("DAO Ballot has been deployed to:", dao_ballot.address);
 

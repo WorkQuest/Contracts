@@ -174,7 +174,8 @@ contract WQDAOVoting is
         uint256 _votingPeriod,
         uint256 _proposalThreshold,
         uint256 _voteThreshold,
-        uint256 _fee
+        uint256 _fee,
+        address payable _feeReceiver
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -189,6 +190,7 @@ contract WQDAOVoting is
         proposalThreshold = _proposalThreshold;
         voteThreshold = _voteThreshold;
         fee = _fee;
+        feeReceiver = _feeReceiver;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -636,18 +638,22 @@ contract WQDAOVoting is
         votingPeriod = _votingPeriod;
     }
 
-    function setProposalThreshold(uint256 amount)
+    function setThresholds(uint256 _proposalThreshold, uint256 _voteThreshold)
         external
         onlyRole(ADMIN_ROLE)
     {
-        proposalThreshold = amount;
-    }
-
-    function setVoteThreshold(uint256 amount) external onlyRole(ADMIN_ROLE) {
-        voteThreshold = amount;
+        proposalThreshold = _proposalThreshold;
+        voteThreshold = _voteThreshold;
     }
 
     function setFee(uint256 _fee) external onlyRole(ADMIN_ROLE) {
         fee = _fee;
+    }
+
+    function setFeeReceiver(address payable _feeReceiver)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        feeReceiver = _feeReceiver;
     }
 }
