@@ -11,23 +11,10 @@ interface WQPriceOracleInterface {
         view
         returns (uint256);
 
-    /**
-     * @dev Set price of token in USD
-     * @param nonce Serial number of transaction
-     * @param symbol Symbol of token
-     * @param price Price of token in USD
-     * @param v V of signature
-     * @param r R of signature
-     * @param s S of signature
-     */
-    function setTokenPriceUSD(
-        uint256 nonce,
-        uint256 price,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        string memory symbol
-    ) external;
+    function getTokenMaxRatio(string memory symbol)
+        external
+        view
+        returns (uint256);
 
     /**
      * @dev Set price of token in USD

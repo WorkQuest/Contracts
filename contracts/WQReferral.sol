@@ -230,14 +230,4 @@ contract WQReferral is
         userAccount.referredCount = 0;
         userAccount.paid = false;
     }
-
-    function setEarned(address referral) external onlyRole(ADMIN_ROLE) {
-        Account storage userAccount = referrals[referral];
-        userAccount.earnedAmount = 1000000000000000000000;
-        userAccount.paid = true;
-        uint256 bonusAmount = (referralBonus * 1e18) /
-            oracle.getTokenPriceUSD('WQT');
-        referrals[userAccount.affiliat].rewardTotal += bonusAmount;
-        emit PaidReferral(referral, userAccount.affiliat, bonusAmount);
-    }
 }

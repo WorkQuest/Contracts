@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 
 contract WQPriceOracle is
     Initializable,
@@ -12,12 +12,13 @@ contract WQPriceOracle is
     UUPSUpgradeable
 {
     using ECDSAUpgradeable for bytes32;
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
-    bytes32 public constant SERVICE_ROLE = keccak256("SERVICE_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+    bytes32 public constant SERVICE_ROLE = keccak256('SERVICE_ROLE');
 
     struct TokenInfo {
         uint256 price;
+        uint256 maxRatio;
         uint256 updatedTime;
         bool enabled;
     }
@@ -65,58 +66,31 @@ contract WQPriceOracle is
      * @param symbol symbol of token
      */
     function getTokenPriceUSD(string calldata symbol)
-        public
+        external
         view
         returns (uint256)
     {
         TokenInfo storage token = tokens[symbol];
-        require(token.enabled, "WQPriceOracle: Token is disabled");
+        require(token.enabled, 'WQPriceOracle: Token is disabled');
         require(
             block.timestamp <= token.updatedTime + validTime,
-            "WQPriceOracle: Price is outdated"
+            'WQPriceOracle: Price is outdated'
         );
         return token.price;
     }
 
-    /**
-     * @dev Set price of token in USD
-     * @param timestamp Serial number of transaction
-     * @param symbol Symbol of token
-     * @param price Price of token in USD
-     * @param v V of signature
-     * @param r R of signature
-     * @param s S of signature
-     */
-    function setTokenPriceUSD(
-        uint256 timestamp,
-        uint256 price,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        string calldata symbol
-    ) external {
-        require(tokens[symbol].enabled, "WQPriceOracle: Token is disabled");
+    function getTokenMaxRatio(string calldata symbol)
+        external
+        view
+        returns (uint256)
+    {
+        TokenInfo storage token = tokens[symbol];
+        require(token.enabled, 'WQPriceOracle: Token is disabled');
         require(
-            timestamp > lastNonce,
-            "WQPriceOracle: Invalid nonce value, must be greater that lastNonce"
+            block.timestamp <= token.updatedTime + validTime,
+            'WQPriceOracle: Price is outdated'
         );
-        require(
-            block.timestamp >= tokens[symbol].updatedTime + validTime / 2,
-            "WQPriceOracle: Price is not outdated yet"
-        );
-        require(
-            hasRole(
-                SERVICE_ROLE,
-                keccak256(abi.encodePacked(timestamp, price, symbol))
-                    .toEthSignedMessageHash()
-                    .recover(v, r, s)
-            ),
-            "WQPriceOracle: validator is not a service"
-        );
-        tokens[symbol].price = price;
-        tokens[symbol].updatedTime = block.timestamp;
-        lastNonce = timestamp;
-        emit Priced(timestamp, price, block.timestamp, symbol);
+        return token.maxRatio;
     }
 
     /**
@@ -133,30 +107,34 @@ contract WQPriceOracle is
         uint8 v,
         bytes32 r,
         bytes32 s,
-        uint256[] calldata prices,
-        string[] calldata symbols
+        uint256[] memory prices,
+        uint256[] memory maxRatio,
+        string[] memory symbols
     ) external {
         require(
-            prices.length == symbols.length,
-            "WQPriceOracle: Array lengths are not equals"
-        );
-        require(
             timestamp > lastNonce,
-            "WQPriceOracle: Invalid nonce value, must be greater that lastNonce"
+            'WQPriceOracle: Invalid nonce value, must be greater that lastNonce'
         );
-        bytes memory allsymbols;
-        for (uint256 i = 0; i < symbols.length; i++) {
-            allsymbols = abi.encodePacked(allsymbols, symbols[i]);
+        {
+            bytes memory allsymbols;
+            for (uint256 i = 0; i < symbols.length; i++) {
+                allsymbols = abi.encodePacked(allsymbols, symbols[i]);
+            }
+            require(
+                hasRole(
+                    SERVICE_ROLE,
+                    keccak256(
+                        abi.encodePacked(
+                            timestamp,
+                            prices,
+                            maxRatio,
+                            allsymbols
+                        )
+                    ).toEthSignedMessageHash().recover(v, r, s)
+                ),
+                'WQPriceOracle: validator is not a service'
+            );
         }
-        require(
-            hasRole(
-                SERVICE_ROLE,
-                keccak256(abi.encodePacked(timestamp, prices, allsymbols))
-                    .toEthSignedMessageHash()
-                    .recover(v, r, s)
-            ),
-            "WQPriceOracle: validator is not a service"
-        );
         lastNonce = timestamp;
         for (uint256 i = 0; i < prices.length; i++) {
             if (
@@ -165,6 +143,7 @@ contract WQPriceOracle is
                 tokens[symbols[i]].updatedTime + validTime / 2
             ) {
                 tokens[symbols[i]].price = prices[i];
+                tokens[symbols[i]].maxRatio = maxRatio[i];
                 tokens[symbols[i]].updatedTime = block.timestamp;
                 emit Priced(timestamp, prices[i], block.timestamp, symbols[i]);
             }
