@@ -30,7 +30,7 @@ task("config_referral", "Config referral")
         let referral = await ethers.getContractAt("WQReferral", process.env.REFERRAL);
         console.log("Try to config referral...");
         await referral.setFactory(process.env.WORK_QUEST_FACTORY);
-        await web3.eth.sendTransaction({ from: accounts[0].address, to: referral.address, value: "100000000000000000000000" });
+        // await web3.eth.sendTransaction({ from: accounts[0].address, to: referral.address, value: "100000000000000000000000" });
         // await referral.setOracle(process.env.PRICE_ORACLE);
         // await referral.setReferralBonus(process.env.REFERRAL_REWARD);
         // await referral.setEarnedThreshold(process.env.REFERRAL_EARNED_THRESHOLD);
