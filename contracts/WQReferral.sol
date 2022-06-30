@@ -8,7 +8,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import './WQTInterface.sol';
-import './WQPriceOracleInterface.sol';
+import './stablecoin/WQPriceOracleInterface.sol';
 import './WorkQuestFactory.sol';
 
 contract WQReferral is
