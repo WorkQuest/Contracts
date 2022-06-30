@@ -8,7 +8,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import './WQPriceOracleInterface.sol';
+import './stablecoin/WQPriceOracleInterface.sol';
 import './WQFundInterface.sol';
 
 contract WQBorrowing is

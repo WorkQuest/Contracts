@@ -38,8 +38,6 @@ contract WorkQuest {
     bytes32 public jobHash;
     /// @notice Cost of job
     uint256 public cost;
-    /// @notice Forfeit amount if worker didn't  job
-    uint256 public forfeit;
     /// @notice Address of worker
     address public worker;
     /// @notice Current status of job
@@ -111,7 +109,7 @@ contract WorkQuest {
 
     /**
      * @notice Get info about contract state
-     * @dev Return parameters jobHash, cost, forfeit, employer, worker, status, deadline
+     * @dev Return parameters jobHash, cost, employer, worker, status, deadline
      */
     function getInfo()
         public
@@ -119,7 +117,6 @@ contract WorkQuest {
         returns (
             bytes32 _jobHash,
             uint256 _cost,
-            uint256 _forfeit,
             address _employer,
             address _worker,
             address _factory,
@@ -130,7 +127,6 @@ contract WorkQuest {
         return (
             jobHash,
             cost,
-            forfeit,
             employer,
             worker,
             address(factory),
@@ -230,9 +226,16 @@ contract WorkQuest {
     function arbitration() external payable {
         require(
             (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
+                (
+                    msg.sender == employer &&
+                        status == JobStatus.InProgress &&
+                        deadline > 0
+                        ? block.timestamp > deadline
+                        : false
+                ) ||
                 (msg.sender == worker &&
                     status == JobStatus.WaitJobVerify &&
-                    block.timestamp > timeDone + 1 minutes), // FIXME: 3 days
+                    block.timestamp > timeDone + 3 days),
             errMsg
         );
         require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');
@@ -288,7 +291,7 @@ contract WorkQuest {
     }
 
     function _transferFunds() internal {
-        uint256 newCost = cost - forfeit;
+        uint256 newCost = cost;
         uint256 comission = (newCost * factory.feeWorker()) / 1e18;
         uint256 pensionContribute = (newCost *
             WQPensionFundInterface(factory.pensionFund()).getFee(worker)) /
@@ -314,9 +317,6 @@ contract WorkQuest {
                 worker,
                 pensionContribute
             );
-        }
-        if (forfeit > 0) {
-            IERC20(factory.wusd()).safeTransfer(employer, forfeit);
         }
         WQReferralInterface(factory.referral()).calcReferral(worker, newCost);
         WQReferralInterface(factory.referral()).calcReferral(employer, newCost);
