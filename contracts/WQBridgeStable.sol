@@ -10,7 +10,6 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import './WQBridgeTokenInterface.sol';
-import './WQBridgePool.sol';
 
 contract WQBridgeStable is
     Initializable,
@@ -22,19 +21,6 @@ contract WQBridgeStable is
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address payable;
 
-    /// @notice Statuses of a swap
-    enum State {
-        Empty,
-        Initialized,
-        Redeemed
-    }
-
-    /// @notice Swap info structure
-    struct SwapData {
-        uint256 nonce;
-        State state;
-    }
-
     /**
      * @notice Settings of tokens
      * @return token Address of token
@@ -42,20 +28,17 @@ contract WQBridgeStable is
      * @return naive Is true if native coin, is false if ERC20 token
      */
     struct TokenSettings {
-        // uint256 minAmount;
-        // uint256 maxAmount;
+        uint256 minAmount;
+        uint256 maxAmount;
+        uint256 factor;
         address token;
         bool enabled;
-        bool native;
-        bool lockable;
     }
 
     /// @notice Admin role constant
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     /// @notice Contract upgrader role constant
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
-    /// @notice Validator role constant
-    bytes32 public constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
 
     /// @notice 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
     uint256 public chainId;
@@ -69,7 +52,7 @@ contract WQBridgeStable is
     mapping(string => TokenSettings) public tokens;
 
     /// @notice Map of message hash to swap state
-    mapping(bytes32 => SwapData) public swaps;
+    mapping(bytes32 => bool) public swaps;
 
     /**
      * @dev Emitted when swap created
@@ -99,11 +82,10 @@ contract WQBridgeStable is
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialize(
-        uint256 _chainId,
-        address payable _pool,
-        address validator
-    ) external initializer {
+    function initialize(uint256 _chainId, address payable _pool)
+        external
+        initializer
+    {
         __AccessControl_init();
         __Pausable_init();
         __UUPSUpgradeable_init();
@@ -111,8 +93,6 @@ contract WQBridgeStable is
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(VALIDATOR_ROLE, ADMIN_ROLE);
-        _setupRole(VALIDATOR_ROLE, validator);
 
         chainId = _chainId; // 1 - WQ, 2 - ETH, 3 - BSC     // TO_ASK why not standart numbers for chains?
         pool = _pool;
@@ -147,10 +127,10 @@ contract WQBridgeStable is
             token.enabled,
             'WorkQuest Bridge: This token not registered or disabled'
         );
-        // require(
-        //     amount >= token.minAmount && amount <= token.maxAmount,
-        //     'WorkQuest Bridge: Invalid amount'
-        // );
+        require(
+            amount >= token.minAmount && amount <= token.maxAmount,
+            'WorkQuest Bridge: Invalid amount'
+        );
         bytes32 message = keccak256(
             abi.encodePacked(
                 nonce,
@@ -163,44 +143,26 @@ contract WQBridgeStable is
             )
         );
         require(
-            swaps[message].state == State.Empty,
+            !swaps[message],
             'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
         );
 
-        swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
-        if (token.lockable) {
-            IERC20Upgradeable(token.token).safeTransferFrom(
-                msg.sender,
-                pool,
-                amount
-            );
-        } else if (token.native) {
-            require(
-                msg.value == amount,
-                'WorkQuest Bridge: Amount value is not equal to transfered funds'
-            );
-            pool.sendValue(amount);
-        } else {
-            WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
-        }
+        swaps[message] = true;
+        IERC20Upgradeable(token.token).safeTransferFrom(
+            msg.sender,
+            pool,
+            amount
+        );
         emit SwapInitialized(
             block.timestamp,
             recipient,
-            amount,
+            amount / token.factor,
             chainId,
             chainTo,
             nonce,
             userId,
             symbol
         );
-    }
-
-    /**
-     * @dev Returns swap state.
-     * @param message Hash of swap parameters
-     */
-    function getSwapState(bytes32 message) external view returns (State state) {
-        return swaps[message].state;
     }
 
     /**
@@ -228,16 +190,17 @@ contract WQBridgeStable is
      * @notice Update token settings
      * @param token Address of token. Ignored in swap and redeem when native is true.
      * @param enabled True - enabled, false - disabled
-     * @param native If money is native for this chain set true
+     * @param factor The token factor to 18 decimals
+     * @param minAmount Minimum amount of tokens
+     * @param maxAmount Maximum amount of tokens
      * @param symbol Symbol of token
      */
     function updateToken(
         address token,
         bool enabled,
-        bool native,
-        bool lockable,
-        // uint256 minAmount,
-        // uint256 maxAmount,
+        uint256 factor,
+        uint256 minAmount,
+        uint256 maxAmount,
         string memory symbol
     ) public onlyRole(ADMIN_ROLE) {
         require(
@@ -245,12 +208,11 @@ contract WQBridgeStable is
             'WorkQuest Bridge: Symbol length must be greater than 0'
         );
         tokens[symbol] = TokenSettings({
-            // minAmount: minAmount,
-            // maxAmount: maxAmount,
+            minAmount: minAmount,
+            maxAmount: maxAmount,
             token: token,
             enabled: enabled,
-            native: native,
-            lockable: lockable
+            factor: factor
         });
     }
 
