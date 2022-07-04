@@ -30,15 +30,13 @@ interface WQRouterInterface {
         address user,
         uint256 collateral,
         uint256 price,
-        uint256 priceIndex,
         uint256 index,
-        uint256 newPriceIndex,
         uint256 newIndex,
         string calldata symbol
     ) external;
 
     function buyCollateral(
-        uint256 priceIndex,
+        address buyer,
         uint256 index,
         uint256 amount,
         uint256 fee,

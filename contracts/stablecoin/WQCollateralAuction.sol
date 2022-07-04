@@ -8,7 +8,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import './WQPriceOracle.sol';
+import './WQPriceOracleInterface.sol';
 import './WQRouterInterface.sol';
 
 contract WQCollateralAuction is
@@ -19,6 +19,7 @@ contract WQCollateralAuction is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant SERVICE_ROLE = keccak256('SERVICE_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
     uint256 constant YEAR = 31536000;
 
@@ -35,15 +36,14 @@ contract WQCollateralAuction is
         uint256 amount;
         uint256 ratio;
         uint256 created;
-        address buyer;
         uint256 saleAmount;
-        uint256 endCost;
+        uint256 endPrice;
         uint256 endTime;
         LotStatus status;
     }
 
     /// @dev Address of price oracle
-    WQPriceOracle public oracle;
+    WQPriceOracleInterface public oracle;
     /// @dev Address of router
     WQRouterInterface public router;
     /// @dev Address of collateral token
@@ -57,59 +57,35 @@ contract WQCollateralAuction is
     uint256 public lowerBoundCost;
     /// @dev Duration of collaterall auction
     uint256 public auctionDuration;
-    /// @dev Step of price indexes
-    uint256 public priceIndexStep;
 
     /// @dev Total amount of collateral auctioned
     uint256 public totalAuctioned;
-    /// @dev Mapping priceIndex to array of lots
-    mapping(uint256 => LotInfo[]) public lots;
-    /// @dev Mapping priceIndex to index of array of prices
-    mapping(uint256 => uint256) public priceIndexes;
-    /// @dev Array of all price indexes
-    uint256[] public prices;
+    /// @dev Array of lots
+    LotInfo[] public lots;
 
     /**
      * @dev Event emitted when dutch auction started
-     * @param priceIndex priceIndex value of lot
      * @param index index value of lot
      * @param amount Amount of tokens purchased
      * @param endCost Cost of lot (WUSD)
      */
-    event AuctionStarted(
-        uint256 priceIndex,
-        uint256 index,
-        uint256 amount,
-        uint256 endCost
-    );
+    event AuctionStarted(uint256 index, uint256 amount, uint256 endCost);
 
     /**
      * @dev Event emitted when lot buyed
-     * @param priceIndex priceIndex value of lot
      * @param index index value of lot
      * @param amount Amount of tokens purchased
      * @param cost Cost of lot (WUSD)
      */
-    event LotBuyed(
-        uint256 priceIndex,
-        uint256 index,
-        uint256 amount,
-        uint256 cost
-    );
+    event LotBuyed(uint256 index, uint256 amount, uint256 cost);
 
     /**
      * @dev Event emitted when lot cancelled (after end of auction time)
-     * @param priceIndex priceIndex value of lot
      * @param index index value of lot
      * @param amount Amount of tokens (0)
      * @param cost Cost of lot (0)
      */
-    event LotCanceled(
-        uint256 priceIndex,
-        uint256 index,
-        uint256 amount,
-        uint256 cost
-    );
+    event LotCanceled(uint256 index, uint256 amount, uint256 cost);
 
     modifier onlyRouter() {
         require(
@@ -129,8 +105,7 @@ contract WQCollateralAuction is
         uint256 _liquidateThreshold,
         uint256 _upperBoundCost,
         uint256 _lowerBoundCost,
-        uint256 _auctionDuration,
-        uint256 _priceIndexStep
+        uint256 _auctionDuration
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -138,15 +113,15 @@ contract WQCollateralAuction is
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
+        _setRoleAdmin(SERVICE_ROLE, ADMIN_ROLE);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         token = IERC20MetadataUpgradeable(_token);
-        oracle = WQPriceOracle(_oracle);
+        oracle = WQPriceOracleInterface(_oracle);
         router = WQRouterInterface(_router);
         liquidateThreshold = _liquidateThreshold;
         upperBoundCost = _upperBoundCost;
         lowerBoundCost = _lowerBoundCost;
         auctionDuration = _auctionDuration;
-        priceIndexStep = _priceIndexStep;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -166,124 +141,97 @@ contract WQCollateralAuction is
         uint256 price,
         uint256 amount,
         uint256 ratio
-    ) external onlyRouter returns (uint256, uint256) {
-        uint256 priceIndex = getPriceIndex(price);
-        if (lots[priceIndex].length == 0) {
-            prices.push(priceIndex);
-            priceIndexes[priceIndex] = prices.length - 1;
-        }
-        lots[priceIndex].push(
+    ) external onlyRouter returns (uint256) {
+        lots.push(
             LotInfo({
                 user: user,
                 price: price,
                 amount: amount,
                 ratio: ratio,
                 created: block.timestamp,
-                buyer: address(0),
                 saleAmount: 0,
-                endCost: 0,
+                endPrice: 0,
                 endTime: 0,
                 status: LotStatus.New
             })
         );
-        return (priceIndex, lots[priceIndex].length - 1);
+        return lots.length - 1;
     }
 
     /**
      * @dev Service function for router
      * @dev Called when user claimed extra debt when price increased or disposed debt when price decreased
-     * @param priceIndex Price index value of lot
      * @param index Index value of lot
      */
     function moveLot(
-        uint256 priceIndex,
         uint256 index,
         uint256 newPrice,
         uint256 newAmount
-    ) external onlyRouter returns (uint256, uint256) {
-        uint256 newPriceIndex = getPriceIndex(newPrice);
-        lots[priceIndex][index].price = newPrice;
-        lots[priceIndex][index].amount = newAmount;
-        if (priceIndex != newPriceIndex) {
-            if (lots[newPriceIndex].length == 0) {
-                prices.push(newPriceIndex);
-                priceIndexes[newPriceIndex] = prices.length - 1;
-            }
-            lots[newPriceIndex].push(lots[priceIndex][index]);
-            _removeLot(priceIndex, index);
-            return (newPriceIndex, lots[newPriceIndex].length - 1);
-        }
-        return (priceIndex, index);
+    ) external onlyRouter returns (uint256) {
+        lots[index].price = newPrice;
+        lots[index].amount = newAmount;
+        return index;
     }
 
     /**
      * @dev Service function for router. Called when user gives WUSD and takes part of collateral tokens
-     * @param priceIndex Price index value of lot
      * @param index Index value of lot
      * @param collaterralPart Decreased amount of collateral part
      */
-    function decreaseLotAmount(
-        uint256 priceIndex,
-        uint256 index,
-        uint256 collaterralPart
-    ) external onlyRouter returns (uint256) {
-        lots[priceIndex][index].amount -= collaterralPart;
-        uint256 remain = lots[priceIndex][index].amount;
+    function decreaseLotAmount(uint256 index, uint256 collaterralPart)
+        external
+        onlyRouter
+        returns (uint256)
+    {
+        lots[index].amount -= collaterralPart;
+        uint256 remain = lots[index].amount;
         if (remain == 0) {
-            _removeLot(priceIndex, index);
+            _removeLot(index);
         }
         return remain;
     }
 
-    function _removeLot(uint256 priceIndex, uint256 index) internal {
-        uint256 lastIndex = lots[priceIndex].length - 1;
+    function _removeLot(uint256 index) internal {
+        uint256 lastIndex = lots.length - 1;
         if (lastIndex != index) {
             router.moveUserLot(
-                lots[priceIndex][lastIndex].user,
-                lots[priceIndex][lastIndex].amount,
-                lots[priceIndex][lastIndex].price,
-                priceIndex,
+                lots[lastIndex].user,
+                lots[lastIndex].amount,
+                lots[lastIndex].price,
                 lastIndex,
-                priceIndex,
                 index,
                 token.symbol()
             );
         }
-        lots[priceIndex][index] = lots[priceIndex][lastIndex];
-        lots[priceIndex].pop();
-        if (lots[priceIndex].length == 0) {
-            _removePriceIndex(priceIndex);
-        }
+        lots[index] = lots[lastIndex];
+        lots.pop();
     }
 
     /**
      * @dev Get list of lots
-     * @param price Price value
      * @param offset Offset value
      * @param limit Limit value
      */
-    function getLots(
-        uint256 price,
-        uint256 offset,
-        uint256 limit
-    ) external view returns (LotInfo[] memory page) {
-        uint256 priceIndex = getPriceIndex(price);
-        if (limit > lots[priceIndex].length - offset) {
-            limit = lots[priceIndex].length - offset;
+    function getLots(uint256 offset, uint256 limit)
+        external
+        view
+        returns (LotInfo[] memory page)
+    {
+        if (limit > lots.length - offset) {
+            limit = lots.length - offset;
         }
         page = new LotInfo[](limit);
         for (uint256 i = 0; i < limit; i++) {
-            page[i] = lots[priceIndex][offset + i];
+            page[i] = lots[offset + i];
         }
         return page;
     }
 
     /**
      * @dev Getter of lot for router contract
-     * @param priceIndex Price index value
      * @param index Index value
      */
-    function getLotInfo(uint256 priceIndex, uint256 index)
+    function getLotInfo(uint256 index)
         external
         view
         returns (
@@ -294,58 +242,24 @@ contract WQCollateralAuction is
             uint256
         )
     {
-        LotInfo storage lot = lots[priceIndex][index];
+        LotInfo storage lot = lots[index];
         return (lot.amount, lot.price, lot.ratio, lot.created, lot.saleAmount);
     }
 
     /**
      * @dev Getter of lot for router contract
-     * @param priceIndex Price index value
      * @param index Index value
      */
-    function getLotStatus(uint256 priceIndex, uint256 index)
-        external
-        view
-        returns (uint8)
-    {
-        return uint8(lots[priceIndex][index].status);
+    function getLotStatus(uint256 index) external view returns (uint8) {
+        return uint8(lots[index].status);
     }
 
     /**
      * @dev Getter of lot for router contract
-     * @param priceIndex Price index value
      * @param index Index value
      */
-    function getLotUsers(uint256 priceIndex, uint256 index)
-        external
-        view
-        returns (address, address)
-    {
-        return (lots[priceIndex][index].user, lots[priceIndex][index].buyer);
-    }
-
-    /**
-     * @dev Get price index from price
-     * @param price Price value
-     */
-    function getPriceIndex(uint256 price) public view returns (uint256) {
-        return (price / priceIndexStep) * priceIndexStep;
-    }
-
-    /**
-     * @dev Remove priceIndex from mapping priceIndexes and from prices array
-     * @param priceIndex Index
-     */
-    function _removePriceIndex(uint256 priceIndex) internal {
-        uint256 lastPrice = prices[prices.length - 1];
-        uint256 removedIndex = priceIndexes[priceIndex];
-        // Defence of remove zero element of prices array
-        if (prices[removedIndex] == priceIndex) {
-            prices[removedIndex] = lastPrice;
-            prices.pop();
-            priceIndexes[lastPrice] = removedIndex;
-            delete priceIndexes[priceIndex];
-        }
+    function getLotUsers(uint256 index) external view returns (address) {
+        return lots[index].user;
     }
 
     /**
@@ -367,47 +281,41 @@ contract WQCollateralAuction is
 
     /**
      * @dev Start or restart collateral auction
-     * @param priceIndex Price index value
      * @param index Index value
      * @param amount Amount of tokens purchased
      */
-    function startAuction(
-        uint256 priceIndex,
-        uint256 index,
-        uint256 amount
-    ) external nonReentrant {
+    function startAuction(uint256 index, uint256 amount) external nonReentrant {
         uint256 price = oracle.getTokenPriceUSD(token.symbol());
         totalAuctioned += amount;
         require(
             totalAuctioned <= getLiquidatedCollaterallAmount(),
             'WQAuction: Amount of tokens purchased is greater than the amount liquidated'
         );
-        LotInfo storage lot = lots[priceIndex][index];
+        LotInfo storage lot = lots[index];
         require(lot.status == LotStatus.New, 'WQAuction: Status is not New');
-        uint256 collateralRatio = (price * lot.ratio) / lot.price;
+        uint256 curRatio = (price * lot.ratio) / lot.price;
         require(
-            collateralRatio < liquidateThreshold && collateralRatio >= 1e18,
+            curRatio < liquidateThreshold && curRatio >= 1e18,
             'WQAuction: This lot is not available for sale'
         );
+        //HACK: strict compare for liquidate collateral by owner
         require(
-            amount <= lot.amount,
+            amount < (lot.amount * 1e18) / curRatio,
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
         lot.saleAmount = amount;
-        uint256 factor = 10**(18 - token.decimals());
-        lot.endCost = (price * amount * factor) / 1e18;
+        lot.endPrice = price;
         lot.endTime = block.timestamp + auctionDuration;
         lot.status = LotStatus.Auctioned;
-        emit AuctionStarted(priceIndex, index, amount, lot.endCost);
+        emit AuctionStarted(index, amount, lot.endPrice);
     }
 
     /**
      * @dev Buy collateral lot
-     * @param priceIndex Price index value
      * @param index Index value
      */
-    function buyLot(uint256 priceIndex, uint256 index) external nonReentrant {
-        LotInfo storage lot = lots[priceIndex][index];
+    function buyLot(uint256 index) external nonReentrant {
+        LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
             'WQAuction: Lot is not auctioned'
@@ -416,76 +324,45 @@ contract WQCollateralAuction is
             block.timestamp <= lot.endTime,
             'WQAuction: Auction time is over'
         );
-        uint256 cost = _getCurrentLotCost(lot);
-        uint256 fee = (cost *
+        uint256 cost = (lot.saleAmount *
+            10**(18 - token.decimals()) *
+            _getCurrentLotPrice(lot)) / 1e18;
+        uint256 fee = (lot.saleAmount *
             (router.fixedRate() +
                 (router.annualInterestRate() *
                     (block.timestamp - lot.created)) /
                 YEAR)) / 1e18;
+        uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price;
         totalAuctioned -= lot.saleAmount;
-        lot.buyer = msg.sender;
-        lot.amount -= lot.saleAmount;
-        if (lot.amount > 0) {
-            lot.status = LotStatus.New;
-        } else {
-            lot.status = LotStatus.Liquidated;
-        }
-        router.buyCollateral(priceIndex, index, cost, fee, token.symbol());
-        emit LotBuyed(priceIndex, index, lot.saleAmount, cost);
+        lot.amount -= lot.saleAmount + fee;
+        lot.ratio =
+            (((lot.amount * 1e18) / curRatio - lot.saleAmount) * 1e18) /
+            (lot.amount - lot.saleAmount);
+        router.buyCollateral(msg.sender, index, cost, fee, token.symbol());
+        emit LotBuyed(index, lot.saleAmount, cost);
         lot.saleAmount = 0;
+        lot.status = LotStatus.New;
     }
 
-    function recalcLot(uint256 priceIndex, uint256 index)
+    function refundFromReserves(uint256 index)
         external
         nonReentrant
+        onlyRole(SERVICE_ROLE)
     {
-        LotInfo storage lot = lots[priceIndex][index];
-        require(
-            lot.status == LotStatus.Auctioned,
-            'WQAuction: Lot is not auctioned'
-        );
+        LotInfo storage lot = lots[index];
+        require(lot.status == LotStatus.New, 'WQAuction: Lot is not new');
         require(
             block.timestamp > lot.endTime,
-            'WQAuction: Auction time is not over yet'
+            'WQAuction: Auction time is over'
         );
-        totalAuctioned -= lot.saleAmount;
-        lot.saleAmount = 0;
-        lot.endCost = 0;
-        lot.endTime = 0;
-        lot.status = LotStatus.New;
-        uint256 price = oracle.getTokenPriceUSD(token.symbol());
-        uint256 newPriceIndex = getPriceIndex(price);
-        lot.ratio = (price * lot.ratio) / lot.price;
-        lot.price = price;
-        if (priceIndex != newPriceIndex) {
-            if (lots[newPriceIndex].length == 0) {
-                prices.push(newPriceIndex);
-                priceIndexes[newPriceIndex] = prices.length - 1;
-            }
-            lots[newPriceIndex].push(lots[priceIndex][index]);
-            _removeLot(priceIndex, index);
-            router.moveUserLot(
-                lot.user,
-                lot.amount,
-                lot.price,
-                priceIndex,
-                index,
-                newPriceIndex,
-                lots[newPriceIndex].length - 1,
-                token.symbol()
-            );
-        }
-
-        emit LotCanceled(priceIndex, index, lot.saleAmount, lot.endCost);
     }
 
     /**
      * @dev Cancel auction when time is over
-     * @param priceIndex Price index value
      * @param index Index value
      */
-    function cancelAuction(uint256 priceIndex, uint256 index) external {
-        LotInfo storage lot = lots[priceIndex][index];
+    function cancelAuction(uint256 index) external {
+        LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
             'WQAuction: Lot is not auctioned'
@@ -496,58 +373,41 @@ contract WQCollateralAuction is
         );
         totalAuctioned -= lot.saleAmount;
         lot.saleAmount = 0;
-        lot.endCost = 0;
+        lot.endPrice = 0;
         lot.endTime = 0;
         lot.status = LotStatus.New;
-        emit LotCanceled(priceIndex, index, lot.saleAmount, lot.endCost);
+        emit LotCanceled(index, lot.saleAmount, lot.endPrice);
     }
 
     /**
      * @dev Get current cost of auctioned collateral
-     * @param priceIndex Price index value
      * @param index Index value
      */
-    function getCurrentLotCost(uint256 priceIndex, uint256 index)
-        public
-        view
-        returns (uint256)
-    {
-        LotInfo storage lot = lots[priceIndex][index];
+    function getCurrentLotCost(uint256 index) public view returns (uint256) {
+        LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
             'WQAuction: This lot is not auctioned'
         );
-        return _getCurrentLotCost(lot);
+        return
+            (lot.saleAmount *
+                10**(18 - token.decimals()) *
+                _getCurrentLotPrice(lot)) / 1e18;
     }
 
-    function _getCurrentLotCost(LotInfo storage lot)
+    function _getCurrentLotPrice(LotInfo storage lot)
         internal
         view
         returns (uint256)
     {
         return
-            (lot.endCost * lowerBoundCost) /
+            (lot.endPrice * lowerBoundCost) /
             1e18 +
             ((lot.endTime - block.timestamp) *
                 (upperBoundCost - lowerBoundCost) *
-                lot.endCost) /
+                lot.endPrice) /
             auctionDuration /
             1e18;
-    }
-
-    function getPriceIndexes(uint256 offset, uint256 limit)
-        external
-        view
-        returns (uint256[] memory page)
-    {
-        if (limit > prices.length - offset) {
-            limit = prices.length - offset;
-        }
-        page = new uint256[](limit);
-        for (uint256 i = 0; i < limit; i++) {
-            page[i] = prices[offset + i];
-        }
-        return page;
     }
 
     /** Admin Functions */
@@ -557,7 +417,7 @@ contract WQCollateralAuction is
      * @param _oracle Address of price oracle
      */
     function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
-        oracle = WQPriceOracle(_oracle);
+        oracle = WQPriceOracleInterface(_oracle);
     }
 
     /**
@@ -612,13 +472,5 @@ contract WQCollateralAuction is
         onlyRole(ADMIN_ROLE)
     {
         auctionDuration = duration;
-    }
-
-    /**
-     * @dev Set step of price indexes
-     * @param step Step value in wei
-     */
-    function setPriceIndexStep(uint256 step) external onlyRole(ADMIN_ROLE) {
-        priceIndexStep = step;
     }
 }

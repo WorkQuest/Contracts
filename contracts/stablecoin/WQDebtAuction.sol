@@ -5,13 +5,15 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
-import './WQPriceOracle.sol';
+import './WQPriceOracleInterface.sol';
 import './WQRouterInterface.sol';
 
 contract WQDebtAuction is
     Initializable,
     AccessControlUpgradeable,
+    PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
@@ -28,13 +30,13 @@ contract WQDebtAuction is
         uint256 index;
         uint256 amount;
         uint256 endTime;
-        address buyer;
+        uint256 price;
         LotStatus status;
         string symbol;
     }
 
     /// @dev Address of price oracle
-    WQPriceOracle public oracle;
+    WQPriceOracleInterface public oracle;
     /// @dev Address of router
     WQRouterInterface public router;
 
@@ -74,12 +76,13 @@ contract WQDebtAuction is
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
+        __Pausable_init();
         __UUPSUpgradeable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        oracle = WQPriceOracle(_oracle);
+        oracle = WQPriceOracleInterface(_oracle);
         router = WQRouterInterface(_router);
         auctionDuration = _auctionDuration;
         upperBoundCost = _upperBoundCost;
@@ -114,6 +117,7 @@ contract WQDebtAuction is
     function startAuction(uint256 amount, string calldata symbol)
         external
         nonReentrant
+        whenNotPaused
     {
         require(
             tokens[symbol] != IERC20MetadataUpgradeable(address(0)),
@@ -150,7 +154,7 @@ contract WQDebtAuction is
             index: index,
             amount: amount,
             endTime: block.timestamp + auctionDuration,
-            buyer: address(0),
+            price: oracle.getTokenPriceUSD('WQT'),
             status: LotStatus.Auctioned,
             symbol: symbol
         });
@@ -162,7 +166,11 @@ contract WQDebtAuction is
      * @dev Buy auctioned debt
      * @param index Index value
      */
-    function buyLot(uint256 index, uint256 minCost) external nonReentrant {
+    function buyLot(uint256 index, uint256 minCost)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
@@ -186,7 +194,6 @@ contract WQDebtAuction is
             );
         }
         totalAuctioned -= lot.amount;
-        lot.buyer = msg.sender;
         lot.status = LotStatus.Selled;
         router.transferDebt(msg.sender, cost, lot.amount, lot.symbol);
         emit LotBuyed(lot.index, lot.amount);
@@ -199,7 +206,7 @@ contract WQDebtAuction is
      * @dev Cancel lot
      * @param index Index value
      */
-    function cancelLot(uint256 index) external nonReentrant {
+    function cancelLot(uint256 index) external nonReentrant whenNotPaused {
         LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
@@ -242,7 +249,7 @@ contract WQDebtAuction is
             ((upperBoundCost -
                 ((upperBoundCost - lowerBoundCost) *
                     (lot.endTime - block.timestamp)) /
-                auctionDuration) * lot.amount) / oracle.getTokenPriceUSD('WQT');
+                auctionDuration) * lot.amount) / lot.price;
     }
 
     /** Admin Functions */
@@ -251,7 +258,7 @@ contract WQDebtAuction is
      * @param _oracle address of price oracle
      */
     function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
-        oracle = WQPriceOracle(_oracle);
+        oracle = WQPriceOracleInterface(_oracle);
     }
 
     /**
@@ -309,5 +316,13 @@ contract WQDebtAuction is
         onlyRole(ADMIN_ROLE)
     {
         maxLotAmountFactor = percent;
+    }
+
+    function pause() external onlyRole(ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(ADMIN_ROLE) {
+        _unpause();
     }
 }
