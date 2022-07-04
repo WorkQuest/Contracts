@@ -4,6 +4,8 @@
 pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 
 /**
@@ -12,8 +14,11 @@ import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
  * Modified version of Openzeppelin's TokenTimeLock
  */
 
-contract Lock is OwnableUpgradeable {
+contract Lock is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     using AddressUpgradeable for address payable;
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
+
     enum period {
         second,
         minute,
@@ -30,9 +35,7 @@ contract Lock is OwnableUpgradeable {
     uint256 epochLength;
 
     // beneficiary of tokens after they are released
-    address payable private _beneficiary;
-
-    uint256 periods;
+    address payable private beneficiary;
 
     //the size of periodic payments
     uint256 paymentSize;
@@ -40,15 +43,11 @@ contract Lock is OwnableUpgradeable {
     uint256 startTime = 0;
     uint256 beneficiaryBalance = 0;
 
-    event PaymentsUpdatedOnDeposit(
-        uint256 paymentSize,
-        uint256 startTime,
-        uint256 paymentsRemaining
-    );
+    event Received(uint256 amount);
     event Initialized(
         address payable beneficiary,
         uint256 duration,
-        uint256 periods
+        uint256 paymentsRemaining
     );
     event FundsReleasedToBeneficiary(
         address payable beneficiary,
@@ -56,24 +55,30 @@ contract Lock is OwnableUpgradeable {
         uint256 timeStamp
     );
     event BoxOpened();
-    event BoxClosed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
     function initialize(
-        address payable beneficiary,
+        address payable _beneficiary,
         uint256 duration,
         uint256 durationMultiple,
-        uint256 p
-    ) public onlyOwner {
-        release();
+        uint256 _paymentsRemaining,
+        uint256 _startTime,
+        uint256 _paymentSize
+    ) public onlyOwner initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+        // release();
         require(
             paymentsRemaining == 0,
             'cannot initialize during active vesting schedule'
         );
-        require(duration > 0 && p > 0, 'epoch parameters must be positive');
-        _beneficiary = beneficiary;
+        require(
+            duration > 0 && _paymentsRemaining > 0,
+            'epoch parameters must be positive'
+        );
+        beneficiary = _beneficiary;
         if (duration <= uint256(period.biannual)) {
             if (duration == uint256(period.second)) {
                 epochLength = durationMultiple * 1 seconds;
@@ -97,23 +102,20 @@ contract Lock is OwnableUpgradeable {
         } else {
             epochLength = duration; //custom value
         }
-        periods = p;
-
-        emit Initialized(beneficiary, epochLength, p);
+        paymentsRemaining = _paymentsRemaining;
+        startTime = _startTime;
+        paymentSize = _paymentSize;
+        emit Initialized(beneficiary, epochLength, _paymentsRemaining);
     }
 
-    function deposit(uint256 _startTime) external payable {
-        if (paymentsRemaining == 0) {
-            paymentsRemaining = periods;
-            startTime = _startTime;
-        }
-        paymentSize = msg.value / paymentsRemaining;
-        emit PaymentsUpdatedOnDeposit(
-            paymentSize,
-            startTime,
-            paymentsRemaining
-        );
-        emit BoxClosed();
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyOwner
+    {}
+
+    receive() external payable {
+        emit Received(msg.value);
     }
 
     /**
@@ -182,19 +184,19 @@ contract Lock is OwnableUpgradeable {
         (beneficiaryBalance, startTime, paymentsRemaining) = getElapsedReward();
     }
 
-    function changeBeneficiary(address payable beneficiary) public onlyOwner {
+    function changeBeneficiary(address payable _beneficiary) public onlyOwner {
         require(
             paymentsRemaining == 0,
             'TokenTimelock: cannot change beneficiary while token balance positive'
         );
-        _beneficiary = beneficiary;
+        beneficiary = _beneficiary;
     }
 
     /**
      * @return the beneficiary of the tokens.
      */
     function getBeneficiary() public view returns (address payable) {
-        return _beneficiary;
+        return beneficiary;
     }
 
     /**
@@ -209,10 +211,10 @@ contract Lock is OwnableUpgradeable {
         updateBeneficiaryBalance();
         uint256 amountToSend = beneficiaryBalance;
         beneficiaryBalance = 0;
-        if (amountToSend > 0) _beneficiary.sendValue(amountToSend);
+        if (amountToSend > 0) beneficiary.sendValue(amountToSend);
         if (address(this).balance == 0) emit BoxOpened();
         emit FundsReleasedToBeneficiary(
-            _beneficiary,
+            beneficiary,
             amountToSend,
             block.timestamp
         );
