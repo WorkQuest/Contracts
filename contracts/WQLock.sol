@@ -19,35 +19,23 @@ contract Lock is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
-    enum period {
-        second,
-        minute,
-        hour,
-        day,
-        week,
-        month, //inaccurate, assumes 30 day month, subject to drift
-        year,
-        quarter, //13 weeks
-        biannual //26 weeks
-    }
-
     //The length in seconds for each epoch between payments
     uint256 epochLength;
-
     // beneficiary of tokens after they are released
     address payable private beneficiary;
-
     //the size of periodic payments
     uint256 paymentSize;
-    uint256 paymentsRemaining = 0;
-    uint256 startTime = 0;
-    uint256 beneficiaryBalance = 0;
+    uint256 paymentsRemaining;
+    uint256 startTime;
+    uint256 beneficiaryBalance;
 
     event Received(uint256 amount);
     event Initialized(
         address payable beneficiary,
-        uint256 duration,
-        uint256 paymentsRemaining
+        uint256 epochLength,
+        uint256 paymentsRemaining,
+        uint256 startTime,
+        uint256 paymentSize
     );
     event FundsReleasedToBeneficiary(
         address payable beneficiary,
@@ -61,51 +49,25 @@ contract Lock is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     function initialize(
         address payable _beneficiary,
-        uint256 duration,
-        uint256 durationMultiple,
+        uint256 _epochLength,
         uint256 _paymentsRemaining,
         uint256 _startTime,
         uint256 _paymentSize
     ) public onlyOwner initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
-        // release();
-        require(
-            paymentsRemaining == 0,
-            'cannot initialize during active vesting schedule'
-        );
-        require(
-            duration > 0 && _paymentsRemaining > 0,
-            'epoch parameters must be positive'
-        );
         beneficiary = _beneficiary;
-        if (duration <= uint256(period.biannual)) {
-            if (duration == uint256(period.second)) {
-                epochLength = durationMultiple * 1 seconds;
-            } else if (duration == uint256(period.minute)) {
-                epochLength = durationMultiple * 1 minutes;
-            } else if (duration == uint256(period.hour)) {
-                epochLength = durationMultiple * 1 hours;
-            } else if (duration == uint256(period.day)) {
-                epochLength = durationMultiple * 1 days;
-            } else if (duration == uint256(period.week)) {
-                epochLength = durationMultiple * 1 weeks;
-            } else if (duration == uint256(period.month)) {
-                epochLength = durationMultiple * 30 days;
-            } else if (duration == uint256(period.year)) {
-                epochLength = durationMultiple * 52 weeks;
-            } else if (duration == uint256(period.quarter)) {
-                epochLength = durationMultiple * 13 weeks;
-            } else if (duration == uint256(period.biannual)) {
-                epochLength = 26 weeks;
-            }
-        } else {
-            epochLength = duration; //custom value
-        }
+        epochLength = _epochLength;
         paymentsRemaining = _paymentsRemaining;
         startTime = _startTime;
         paymentSize = _paymentSize;
-        emit Initialized(beneficiary, epochLength, _paymentsRemaining);
+        emit Initialized(
+            beneficiary,
+            epochLength,
+            paymentsRemaining,
+            startTime,
+            paymentSize
+        );
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -202,7 +164,7 @@ contract Lock is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /**
      * @notice Transfers tokens held by timelock to beneficiary.
      */
-    function release() public {
+    function release() external {
         // solhint-disable-next-line not-rely-on-time
         require(
             block.timestamp >= startTime,
