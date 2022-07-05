@@ -59,7 +59,7 @@ contract WQRouter is
      */
     uint256 public fixedRate;
     uint256 public annualInterestRate;
-    uint256 buyerRewards;
+    uint256 public buyerRewards;
     address feeReceiver;
 
     mapping(string => TokenSettings) public tokens;
