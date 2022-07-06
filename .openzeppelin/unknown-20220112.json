@@ -264,6 +264,31 @@
       "address": "0x403E89217FB3367E5c46F87E998293F357DA751E",
       "txHash": "0x749433597e384fb2f99927aed8c1356d4cd9b809134cdba1c851ee591c76e1b8",
       "kind": "uups"
+    },
+    {
+      "address": "0x4aEb49982e46588b388eD8A206a0a825381D1cf6",
+      "txHash": "0xb713092dd67661da5d9b852c3a26f76de229d28e3bd3f76955b5dbbb6b2f7415",
+      "kind": "uups"
+    },
+    {
+      "address": "0xB585b8c6d7c997f86eA5846213AFB874B2f5b4Ff",
+      "txHash": "0x4a74ec05693e7512c27696aea2560888bdb57888a5f6a5f208768762d933d569",
+      "kind": "uups"
+    },
+    {
+      "address": "0xfb93e71e7674114b7C19d72BB9d91f517440E028",
+      "txHash": "0x25d5240c9521b2d8caba0187af3918e3959b962153dc0e4f40116cef74ff88a0",
+      "kind": "uups"
+    },
+    {
+      "address": "0xCCE2FC7ec63108F0a802d92dc6e3935508355C0d",
+      "txHash": "0x01e3f74d8d3ad43b8d93ffe40745dd0a58090db40e78d85a19cd7bf452b21bc3",
+      "kind": "uups"
+    },
+    {
+      "address": "0x1d230D3271D95b2a6f074F016FBE341c232bd0Bc",
+      "txHash": "0x9e246d0667bdcf1faa1956f4b61679b46dc762bdd5dc5d943109020ba60dbd0e",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -13748,6 +13773,218 @@
           },
           "t_mapping(t_address,t_bool)": {
             "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        }
+      }
+    },
+    "5700d973f3da76c0745b1bffd1a9c50b76893c145d3fe610ed02e087ed791463": {
+      "address": "0x8732B34e7c8A0504BA99cBC5ea1D5D340a636Ec6",
+      "txHash": "0xb7aa62691e363a6fbfc605fc1d5cbee2eae53f632710063fb43031c0fab9c34a",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:87"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WQLock",
+            "label": "epochLength",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:23"
+          },
+          {
+            "contract": "WQLock",
+            "label": "beneficiary",
+            "type": "t_address_payable",
+            "src": "contracts/WQLock.sol:25"
+          },
+          {
+            "contract": "WQLock",
+            "label": "paymentSize",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:27"
+          },
+          {
+            "contract": "WQLock",
+            "label": "paymentsRemaining",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:28"
+          },
+          {
+            "contract": "WQLock",
+            "label": "startTime",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:29"
+          },
+          {
+            "contract": "WQLock",
+            "label": "beneficiaryBalance",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:30"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_address_payable": {
+            "label": "address payable"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        }
+      }
+    },
+    "43ce8920ea9c796d75f01164aaada5d3c7493bee836b5aeae51d3bd154dc1ff2": {
+      "address": "0x7D130E68F4E9AB1f806Ef8551B00441Dc94Cb6BB",
+      "txHash": "0xd0b8de1bd50e01d954a0ef5a2efb54a17415175c13b2cb1855e50861cc0234a7",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:87"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WQLock",
+            "label": "epochLength",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:21"
+          },
+          {
+            "contract": "WQLock",
+            "label": "beneficiary",
+            "type": "t_address_payable",
+            "src": "contracts/WQLock.sol:23"
+          },
+          {
+            "contract": "WQLock",
+            "label": "paymentSize",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:25"
+          },
+          {
+            "contract": "WQLock",
+            "label": "paymentsRemaining",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:26"
+          },
+          {
+            "contract": "WQLock",
+            "label": "startTime",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:27"
+          },
+          {
+            "contract": "WQLock",
+            "label": "beneficiaryBalance",
+            "type": "t_uint256",
+            "src": "contracts/WQLock.sol:28"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_address_payable": {
+            "label": "address payable"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
           },
           "t_bool": {
             "label": "bool"

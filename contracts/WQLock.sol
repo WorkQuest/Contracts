@@ -14,10 +14,8 @@ import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
  * Modified version of Openzeppelin's TokenTimeLock
  */
 
-contract Lock is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract WQLock is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     using AddressUpgradeable for address payable;
-    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
-    bytes32 public constant UPGRADER_ROLE = keccak256('UPGRADER_ROLE');
 
     //The length in seconds for each epoch between payments
     uint256 epochLength;
@@ -53,7 +51,7 @@ contract Lock is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint256 _paymentsRemaining,
         uint256 _startTime,
         uint256 _paymentSize
-    ) public onlyOwner initializer {
+    ) public initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
         beneficiary = _beneficiary;

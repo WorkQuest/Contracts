@@ -33,6 +33,7 @@ async function main() {
         const lock = await upgrades.deployProxy(
             Lock,
             [
+                envConfig[`LOCK_BENEFECIARY_${i}`],
                 envConfig[`LOCK_EPOCH_LENGTH_${i}`],
                 envConfig[`LOCK_PAYMENTS_REMAINING_${i}`],
                 envConfig[`LOCK_START_TIME_${i}`],
@@ -41,7 +42,7 @@ async function main() {
             { initializer: 'initialize' }
         );
         await lock.deployed();
-        console.log("Bridge pool has been deployed to:", lock.address);
+        console.log("Lock wallet has been deployed to:", lock.address);
         envConfig[`LOCK_${i}`] = lock.address;
     }
 
