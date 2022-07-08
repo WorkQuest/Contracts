@@ -300,12 +300,13 @@ contract WQCollateralAuction is
             curRatio < liquidateThreshold && curRatio >= 1e18,
             'WQAuction: This lot is not available for sale'
         );
+        lot.saleAmount = amount;
         //HACK: strict compare for liquidate collateral by owner
         require(
-            amount < (lot.amount * 1e18) / curRatio,
+            amount + getComission(index) < (lot.amount * 1e18) / curRatio,
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
-        lot.saleAmount = amount;
+
         lot.endPrice = price;
         lot.endTime = block.timestamp + auctionDuration;
         lot.status = LotStatus.Auctioned;
@@ -329,14 +330,10 @@ contract WQCollateralAuction is
         uint256 cost = (lot.saleAmount *
             10**(18 - token.decimals()) *
             _getCurrentLotPrice(lot)) / 1e18;
-        uint256 fee = (lot.saleAmount *
-            (router.fixedRate() +
-                (router.annualInterestRate() *
-                    (block.timestamp - lot.created)) /
-                YEAR)) / 1e18;
+        uint256 comission = getComission(index);
         uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price;
         totalAuctioned -= lot.saleAmount;
-        lot.amount -= lot.saleAmount + fee;
+        lot.amount -= lot.saleAmount + comission;
         lot.ratio =
             (((lot.amount * 1e18) / curRatio - lot.saleAmount) * 1e18) /
             (lot.amount - lot.saleAmount);
@@ -345,7 +342,7 @@ contract WQCollateralAuction is
             index,
             cost,
             lot.saleAmount,
-            fee,
+            comission,
             token.symbol()
         );
         emit LotBuyed(index, lot.saleAmount, cost);
@@ -381,6 +378,19 @@ contract WQCollateralAuction is
         lot.endTime = 0;
         lot.status = LotStatus.New;
         emit LotCanceled(index, lot.saleAmount, lot.endPrice);
+    }
+
+    /**
+     * @dev Get current comission of lot
+     * @param index Index value
+     */
+    function getComission(uint256 index) public view returns (uint256) {
+        return
+            (lots[index].saleAmount *
+                (router.fixedRate() +
+                    (router.annualInterestRate() *
+                        (block.timestamp - lots[index].created)) /
+                    YEAR)) / 1e18;
     }
 
     /**
