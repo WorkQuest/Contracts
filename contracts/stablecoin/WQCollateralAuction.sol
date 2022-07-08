@@ -57,9 +57,10 @@ contract WQCollateralAuction is
     uint256 public lowerBoundCost;
     /// @dev Duration of collaterall auction
     uint256 public auctionDuration;
-
     /// @dev Total amount of collateral auctioned
     uint256 public totalAuctioned;
+    /// @dev Is reserves enabled
+    bool public reservesEnabled;
     /// @dev Array of lots
     LotInfo[] public lots;
 
@@ -160,7 +161,8 @@ contract WQCollateralAuction is
 
     /**
      * @dev Service function for router
-     * @dev Called when user claimed extra debt when price increased or disposed debt when price decreased
+     * @dev Called when user claimed extra debt when price increased or
+     * @dev disposed debt when price decreased
      * @param index Index value of lot
      */
     function moveLot(
@@ -174,7 +176,8 @@ contract WQCollateralAuction is
     }
 
     /**
-     * @dev Service function for router. Called when user gives WUSD and takes part of collateral tokens
+     * @dev Service function for router.
+     * @dev Called when user gives WUSD and takes part of collateral tokens
      * @param index Index value of lot
      * @param collaterralPart Decreased amount of collateral part
      */
@@ -238,12 +241,11 @@ contract WQCollateralAuction is
             uint256,
             uint256,
             uint256,
-            uint256,
             uint256
         )
     {
         LotInfo storage lot = lots[index];
-        return (lot.amount, lot.price, lot.ratio, lot.created, lot.saleAmount);
+        return (lot.amount, lot.price, lot.ratio, lot.created);
     }
 
     /**
@@ -258,7 +260,7 @@ contract WQCollateralAuction is
      * @dev Getter of lot for router contract
      * @param index Index value
      */
-    function getLotUsers(uint256 index) external view returns (address) {
+    function getLotOwner(uint256 index) external view returns (address) {
         return lots[index].user;
     }
 
@@ -338,23 +340,25 @@ contract WQCollateralAuction is
         lot.ratio =
             (((lot.amount * 1e18) / curRatio - lot.saleAmount) * 1e18) /
             (lot.amount - lot.saleAmount);
-        router.buyCollateral(msg.sender, index, cost, fee, token.symbol());
+        router.buyCollateral(
+            msg.sender,
+            index,
+            cost,
+            lot.saleAmount,
+            fee,
+            token.symbol()
+        );
         emit LotBuyed(index, lot.saleAmount, cost);
         lot.saleAmount = 0;
         lot.status = LotStatus.New;
     }
 
-    function refundFromReserves(uint256 index)
-        external
-        nonReentrant
-        onlyRole(SERVICE_ROLE)
-    {
-        LotInfo storage lot = lots[index];
-        require(lot.status == LotStatus.New, 'WQAuction: Lot is not new');
-        require(
-            block.timestamp > lot.endTime,
-            'WQAuction: Auction time is over'
-        );
+    function enableReserves() external nonReentrant onlyRole(SERVICE_ROLE) {
+        reservesEnabled = true;
+    }
+
+    function disableReserves() external nonReentrant onlyRole(SERVICE_ROLE) {
+        reservesEnabled = false;
     }
 
     /**
