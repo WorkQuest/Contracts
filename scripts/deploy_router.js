@@ -39,7 +39,7 @@ async function main() {
             process.env.ROUTER_ANNUAL_INTEREST_RATE,
             process.env.ROUTER_FEE_RECEIVER
         ],
-        { initializer: 'initialize' }
+        { initializer: 'initialize', kind: 'uups' }
     );
     console.log("Router has been deployed to:", router.address);
 

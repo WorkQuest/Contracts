@@ -121,7 +121,7 @@ async function main() {
             process.env.USDT_AUCTION_LOWER_BOUND_COST,
             process.env.USDT_AUCTION_DURATION
         ],
-        { initializer: 'initialize' }
+        { initializer: 'initialize', kind: 'uups' }
     );
     console.log("USDT collateral auction has been deployed to:", usdt_auction.address);
     envConfig["USDT_AUCTION"] = usdt_auction.address;
