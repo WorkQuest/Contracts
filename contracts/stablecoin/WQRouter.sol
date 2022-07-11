@@ -93,6 +93,7 @@ contract WQRouter is
      */
     event Moved(
         uint256 collateral,
+        uint256 debt,
         uint256 price,
         uint256 index,
         string symbol
@@ -111,6 +112,7 @@ contract WQRouter is
         uint256 collateral,
         uint256 debt,
         uint256 price,
+        uint256 ratio,
         uint256 index,
         string symbol
     );
@@ -287,7 +289,13 @@ contract WQRouter is
         tokens[symbol].totalDebt += extraDebt;
         wusd.mint(msg.sender, extraDebt);
         tokens[symbol].collateralAuction.moveLot(index, price, lotAmount);
-        emit Moved(lotAmount, price, index, symbol);
+        emit Moved(
+            lotAmount,
+            (lotAmount * lotPrice) / collateralRatio + extraDebt,
+            price,
+            index,
+            symbol
+        );
     }
 
     /**
@@ -322,7 +330,13 @@ contract WQRouter is
         tokens[symbol].totalDebt -= returnDebt;
         tokens[symbol].collateralAuction.moveLot(index, price, lotAmount);
         wusd.burn(msg.sender, returnDebt);
-        emit Moved(lotAmount, price, index, symbol);
+        emit Moved(
+            lotAmount,
+            (lotAmount * lotPrice) / collateralRatio - returnDebt,
+            price,
+            index,
+            symbol
+        );
     }
 
     /**
@@ -339,9 +353,12 @@ contract WQRouter is
         isLotExist(index, symbol);
         uint256 price = oracle.getTokenPriceUSD(symbol);
 
-        (uint256 lotAmount, uint256 lotPrice, , ) = tokens[symbol]
-            .collateralAuction
-            .getLotInfo(index);
+        (
+            uint256 lotAmount,
+            uint256 lotPrice,
+            uint256 collateralRatio,
+
+        ) = tokens[symbol].collateralAuction.getLotInfo(index);
         require(
             tokens[symbol].collateralAuction.getLotStatus(index) == uint8(1),
             'WQRouter: Status not new'
@@ -360,7 +377,13 @@ contract WQRouter is
             addedCollateral
         );
 
-        emit Moved(lotAmount + addedCollateral, price, index, symbol);
+        emit Moved(
+            lotAmount + addedCollateral,
+            (lotPrice * lotAmount) / collateralRatio,
+            price,
+            index,
+            symbol
+        );
     }
 
     /**
@@ -378,8 +401,8 @@ contract WQRouter is
         isLotExist(index, symbol);
         uint256 price;
         uint256 collateralPart;
+        uint256 collateralRatio;
         {
-            uint256 collateralRatio;
             uint256 createdAt;
             (, price, collateralRatio, createdAt) = tokens[symbol]
                 .collateralAuction
@@ -432,6 +455,7 @@ contract WQRouter is
             collateralPart,
             debtPart,
             price,
+            collateralRatio,
             index,
             symbol
         );
@@ -441,13 +465,20 @@ contract WQRouter is
         address user,
         uint256 collateral,
         uint256 price,
+        uint256 collateralRatio,
         uint256 index,
         uint256 newIndex,
         string calldata symbol
     ) external onlyCollateralAuction(symbol) {
         collaterals[symbol][user].lots.remove(index);
         collaterals[symbol][user].lots.add(newIndex);
-        emit Moved(collateral, price, index, symbol);
+        emit Moved(
+            collateral,
+            (collateral * price) / collateralRatio,
+            price,
+            index,
+            symbol
+        );
     }
 
     /**
@@ -461,6 +492,7 @@ contract WQRouter is
         uint256 debtAmount,
         uint256 collateralAmount,
         uint256 comission,
+        uint256 ratio,
         string calldata symbol
     ) external nonReentrant onlyCollateralAuction(symbol) {
         address owner = tokens[symbol].collateralAuction.getLotOwner(index);
@@ -486,6 +518,7 @@ contract WQRouter is
             collateralAmount + comission,
             debtAmount,
             (debtAmount * 1e18) / collateralAmount,
+            ratio,
             index,
             symbol
         );

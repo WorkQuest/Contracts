@@ -201,6 +201,7 @@ contract WQCollateralAuction is
                 lots[lastIndex].user,
                 lots[lastIndex].amount,
                 lots[lastIndex].price,
+                lots[lastIndex].ratio,
                 lastIndex,
                 index,
                 token.symbol()
@@ -343,6 +344,7 @@ contract WQCollateralAuction is
             cost,
             lot.saleAmount,
             comission,
+            lot.ratio,
             token.symbol()
         );
         emit LotBuyed(index, lot.saleAmount, cost);
