@@ -1,5 +1,4 @@
 task("buy_lot", "Buy lot")
-    .addParam("price", "Price of lot")
     .addParam("index", "Index of lot")
     .addOptionalParam("eth", "Eth amount")
     .addOptionalParam("bnb", "Bnb amount")
@@ -12,7 +11,6 @@ task("buy_lot", "Buy lot")
         const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
         for (const k in envConfig) { process.env[k] = envConfig[k]; }
 
-        let amount;
         let auction;
         if (args.eth) {
             symbol = "ETH";
@@ -22,7 +20,7 @@ task("buy_lot", "Buy lot")
             symbol = "BNB";
             auction = await ethers.getContractAt("WQCollateralAuction", process.env.BNB_AUCTION);
         }
-        
-        let tx = await auction.buyLot(args.price, args.index, {value: "100421000000000000000000"});
+
+        let tx = await auction.buyLot(args.index, { value: "100421000000000000000000" });
         console.log(tx.hash);
     });

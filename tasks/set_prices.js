@@ -41,6 +41,7 @@ task("set_prices", "Set all prices of tokens")
         let message = web3.utils.soliditySha3(
             { t: 'uint256', v: nonce.toString() },
             { t: 'uint256', v: prices },
+            { t: 'uint256', v: maxRatio },
             { t: 'string', v: symbols }
         );
         let signature = await web3.eth.sign(message, accounts[0].address);

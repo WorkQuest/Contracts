@@ -42,7 +42,6 @@ interface WQRouterInterface {
         uint256 debtAmount,
         uint256 collateralAmount,
         uint256 comission,
-        uint256 ratio,
         string calldata symbol
     ) external payable;
 

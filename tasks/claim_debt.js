@@ -1,5 +1,5 @@
 task("claim_debt", "Claim extra debt")
-    .addParam("price", "Price of lot")
+    .addParam("symbol", "Token symbol")
     .addParam("index", "Index of lot")
     .addParam("account", "Account number")
     .setAction(async function (args, hre, runSuper) {
@@ -12,7 +12,6 @@ task("claim_debt", "Claim extra debt")
         for (const k in envConfig) { process.env[k] = envConfig[k]; }
 
         const router = await ethers.getContractAt("WQRouter", process.env.ROUTER);
-        const aue = await ethers.getContractAt("WQCollateralAuction", process.env.ETH_AUCTION);
-        let tx = await router.connect(accounts[parseInt(args.account)]).claimExtraDebt(await aue.getPriceIndex(args.price), args.index, "ETH");
+        let tx = await router.connect(accounts[parseInt(args.account)]).claimExtraDebt(args.index, args.symbol);
         console.log(tx.hash);
     });

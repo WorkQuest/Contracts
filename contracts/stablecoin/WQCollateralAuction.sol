@@ -241,12 +241,11 @@ contract WQCollateralAuction is
         returns (
             uint256,
             uint256,
-            uint256,
             uint256
         )
     {
         LotInfo storage lot = lots[index];
-        return (lot.amount, lot.price, lot.ratio, lot.created);
+        return (lot.amount, lot.price, lot.ratio);
     }
 
     /**
@@ -270,14 +269,15 @@ contract WQCollateralAuction is
      */
     function getLiquidatedCollaterallAmount() public view returns (uint256) {
         string memory symbol = token.symbol();
-        uint256 factor = 10**(18 - token.decimals());
         uint256 price = oracle.getTokenPriceUSD(symbol);
-        uint256 collateral = router.getCollateral(symbol) * price * factor;
+        uint256 collateral = router.getCollateral(symbol) *
+            10**(18 - token.decimals());
         uint256 debt = router.getDebt(symbol);
         if (
-            collateral < liquidateThreshold * debt && collateral > 1e18 * debt
+            collateral * price < liquidateThreshold * debt &&
+            collateral * price > 1e18 * debt
         ) {
-            return (3e18 * debt - 2 * collateral) / price;
+            return ((liquidateThreshold * debt) / price - collateral);
         }
         return 0;
     }
@@ -298,16 +298,24 @@ contract WQCollateralAuction is
         require(lot.status == LotStatus.New, 'WQAuction: Status is not New');
         uint256 curRatio = (price * lot.ratio) / lot.price;
         require(
-            curRatio < liquidateThreshold && curRatio >= 1e18,
+            (curRatio < liquidateThreshold && curRatio >= 1e18) ||
+                (reservesEnabled && curRatio < 1e18),
             'WQAuction: This lot is not available for sale'
         );
         lot.saleAmount = amount;
         //HACK: strict compare for liquidate collateral by owner
+        uint256 comission = getComission(index);
         require(
-            amount + getComission(index) < (lot.amount * 1e18) / curRatio,
+            amount + comission < (lot.amount * 1e18) / curRatio,
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
-
+        if (reservesEnabled) {
+            require(
+                amount + comission <=
+                    lot.amount + token.balanceOf(address(this)),
+                'WQAuction: Amount of tokens purchased is greater than lot amount and reserves'
+            );
+        }
         lot.endPrice = price;
         lot.endTime = block.timestamp + auctionDuration;
         lot.status = LotStatus.Auctioned;
@@ -344,7 +352,6 @@ contract WQCollateralAuction is
             cost,
             lot.saleAmount,
             comission,
-            lot.ratio,
             token.symbol()
         );
         emit LotBuyed(index, lot.saleAmount, cost);

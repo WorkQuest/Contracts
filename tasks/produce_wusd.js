@@ -13,6 +13,7 @@ task("produce_wusd", "Produce WUSD")
         for (const k in envConfig) { process.env[k] = envConfig[k]; }
 
         /**
+                const or = await ethers.getContractAt("WQPriceOracle", process.env.PRICE_ORACLE)
                 const wusd = await ethers.getContractAt("WQBridgeToken", process.env.WUSD_TOKEN)
                 const usdt = await ethers.getContractAt("WQBridgeToken", process.env.USDT_TOKEN)
                 const weth = await ethers.getContractAt("WQBridgeToken", process.env.ETH_TOKEN)
