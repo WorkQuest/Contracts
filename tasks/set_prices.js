@@ -37,6 +37,11 @@ task("set_prices", "Set all prices of tokens")
             prices.push(await ethers.utils.parseEther(args.usdt));
             maxRatio.push("1060000000000000000");
         }
+        if (args.usdc) {
+            symbols.push("USDC");
+            prices.push(await ethers.utils.parseEther(args.usdc));
+            maxRatio.push("1060000000000000000");
+        }
         // console.log(symbols, prices);
         let message = web3.utils.soliditySha3(
             { t: 'uint256', v: nonce.toString() },

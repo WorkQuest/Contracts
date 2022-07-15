@@ -270,14 +270,14 @@ contract WQCollateralAuction is
     function getLiquidatedCollaterallAmount() public view returns (uint256) {
         string memory symbol = token.symbol();
         uint256 price = oracle.getTokenPriceUSD(symbol);
-        uint256 collateral = router.getCollateral(symbol) *
-            10**(18 - token.decimals());
+        uint256 factor = 10**(18 - token.decimals());
+        uint256 collateral = router.getCollateral(symbol) * factor;
         uint256 debt = router.getDebt(symbol);
         if (
             collateral * price < liquidateThreshold * debt &&
             collateral * price > 1e18 * debt
         ) {
-            return ((liquidateThreshold * debt) / price - collateral);
+            return ((liquidateThreshold * debt) / price - collateral) / factor;
         }
         return 0;
     }
@@ -336,16 +336,18 @@ contract WQCollateralAuction is
             block.timestamp <= lot.endTime,
             'WQAuction: Auction time is over'
         );
+        uint256 curPrice = _getCurrentLotPrice(lot);
         uint256 cost = (lot.saleAmount *
             10**(18 - token.decimals()) *
-            _getCurrentLotPrice(lot)) / 1e18;
+            curPrice) / 1e18;
         uint256 comission = getComission(index);
-        uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price;
+        uint256 curRatio = (curPrice * lot.ratio) / lot.price;
         totalAuctioned -= lot.saleAmount;
-        lot.amount -= lot.saleAmount + comission;
         lot.ratio =
-            (((lot.amount * 1e18) / curRatio - lot.saleAmount) * 1e18) /
-            (lot.amount - lot.saleAmount);
+            ((lot.amount - lot.saleAmount - comission) * 1e18) /
+            ((lot.amount * 1e18) / curRatio - lot.saleAmount - comission);
+        lot.amount -= lot.saleAmount + comission;
+        lot.price = curPrice;
         router.buyCollateral(
             msg.sender,
             index,
@@ -356,6 +358,8 @@ contract WQCollateralAuction is
         );
         emit LotBuyed(index, lot.saleAmount, cost);
         lot.saleAmount = 0;
+        lot.endPrice = 0;
+        lot.endTime = 0;
         lot.status = LotStatus.New;
     }
 
