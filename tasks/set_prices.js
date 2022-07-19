@@ -3,6 +3,7 @@ task("set_prices", "Set all prices of tokens")
     .addOptionalParam("bnb", "BNB price")
     .addOptionalParam("wqt", "WQT price")
     .addOptionalParam("usdt", "USDT price")
+    .addOptionalParam("usdc", "USDC price")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
         const accounts = await ethers.getSigners();

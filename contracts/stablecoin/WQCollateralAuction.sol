@@ -78,7 +78,7 @@ contract WQCollateralAuction is
      * @param amount Amount of tokens purchased
      * @param cost Cost of lot (WUSD)
      */
-    event LotBuyed(uint256 index, uint256 amount, uint256 cost);
+    event LotBuyed(address buyer, uint256 index, uint256 amount, uint256 cost, uint256 price);
 
     /**
      * @dev Event emitted when lot cancelled (after end of auction time)
@@ -304,15 +304,13 @@ contract WQCollateralAuction is
         );
         lot.saleAmount = amount;
         //HACK: strict compare for liquidate collateral by owner
-        uint256 comission = getComission(index);
         require(
-            amount + comission < (lot.amount * 1e18) / curRatio,
+            amount < (lot.amount * 1e18) / curRatio,
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
         if (reservesEnabled) {
             require(
-                amount + comission <=
-                    lot.amount + token.balanceOf(address(this)),
+                amount <= lot.amount + token.balanceOf(address(this)),
                 'WQAuction: Amount of tokens purchased is greater than lot amount and reserves'
             );
         }
@@ -344,9 +342,9 @@ contract WQCollateralAuction is
         uint256 curRatio = (curPrice * lot.ratio) / lot.price;
         totalAuctioned -= lot.saleAmount;
         lot.ratio =
-            ((lot.amount - lot.saleAmount - comission) * 1e18) /
-            ((lot.amount * 1e18) / curRatio - lot.saleAmount - comission);
-        lot.amount -= lot.saleAmount + comission;
+            ((lot.amount - lot.saleAmount) * 1e18) /
+            ((lot.amount * 1e18) / curRatio - lot.saleAmount);
+        lot.amount -= lot.saleAmount;
         lot.price = curPrice;
         router.buyCollateral(
             msg.sender,
@@ -356,7 +354,7 @@ contract WQCollateralAuction is
             comission,
             token.symbol()
         );
-        emit LotBuyed(index, lot.saleAmount, cost);
+        emit LotBuyed(msg.sender, index, lot.saleAmount, cost, curPrice);
         lot.saleAmount = 0;
         lot.endPrice = 0;
         lot.endTime = 0;
@@ -386,11 +384,50 @@ contract WQCollateralAuction is
             'WQAuction: Auction time is not over yet'
         );
         totalAuctioned -= lot.saleAmount;
+        uint256 curPrice = _getCurrentLotPrice(lot);
+        lot.ratio = (curPrice * lot.ratio) / lot.price;
+        lot.price = curPrice;
         lot.saleAmount = 0;
         lot.endPrice = 0;
         lot.endTime = 0;
-        lot.status = LotStatus.New;
+        lot.status = LotStatus.Liquidated;
         emit LotCanceled(index, lot.saleAmount, lot.endPrice);
+    }
+
+    /**
+     * @dev Cancel auction when time is over
+     * @param index Index value
+     */
+    function liquidateLot(uint256 index, uint256 amount) external {
+        LotInfo storage lot = lots[index];
+        require(
+            lot.status == LotStatus.Liquidated,
+            'WQAuction: Lot is not liquidated'
+        );
+
+        uint256 curPrice = oracle.getTokenPriceUSD(token.symbol());
+        uint256 cost = (amount * 10**(18 - token.decimals()) * curPrice) / 1e18;
+        uint256 comission = getComission(index);
+        uint256 curRatio = (curPrice * lot.ratio) / lot.price;
+
+        require(
+            amount < (lot.amount * 1e18) / curRatio,
+            'WQAuction: Amount of tokens purchased is greater than lot amount'
+        );
+        lot.ratio =
+            ((lot.amount - amount) * 1e18) /
+            ((lot.amount * 1e18) / curRatio - amount);
+        lot.amount -= amount;
+        lot.price = curPrice;
+        router.buyCollateral(
+            msg.sender,
+            index,
+            cost,
+            amount,
+            comission,
+            token.symbol()
+        );
+        emit LotBuyed(msg.sender, index, amount, cost, curPrice);
     }
 
     /**

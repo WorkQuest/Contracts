@@ -14,9 +14,12 @@ task("prices", "Get all prices")
         let bnb_upd = parseInt((await priceOracle.tokens("BNB")).updatedTime);
         let wqt_upd = parseInt((await priceOracle.tokens("WQT")).updatedTime);
         let usdt_upd = parseInt((await priceOracle.tokens("USDT")).updatedTime);
+        let usdc_upd = parseInt((await priceOracle.tokens("USDC")).updatedTime);
         let valid = parseInt(await priceOracle.validTime());
-        console.log("ETH:", (await priceOracle.tokens("ETH")).price / 1e18, valid - cur + eth_upd);
-        console.log("BNB:", (await priceOracle.tokens("BNB")).price / 1e18, valid - cur + bnb_upd);
-        console.log("WQT:", (await priceOracle.tokens("WQT")).price / 1e18, valid - cur + wqt_upd);
-        console.log("USDT:", (await priceOracle.tokens("USDT")).price / 1e18, valid - cur + usdt_upd);
+
+        console.log("ETH:", valid - cur + eth_upd, (await priceOracle.tokens("ETH")).maxRatio / 1e18, (await priceOracle.tokens("ETH")).price / 1e18);
+        console.log("BNB:", valid - cur + bnb_upd, (await priceOracle.tokens("BNB")).maxRatio / 1e18, (await priceOracle.tokens("BNB")).price / 1e18);
+        console.log("WQT:", valid - cur + wqt_upd, (await priceOracle.tokens("WQT")).maxRatio / 1e18, (await priceOracle.tokens("WQT")).price / 1e18);
+        console.log("USDT:", valid - cur + usdt_upd, (await priceOracle.tokens("USDT")).maxRatio / 1e18, (await priceOracle.tokens("USDT")).price / 1e18);
+        console.log("USDC:", valid - cur + usdc_upd, (await priceOracle.tokens("USDC")).maxRatio / 1e18, (await priceOracle.tokens("USDC")).price / 1e18);
     });

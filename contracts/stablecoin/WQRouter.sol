@@ -384,12 +384,12 @@ contract WQRouter is
      * @dev Partial liquidate of a collateral.
      * @dev User gives WUSD (debeted WUSD + comission) and takes part of collateral tokens
      * @param index index of lot
-     * @param debtPart Amount of liquidated part of debt
+     * @param collateralPart Amount of part of collateral
      * @param symbol Symbol of token
      */
     function removeCollateral(
         uint256 index,
-        uint256 debtPart,
+        uint256 collateralPart,
         string calldata symbol
     ) external nonReentrant onlyEnabledToken(symbol) {
         isLotExist(index, symbol);
@@ -405,34 +405,38 @@ contract WQRouter is
                     uint8(1),
                 'WQRouter: Status not new'
             );
+            require(
+                collateralPart <= (collateral * 1e18) / collateralRatio,
+                'WQRouter: Removed collateral part is greater than collateral'
+            );
             uint256 comission = tokens[symbol].collateralAuction.getComission(
                 index
             );
-            uint256 collateralPart = (debtPart * collateralRatio) /
-                price /
+            uint256 debtPart = (collateralPart *
+                price *
                 10 **
                     (18 -
                         IERC20MetadataUpgradeable(tokens[symbol].token)
-                            .decimals());
+                            .decimals())) / collateralRatio;
             tokens[symbol].totalDebt -= debtPart;
-            tokens[symbol].totalCollateral -= collateralPart + comission;
+            tokens[symbol].totalCollateral -= collateralPart;
             UserCollateral storage userCollateral = collaterals[symbol][
                 msg.sender
             ];
-            userCollateral.collateralAmount -= collateralPart + comission;
+            userCollateral.collateralAmount -= collateralPart;
             uint256 remain = tokens[symbol].collateralAuction.decreaseLotAmount(
                 index,
-                collateralPart + comission
+                collateralPart
             );
             if (remain == 0) {
                 collaterals[symbol][msg.sender].lots.remove(index);
             }
-            collateral -= collateralPart + comission;
+            collateral -= collateralPart;
 
             //Transfer collateral token
             userCollateral.vault.transfer(
                 payable(msg.sender),
-                collateralPart,
+                collateralPart - comission,
                 tokens[symbol].token
             );
             // Stability comission
@@ -495,14 +499,12 @@ contract WQRouter is
     ) external nonReentrant onlyCollateralAuction(symbol) {
         address owner = tokens[symbol].collateralAuction.getLotOwner(index);
         {
-            collaterals[symbol][owner].collateralAmount -=
-                collateralAmount +
-                comission;
-            tokens[symbol].totalCollateral -= collateralAmount + comission;
+            collaterals[symbol][owner].collateralAmount -= collateralAmount;
+            tokens[symbol].totalCollateral -= collateralAmount;
             tokens[symbol].totalDebt -= debtAmount;
             collaterals[symbol][owner].vault.transfer(
                 payable(buyer),
-                collateralAmount,
+                collateralAmount - comission,
                 tokens[symbol].token
             );
             // Stability comission
@@ -586,6 +588,17 @@ contract WQRouter is
             page[i] = lots.at(offset + i);
         }
         return page;
+    }
+
+    function getRemain(uint256 index, string calldata symbol)
+        external
+        view
+        returns (uint256)
+    {
+        (uint256 collateral, , uint256 collateralRatio) = tokens[symbol]
+            .collateralAuction
+            .getLotInfo(index);
+        return (collateral * 1e18) / collateralRatio;
     }
 
     function getCollateral(string calldata symbol)
