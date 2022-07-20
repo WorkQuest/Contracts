@@ -10,16 +10,23 @@ task("prices", "Get all prices")
 
         const priceOracle = await ethers.getContractAt("WQPriceOracle", process.env.PRICE_ORACLE);
         let cur = (await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp;
-        let eth_upd = parseInt((await priceOracle.tokens("ETH")).updatedTime);
-        let bnb_upd = parseInt((await priceOracle.tokens("BNB")).updatedTime);
-        let wqt_upd = parseInt((await priceOracle.tokens("WQT")).updatedTime);
-        let usdt_upd = parseInt((await priceOracle.tokens("USDT")).updatedTime);
-        let usdc_upd = parseInt((await priceOracle.tokens("USDC")).updatedTime);
+
+        let weth = await priceOracle.tokens("ETH");
+        let wbnb = await priceOracle.tokens("BNB");
+        let wqt = await priceOracle.tokens("WQT");
+        let usdt = await priceOracle.tokens("USDT");
+        let usdc = await priceOracle.tokens("USDC");
+
+        let eth_upd = parseInt(weth.updatedTime);
+        let bnb_upd = parseInt(wbnb.updatedTime);
+        let wqt_upd = parseInt(wqt.updatedTime);
+        let usdt_upd = parseInt(usdt.updatedTime);
+        let usdc_upd = parseInt(usdc.updatedTime);
         let valid = parseInt(await priceOracle.validTime());
 
-        console.log("ETH:", valid - cur + eth_upd, (await priceOracle.tokens("ETH")).maxRatio / 1e18, (await priceOracle.tokens("ETH")).price / 1e18);
-        console.log("BNB:", valid - cur + bnb_upd, (await priceOracle.tokens("BNB")).maxRatio / 1e18, (await priceOracle.tokens("BNB")).price / 1e18);
-        console.log("WQT:", valid - cur + wqt_upd, (await priceOracle.tokens("WQT")).maxRatio / 1e18, (await priceOracle.tokens("WQT")).price / 1e18);
-        console.log("USDT:", valid - cur + usdt_upd, (await priceOracle.tokens("USDT")).maxRatio / 1e18, (await priceOracle.tokens("USDT")).price / 1e18);
-        console.log("USDC:", valid - cur + usdc_upd, (await priceOracle.tokens("USDC")).maxRatio / 1e18, (await priceOracle.tokens("USDC")).price / 1e18);
+        console.log("ETH:", valid - cur + eth_upd, weth.maxRatio / 1e18, weth.price / 1e18);
+        console.log("BNB:", valid - cur + bnb_upd, wbnb.maxRatio / 1e18, wbnb.price / 1e18);
+        console.log("WQT:", valid - cur + wqt_upd, wqt.maxRatio / 1e18, wqt.price / 1e18);
+        console.log("USDT:", valid - cur + usdt_upd, usdt.maxRatio / 1e18, usdt.price / 1e18);
+        console.log("USDC:", valid - cur + usdc_upd, usdc.maxRatio / 1e18, usdc.price / 1e18);
     });

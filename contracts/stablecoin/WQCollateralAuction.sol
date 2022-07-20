@@ -78,7 +78,13 @@ contract WQCollateralAuction is
      * @param amount Amount of tokens purchased
      * @param cost Cost of lot (WUSD)
      */
-    event LotBuyed(address buyer, uint256 index, uint256 amount, uint256 cost, uint256 price);
+    event LotBuyed(
+        address buyer,
+        uint256 index,
+        uint256 amount,
+        uint256 cost,
+        uint256 price
+    );
 
     /**
      * @dev Event emitted when lot cancelled (after end of auction time)
@@ -338,7 +344,7 @@ contract WQCollateralAuction is
         uint256 cost = (lot.saleAmount *
             10**(18 - token.decimals()) *
             curPrice) / 1e18;
-        uint256 comission = getComission(index);
+        uint256 comission = getComission(index, lot.saleAmount);
         uint256 curRatio = (curPrice * lot.ratio) / lot.price;
         totalAuctioned -= lot.saleAmount;
         lot.ratio =
@@ -406,14 +412,13 @@ contract WQCollateralAuction is
         );
 
         uint256 curPrice = oracle.getTokenPriceUSD(token.symbol());
-        uint256 cost = (amount * 10**(18 - token.decimals()) * curPrice) / 1e18;
-        uint256 comission = getComission(index);
         uint256 curRatio = (curPrice * lot.ratio) / lot.price;
-
         require(
             amount < (lot.amount * 1e18) / curRatio,
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
+        uint256 cost = (amount * 10**(18 - token.decimals()) * curPrice) / 1e18;
+        uint256 comission = getComission(index, lot.saleAmount);
         lot.ratio =
             ((lot.amount - amount) * 1e18) /
             ((lot.amount * 1e18) / curRatio - amount);
@@ -434,9 +439,13 @@ contract WQCollateralAuction is
      * @dev Get current comission of lot
      * @param index Index value
      */
-    function getComission(uint256 index) public view returns (uint256) {
+    function getComission(uint256 index, uint256 amount)
+        public
+        view
+        returns (uint256)
+    {
         return
-            (lots[index].saleAmount *
+            (amount *
                 (router.fixedRate() +
                     (router.annualInterestRate() *
                         (block.timestamp - lots[index].created)) /

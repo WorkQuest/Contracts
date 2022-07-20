@@ -410,7 +410,8 @@ contract WQRouter is
                 'WQRouter: Removed collateral part is greater than collateral'
             );
             uint256 comission = tokens[symbol].collateralAuction.getComission(
-                index
+                index,
+                collateralPart
             );
             uint256 debtPart = (collateralPart *
                 price *
