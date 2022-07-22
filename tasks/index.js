@@ -31,6 +31,7 @@ require('./buy_surplus.js');
 require('./prices.js');
 require('./claim_debt.js');
 require('./dispose_debt.js');
+require('./add_collateral.js');
 require('./remove_collateral.js');
 require('./start_auction.js');
 require('./buy_lot.js');

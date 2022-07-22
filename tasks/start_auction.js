@@ -25,7 +25,7 @@ task("start_auction", "Start auction")
         }
         if (args.usdt) {
             symbol = "USDT";
-            amount = await ethers.utils.parseEther(args.usdt);
+            amount = await ethers.utils.parseUnits(args.usdt, 6);
             auction = await ethers.getContractAt("WQCollateralAuction", process.env.USDT_AUCTION);
         }
 

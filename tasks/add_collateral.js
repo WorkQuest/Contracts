@@ -1,4 +1,4 @@
-task("dispose_debt", "Dispose debt")
+task("add_collateral", "Add collateral")
     .addParam("id", "Index of lot")
     .addParam("user", "Account number")
     .addParam("sym", "Token symbol")
@@ -12,6 +12,6 @@ task("dispose_debt", "Dispose debt")
         for (const k in envConfig) { process.env[k] = envConfig[k]; }
 
         const router = await ethers.getContractAt("WQRouter", process.env.ROUTER);
-        let tx = await router.connect(accounts[parseInt(args.user)]).disposeDebt(args.id, args.sym);
+        let tx = await router.connect(accounts[parseInt(args.user)]).addCollateral(args.id, args.sym);
         console.log(tx.hash);
     });

@@ -45,8 +45,8 @@ if (!process.env.EXPLORER_API_KEY) {
 
 
 function createNetworkConfig(network) {
-  // const url = `https://${network}.infura.io/v3/${infuraApiKey}`;
-  const url = `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/eth/${network}`;
+  const url = `https://${network}.infura.io/v3/${providerApiKey}`;
+  // const url = `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/eth/${network}`;
   return {
     accounts: { mnemonic: mnemonic },
     chainId: chainIds[network],
@@ -84,28 +84,28 @@ module.exports = {
       chainId: 2009
     },
     bsctestnet: {
-      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/testnet`,
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
       chainId: 97,
       gas: "auto",
       gasPrice: 5000000000,
       accounts: { mnemonic: mnemonic }
     },
     bscmainnet: {
-      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/bsc/mainnet`,
+      url: `https://bsc-dataseed1.binance.org/`,
       chainId: 56,
       gas: "auto",
       gasPrice: 5000000000,
       accounts: { mnemonic: mnemonic }
     },
     mumbai: {
-      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/polygon/mumbai`,
+      url: `https://rpc-mumbai.matic.today/`,
       chainId: 80001,
       gas: "auto",
       gasPrice: 5000000000,
       accounts: { mnemonic: mnemonic }
     },
     polygon: {
-      url: `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/polygon/mainnet`,
+      url: `https://polygon-rpc.com/`,
       chainId: 137,
       gas: "auto",
       gasPrice: 60000000000,

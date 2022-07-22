@@ -59,8 +59,6 @@ contract WQRouter is
      */
     uint256 public fixedRate;
     uint256 public annualInterestRate;
-    uint256 public fee;
-    address feeReceiver;
 
     mapping(string => TokenSettings) public tokens;
     mapping(string => mapping(address => UserCollateral)) private collaterals;
@@ -98,6 +96,7 @@ contract WQRouter is
         uint256 price,
         uint256 index,
         uint256 newIndex,
+        uint8 status,
         string symbol
     );
 
@@ -167,8 +166,7 @@ contract WQRouter is
         address _oracle,
         address _wusd,
         uint256 _fixedRate,
-        uint256 _annualInterestRate,
-        address _feeReceiver
+        uint256 _annualInterestRate
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -181,7 +179,6 @@ contract WQRouter is
         wusd = WQBridgeTokenInterface(_wusd);
         fixedRate = _fixedRate;
         annualInterestRate = _annualInterestRate;
-        feeReceiver = _feeReceiver;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -280,20 +277,28 @@ contract WQRouter is
             tokens[symbol].collateralAuction.getLotStatus(index) == uint8(1),
             'WQRouter: Status not new'
         );
-        uint256 factor = 10 **
-            (18 - IERC20MetadataUpgradeable(tokens[symbol].token).decimals());
-        uint256 extraDebt = ((price - lotPrice) * lotAmount * factor) /
-            collateralRatio;
+        uint256 extraDebt = ((price - lotPrice) *
+            lotAmount *
+            10 **
+                (18 -
+                    IERC20MetadataUpgradeable(tokens[symbol].token)
+                        .decimals())) / collateralRatio;
 
         tokens[symbol].totalDebt += extraDebt;
         wusd.mint(msg.sender, extraDebt);
         tokens[symbol].collateralAuction.moveLot(index, price, lotAmount);
         emit Moved(
             lotAmount,
-            (lotAmount * price * factor) / collateralRatio,
+            (lotAmount *
+                price *
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals())) / collateralRatio,
             price,
             index,
             index,
+            0,
             symbol
         );
     }
@@ -318,19 +323,27 @@ contract WQRouter is
             tokens[symbol].collateralAuction.getLotStatus(index) == uint8(1),
             'WQRouter: Status not new'
         );
-        uint256 factor = 10 **
-            (18 - IERC20MetadataUpgradeable(tokens[symbol].token).decimals());
-        uint256 returnDebt = ((lotPrice - price) * lotAmount * factor) /
-            collateralRatio;
+        uint256 returnDebt = ((lotPrice - price) *
+            lotAmount *
+            10 **
+                (18 -
+                    IERC20MetadataUpgradeable(tokens[symbol].token)
+                        .decimals())) / collateralRatio;
         tokens[symbol].totalDebt -= returnDebt;
         tokens[symbol].collateralAuction.moveLot(index, price, lotAmount);
         wusd.burn(msg.sender, returnDebt);
         emit Moved(
             lotAmount,
-            (lotAmount * price * factor) / collateralRatio,
+            (lotAmount *
+                price *
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals())) / collateralRatio,
             price,
             index,
             index,
+            1,
             symbol
         );
     }
@@ -376,6 +389,7 @@ contract WQRouter is
             price,
             index,
             index,
+            2,
             symbol
         );
     }
@@ -384,12 +398,12 @@ contract WQRouter is
      * @dev Partial liquidate of a collateral.
      * @dev User gives WUSD (debeted WUSD + comission) and takes part of collateral tokens
      * @param index index of lot
-     * @param collateralPart Amount of part of collateral
+     * @param debtPart Amount of part of debt
      * @param symbol Symbol of token
      */
     function removeCollateral(
         uint256 index,
-        uint256 collateralPart,
+        uint256 debtPart,
         string calldata symbol
     ) external nonReentrant onlyEnabledToken(symbol) {
         isLotExist(index, symbol);
@@ -406,19 +420,26 @@ contract WQRouter is
                 'WQRouter: Status not new'
             );
             require(
-                collateralPart <= (collateral * 1e18) / collateralRatio,
-                'WQRouter: Removed collateral part is greater than collateral'
+                debtPart <=
+                    (collateral *
+                        price *
+                        10 **
+                            (18 -
+                                IERC20MetadataUpgradeable(tokens[symbol].token)
+                                    .decimals())) /
+                        collateralRatio,
+                'WQRouter: Removed debt part is greater than all debt'
             );
+            uint256 collateralPart = (debtPart * collateralRatio) /
+                price /
+                (10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals()));
             uint256 comission = tokens[symbol].collateralAuction.getComission(
                 index,
                 collateralPart
             );
-            uint256 debtPart = (collateralPart *
-                price *
-                10 **
-                    (18 -
-                        IERC20MetadataUpgradeable(tokens[symbol].token)
-                            .decimals())) / collateralRatio;
             tokens[symbol].totalDebt -= debtPart;
             tokens[symbol].totalCollateral -= collateralPart;
             UserCollateral storage userCollateral = collaterals[symbol][
@@ -481,6 +502,7 @@ contract WQRouter is
             price,
             index,
             newIndex,
+            3,
             symbol
         );
     }
@@ -591,17 +613,6 @@ contract WQRouter is
         return page;
     }
 
-    function getRemain(uint256 index, string calldata symbol)
-        external
-        view
-        returns (uint256)
-    {
-        (uint256 collateral, , uint256 collateralRatio) = tokens[symbol]
-            .collateralAuction
-            .getLotInfo(index);
-        return (collateral * 1e18) / collateralRatio;
-    }
-
     function getCollateral(string calldata symbol)
         external
         view
@@ -627,8 +638,7 @@ contract WQRouter is
             WQSurplusAuction,
             WQDebtAuction,
             uint256,
-            uint256,
-            address
+            uint256
         )
     {
         return (
@@ -637,12 +647,18 @@ contract WQRouter is
             surplusAuction,
             debtAuction,
             fixedRate,
-            annualInterestRate,
-            feeReceiver
+            annualInterestRate
         );
     }
 
     /** Admin Functions */
+    function syncState(
+        address user,
+        uint256 index,
+        string calldata symbol
+    ) external onlyRole(ADMIN_ROLE) {
+        collaterals[symbol][user].lots.add(index);
+    }
 
     /**
      * @dev Set address of price oracle contract
@@ -650,12 +666,12 @@ contract WQRouter is
      */
     function setContracts(
         address _oracle,
-        address debt_auction,
-        address surplus_auction
+        address _debtAuction,
+        address _surplusAuction
     ) external onlyRole(ADMIN_ROLE) {
         oracle = WQPriceOracleInterface(_oracle);
-        debtAuction = WQDebtAuction(debt_auction);
-        surplusAuction = WQSurplusAuction(surplus_auction);
+        debtAuction = WQDebtAuction(_debtAuction);
+        surplusAuction = WQSurplusAuction(_surplusAuction);
     }
 
     /**
@@ -681,24 +697,11 @@ contract WQRouter is
      * @dev Set fixed rate value value
      * @param _fixedRate Fixed rate value
      */
-    function setRate(
-        uint256 _fixedRate,
-        uint256 _annualInterestRate,
-        uint256 _fee
-    ) external onlyRole(ADMIN_ROLE) {
-        fixedRate = _fixedRate;
-        annualInterestRate = _annualInterestRate;
-        fee = _fee;
-    }
-
-    /**
-     * @dev Set stability fee value
-     * @param _feeReceiver Address of fee receiver
-     */
-    function setFeeReceiver(address _feeReceiver)
+    function setRate(uint256 _fixedRate, uint256 _annualInterestRate)
         external
         onlyRole(ADMIN_ROLE)
     {
-        feeReceiver = _feeReceiver;
+        fixedRate = _fixedRate;
+        annualInterestRate = _annualInterestRate;
     }
 }
