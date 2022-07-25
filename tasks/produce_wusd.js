@@ -1,8 +1,8 @@
 task("produce_wusd", "Produce WUSD")
-    .addParam("sym", "Token symbol")
     .addParam("am", "Token amount")
     .addParam("rat", "Collateral ratio")
     .addParam("user", "Account number")
+    .addParam("sym", "Token symbol")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
         const acc = await ethers.getSigners();

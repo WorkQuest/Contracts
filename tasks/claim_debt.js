@@ -1,7 +1,7 @@
 task("claim_debt", "Claim extra debt")
-    .addParam("sym", "Token symbol")
     .addParam("id", "Index of lot")
     .addParam("user", "Account number")
+    .addParam("sym", "Token symbol")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
         const accounts = await ethers.getSigners();

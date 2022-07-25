@@ -390,7 +390,7 @@ contract WQCollateralAuction is
             'WQAuction: Auction time is not over yet'
         );
         totalAuctioned -= lot.saleAmount;
-        uint256 curPrice = _getCurrentLotPrice(lot);
+        uint256 curPrice = oracle.getTokenPriceUSD(token.symbol());
         lot.ratio = (curPrice * lot.ratio) / lot.price;
         lot.price = curPrice;
         lot.saleAmount = 0;
