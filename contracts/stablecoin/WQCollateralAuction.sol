@@ -424,6 +424,7 @@ contract WQCollateralAuction is
             ((lot.amount * 1e18) / curRatio - amount);
         lot.amount -= amount;
         lot.price = curPrice;
+        if (lot.ratio >= liquidateThreshold) lot.status = LotStatus.New;
         router.buyCollateral(
             msg.sender,
             index,

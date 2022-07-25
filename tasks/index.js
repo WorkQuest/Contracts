@@ -36,6 +36,7 @@ require('./remove_collateral.js');
 require('./start_auction.js');
 require('./buy_lot.js');
 require('./cancel_auction.js');
+require('./liquidate_lot.js');
 require('./set_prices.js');
 require('./config_promotion.js');
 require('./config_referral.js');
