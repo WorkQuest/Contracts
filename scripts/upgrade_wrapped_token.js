@@ -31,14 +31,14 @@ async function main() {
     let bridge_token = await upgrades.upgradeProxy(process.env.WUSD_TOKEN, BridgeToken);
     console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
 
-    // bridge_token = await upgrades.upgradeProxy(process.env.ETH_TOKEN, BridgeToken);
-    // console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
+    bridge_token = await upgrades.upgradeProxy(process.env.ETH_TOKEN, BridgeToken);
+    console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
 
-    // bridge_token = await upgrades.upgradeProxy(process.env.BNB_TOKEN, BridgeToken);
-    // console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
+    bridge_token = await upgrades.upgradeProxy(process.env.BNB_TOKEN, BridgeToken);
+    console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
 
-    // bridge_token = await upgrades.upgradeProxy(process.env.USDT_TOKEN, BridgeToken);
-    // console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
+    bridge_token = await upgrades.upgradeProxy(process.env.USDT_TOKEN, BridgeToken);
+    console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
 }
 
 main()
