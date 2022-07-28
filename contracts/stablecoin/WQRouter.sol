@@ -54,12 +54,6 @@ contract WQRouter is
     WQSurplusAuction surplusAuction;
     WQDebtAuction debtAuction;
 
-    /**
-     * @notice Stability fee settings
-     */
-    uint256 public fixedRate;
-    uint256 public annualInterestRate;
-
     mapping(string => TokenSettings) public tokens;
     mapping(string => mapping(address => UserCollateral)) private collaterals;
 
@@ -162,12 +156,7 @@ contract WQRouter is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(
-        address _oracle,
-        address _wusd,
-        uint256 _fixedRate,
-        uint256 _annualInterestRate
-    ) external initializer {
+    function initialize(address _oracle, address _wusd) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -177,8 +166,6 @@ contract WQRouter is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         oracle = WQPriceOracleInterface(_oracle);
         wusd = WQBridgeTokenInterface(_wusd);
-        fixedRate = _fixedRate;
-        annualInterestRate = _annualInterestRate;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -636,18 +623,14 @@ contract WQRouter is
             WQPriceOracleInterface,
             WQBridgeTokenInterface,
             WQSurplusAuction,
-            WQDebtAuction,
-            uint256,
-            uint256
+            WQDebtAuction
         )
     {
         return (
             oracle,
             wusd,
             surplusAuction,
-            debtAuction,
-            fixedRate,
-            annualInterestRate
+            debtAuction
         );
     }
 
@@ -691,17 +674,5 @@ contract WQRouter is
         tokens[symbol].collateralAuction = WQCollateralAuction(auction);
         tokens[symbol].enabled = enabled;
         tokens[symbol].minRatio = minRatio;
-    }
-
-    /**
-     * @dev Set fixed rate value value
-     * @param _fixedRate Fixed rate value
-     */
-    function setRate(uint256 _fixedRate, uint256 _annualInterestRate)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        fixedRate = _fixedRate;
-        annualInterestRate = _annualInterestRate;
     }
 }

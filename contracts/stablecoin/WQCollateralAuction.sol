@@ -59,6 +59,8 @@ contract WQCollateralAuction is
     uint256 public auctionDuration;
     /// @dev Total amount of collateral auctioned
     uint256 public totalAuctioned;
+    uint256 public fixedRate;
+    uint256 public annualInterestRate;
     /// @dev Is reserves enabled
     bool public reservesEnabled;
     /// @dev Array of lots
@@ -112,7 +114,9 @@ contract WQCollateralAuction is
         uint256 _liquidateThreshold,
         uint256 _upperBoundCost,
         uint256 _lowerBoundCost,
-        uint256 _auctionDuration
+        uint256 _auctionDuration,
+        uint256 _fixedRate,
+        uint256 _annualInterestRate
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -129,6 +133,8 @@ contract WQCollateralAuction is
         upperBoundCost = _upperBoundCost;
         lowerBoundCost = _lowerBoundCost;
         auctionDuration = _auctionDuration;
+        fixedRate = _fixedRate;
+        annualInterestRate = _annualInterestRate;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -377,63 +383,48 @@ contract WQCollateralAuction is
 
     /**
      * @dev Cancel auction when time is over
-     * @param index Index value
+     * @param indexes Index value
      */
-    function cancelAuction(uint256 index) external {
-        LotInfo storage lot = lots[index];
-        require(
-            lot.status == LotStatus.Auctioned,
-            'WQAuction: Lot is not auctioned'
-        );
-        require(
-            block.timestamp > lot.endTime,
-            'WQAuction: Auction time is not over yet'
-        );
-        totalAuctioned -= lot.saleAmount;
-        uint256 curPrice = oracle.getTokenPriceUSD(token.symbol());
-        lot.ratio = (curPrice * lot.ratio) / lot.price;
-        lot.price = curPrice;
-        lot.saleAmount = 0;
-        lot.endPrice = 0;
-        lot.endTime = 0;
-        lot.status = LotStatus.Liquidated;
-        emit LotCanceled(index, lot.saleAmount, lot.endPrice);
+    function cancelAuction(uint256[] memory indexes) external {
+        for (uint256 i = 0; i < indexes.length; i++) {
+            LotInfo storage lot = lots[indexes[i]];
+            require(
+                lot.status == LotStatus.Auctioned,
+                'WQAuction: Lot is not auctioned'
+            );
+            require(
+                block.timestamp > lot.endTime,
+                'WQAuction: Auction time is not over yet'
+            );
+            totalAuctioned -= lot.saleAmount;
+            lot.saleAmount = 0;
+            lot.endPrice = 0;
+            lot.endTime = 0;
+            lot.status = LotStatus.New;
+            emit LotCanceled(indexes[i], lot.saleAmount, lot.endPrice);
+        }
     }
 
     /**
-     * @dev Cancel auction when time is over
-     * @param index Index value
+     * @dev Restart auction when time is over
+     * @param indexes Indexes value
      */
-    function liquidateLot(uint256 index, uint256 amount) external {
-        LotInfo storage lot = lots[index];
-        require(
-            lot.status == LotStatus.Liquidated,
-            'WQAuction: Lot is not liquidated'
-        );
-
-        uint256 curPrice = oracle.getTokenPriceUSD(token.symbol());
-        uint256 curRatio = (curPrice * lot.ratio) / lot.price;
-        require(
-            amount < (lot.amount * 1e18) / curRatio,
-            'WQAuction: Amount of tokens purchased is greater than lot amount'
-        );
-        uint256 cost = (amount * 10**(18 - token.decimals()) * curPrice) / 1e18;
-        uint256 comission = getComission(index, lot.saleAmount);
-        lot.ratio =
-            ((lot.amount - amount) * 1e18) /
-            ((lot.amount * 1e18) / curRatio - amount);
-        lot.amount -= amount;
-        lot.price = curPrice;
-        if (lot.ratio >= liquidateThreshold) lot.status = LotStatus.New;
-        router.buyCollateral(
-            msg.sender,
-            index,
-            cost,
-            amount,
-            comission,
-            token.symbol()
-        );
-        emit LotBuyed(msg.sender, index, amount, cost, curPrice);
+    function restartAuction(uint256[] memory indexes) external {
+        uint256 price = oracle.getTokenPriceUSD(token.symbol());
+        for (uint256 i = 0; i < indexes.length; i++) {
+            LotInfo storage lot = lots[indexes[i]];
+            require(
+                lot.status == LotStatus.Auctioned,
+                'WQAuction: Lot is not auctioned'
+            );
+            require(
+                block.timestamp > lot.endTime,
+                'WQAuction: Auction time is not over yet'
+            );
+            lot.endPrice = price;
+            lot.endTime = block.timestamp + auctionDuration;
+            emit LotCanceled(indexes[i], lot.saleAmount, lot.endPrice);
+        }
     }
 
     /**
@@ -447,8 +438,8 @@ contract WQCollateralAuction is
     {
         return
             (amount *
-                (router.fixedRate() +
-                    (router.annualInterestRate() *
+                (fixedRate +
+                    (annualInterestRate *
                         (block.timestamp - lots[index].created)) /
                     YEAR)) / 1e18;
     }

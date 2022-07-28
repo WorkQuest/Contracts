@@ -17,7 +17,7 @@ task("config_collateral_auction", "Config collateral auction")
         let auction_address = process.env[`${args.token}_AUCTION`];
         if (!auction_address) {
             throw new Error(`Please set your ${args.token}_AUCTION in a .env-${network} file`);
-        }
+S        }
         let liquidate_threshold = process.env[`${args.token}_AUCTION_LIQUIDATE_TRESHOLD`];
         if (!liquidate_threshold) {
             throw new Error(`Please set your ${args.token}_AUCTION_LIQUIDATE_TRESHOLD in a .env-${network} file`);
@@ -33,10 +33,6 @@ task("config_collateral_auction", "Config collateral auction")
         let auction_duration = process.env[`${args.token}_AUCTION_DURATION`];
         if (!auction_duration) {
             throw new Error(`Please set your ${args.token}_AUCTION_DURATION in a .env-${network} file`);
-        }
-        let index_step = process.env[`${args.token}_AUCTION_PRICE_INDEX_STEP`];
-        if (!index_step) {
-            throw new Error(`Please set your ${args.token}_AUCTION_PRICE_INDEX_STEP in a .env-${network} file`);
         }
 
         let auction = await ethers.getContractAt("WQCollateralAuction", auction_address);
