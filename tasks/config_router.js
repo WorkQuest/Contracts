@@ -61,10 +61,10 @@ task("config_router", "Config router")
         const router = await hre.ethers.getContractAt("WQRouter", process.env.ROUTER);
         console.log("Try to config router:", router.address);
         // await router.setContracts(process.env.PRICE_ORACLE, process.env.DEBT_AUCTION, process.env.SURPLUS_AUCTION);
-        // await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
-        // await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
-        // await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
-        // await router.setToken(1, process.env.USDC_TOKEN, process.env.USDC_AUCTION, process.env.USDC_AUCTION_MIN_RATIO, "USDC");
+        await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
+        await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
+        await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
+        await router.setToken(1, process.env.USDC_TOKEN, process.env.USDC_AUCTION, process.env.USDC_AUCTION_MIN_RATIO, "USDC");
 
         const wusd = await ethers.getContractAt("WQBridgeToken", process.env.WUSD_TOKEN);
         await wusd.grantRole(await wusd.MINTER_ROLE(), router.address);

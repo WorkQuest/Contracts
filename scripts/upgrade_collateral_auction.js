@@ -34,6 +34,12 @@ async function main() {
     }
     const usdt_auction = await upgrades.upgradeProxy(process.env.USDT_AUCTION, CollateralAuction);
     console.log("USDT collateral auction has been upgraded to:", usdt_auction.address);
+
+    if (!process.env.USDC_AUCTION) {
+        throw new Error(`Please set your USDC_AUCTION in a .env-${network} file`);
+    }
+    const usdc_auction = await upgrades.upgradeProxy(process.env.USDC_AUCTION, CollateralAuction);
+    console.log("USDC collateral auction has been upgraded to:", usdc_auction.address);
 }
 
 main()

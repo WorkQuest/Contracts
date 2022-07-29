@@ -59,7 +59,9 @@ contract WQCollateralAuction is
     uint256 public auctionDuration;
     /// @dev Total amount of collateral auctioned
     uint256 public totalAuctioned;
+    /// @dev Fixed rate
     uint256 public fixedRate;
+    /// @dev Annual interest rate
     uint256 public annualInterestRate;
     /// @dev Is reserves enabled
     bool public reservesEnabled;
@@ -351,26 +353,46 @@ contract WQCollateralAuction is
             10**(18 - token.decimals()) *
             curPrice) / 1e18;
         uint256 comission = getComission(index, lot.saleAmount);
-        uint256 curRatio = (curPrice * lot.ratio) / lot.price;
+
         totalAuctioned -= lot.saleAmount;
-        lot.ratio =
-            ((lot.amount - lot.saleAmount) * 1e18) /
-            ((lot.amount * 1e18) / curRatio - lot.saleAmount);
-        lot.amount -= lot.saleAmount;
-        lot.price = curPrice;
-        router.buyCollateral(
-            msg.sender,
-            index,
-            cost,
-            lot.saleAmount,
-            comission,
-            token.symbol()
-        );
+
+        uint256 curRatio = (curPrice * lot.ratio) / lot.price;
+        if (curRatio >= 1e18) {
+            lot.ratio =
+                ((lot.amount - lot.saleAmount) * 1e18) /
+                ((lot.amount * 1e18) / curRatio - lot.saleAmount);
+            lot.amount -= lot.saleAmount;
+            lot.price = curPrice;
+            router.buyCollateral(
+                msg.sender,
+                index,
+                cost,
+                lot.saleAmount,
+                comission,
+                token.symbol()
+            );
+            lot.saleAmount = 0;
+            lot.endPrice = 0;
+            lot.endTime = 0;
+            lot.status = LotStatus.New;
+        } else {
+            require(reservesEnabled, 'WQAuction: Reserves is not enabled');
+            router.buyCollateral(
+                msg.sender,
+                index,
+                cost,
+                lot.amount,
+                comission,
+                token.symbol()
+            );
+            //Transfer reserves
+            IERC20Upgradeable(address(token)).safeTransfer(
+                msg.sender,
+                lot.saleAmount - lot.amount
+            );
+            _removeLot(index);
+        }
         emit LotBuyed(msg.sender, index, lot.saleAmount, cost, curPrice);
-        lot.saleAmount = 0;
-        lot.endPrice = 0;
-        lot.endTime = 0;
-        lot.status = LotStatus.New;
     }
 
     function enableReserves() external nonReentrant onlyRole(SERVICE_ROLE) {
@@ -383,48 +405,49 @@ contract WQCollateralAuction is
 
     /**
      * @dev Cancel auction when time is over
-     * @param indexes Index value
+     * @param index Index value
      */
-    function cancelAuction(uint256[] memory indexes) external {
-        for (uint256 i = 0; i < indexes.length; i++) {
-            LotInfo storage lot = lots[indexes[i]];
-            require(
-                lot.status == LotStatus.Auctioned,
-                'WQAuction: Lot is not auctioned'
-            );
-            require(
-                block.timestamp > lot.endTime,
-                'WQAuction: Auction time is not over yet'
-            );
-            totalAuctioned -= lot.saleAmount;
-            lot.saleAmount = 0;
-            lot.endPrice = 0;
-            lot.endTime = 0;
-            lot.status = LotStatus.New;
-            emit LotCanceled(indexes[i], lot.saleAmount, lot.endPrice);
-        }
+    function cancelAuction(uint256 index) external {
+        // for (uint256 i = 0; i < indexes.length; i++) {
+        // LotInfo storage lot = lots[indexes[i]];
+        LotInfo storage lot = lots[index];
+        require(
+            lot.status == LotStatus.Auctioned,
+            'WQAuction: Lot is not auctioned'
+        );
+        require(
+            block.timestamp > lot.endTime,
+            'WQAuction: Auction time is not over yet'
+        );
+        totalAuctioned -= lot.saleAmount;
+        lot.saleAmount = 0;
+        lot.endPrice = 0;
+        lot.endTime = 0;
+        lot.status = LotStatus.New;
+        emit LotCanceled(index, lot.saleAmount, lot.endPrice);
+        // }
     }
 
     /**
      * @dev Restart auction when time is over
-     * @param indexes Indexes value
+     * @param index Indexes value
      */
-    function restartAuction(uint256[] memory indexes) external {
+    function restartAuction(uint256 index) external {
         uint256 price = oracle.getTokenPriceUSD(token.symbol());
-        for (uint256 i = 0; i < indexes.length; i++) {
-            LotInfo storage lot = lots[indexes[i]];
-            require(
-                lot.status == LotStatus.Auctioned,
-                'WQAuction: Lot is not auctioned'
-            );
-            require(
-                block.timestamp > lot.endTime,
-                'WQAuction: Auction time is not over yet'
-            );
-            lot.endPrice = price;
-            lot.endTime = block.timestamp + auctionDuration;
-            emit LotCanceled(indexes[i], lot.saleAmount, lot.endPrice);
-        }
+        // for (uint256 i = 0; i < indexes.length; i++) {
+        LotInfo storage lot = lots[index];
+        require(
+            lot.status == LotStatus.Auctioned,
+            'WQAuction: Lot is not auctioned'
+        );
+        require(
+            block.timestamp > lot.endTime,
+            'WQAuction: Auction time is not over yet'
+        );
+        lot.endPrice = price;
+        lot.endTime = block.timestamp + auctionDuration;
+        emit LotCanceled(index, lot.saleAmount, lot.endPrice);
+        // }
     }
 
     /**
@@ -537,5 +560,13 @@ contract WQCollateralAuction is
         onlyRole(ADMIN_ROLE)
     {
         auctionDuration = duration;
+    }
+
+    function setRate(uint256 _fixedRate, uint256 _annualInterestRate)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        fixedRate = _fixedRate;
+        annualInterestRate = _annualInterestRate;
     }
 }
