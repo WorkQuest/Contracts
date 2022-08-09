@@ -372,7 +372,12 @@ contract WQRouter is
 
         emit Moved(
             lotAmount + addedCollateral,
-            (lotPrice * lotAmount) / collateralRatio,
+            (lotPrice *
+                lotAmount *
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals())) / collateralRatio,
             price,
             index,
             index,
@@ -485,7 +490,12 @@ contract WQRouter is
         collaterals[symbol][user].lots.add(newIndex);
         emit Moved(
             collateral,
-            (collateral * price) / collateralRatio,
+            (collateral *
+                price *
+                10 **
+                    (18 -
+                        IERC20MetadataUpgradeable(tokens[symbol].token)
+                            .decimals())) / collateralRatio,
             price,
             index,
             newIndex,
@@ -626,12 +636,7 @@ contract WQRouter is
             WQDebtAuction
         )
     {
-        return (
-            oracle,
-            wusd,
-            surplusAuction,
-            debtAuction
-        );
+        return (oracle, wusd, surplusAuction, debtAuction);
     }
 
     /** Admin Functions */
