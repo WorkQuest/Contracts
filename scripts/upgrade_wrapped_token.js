@@ -25,6 +25,9 @@ async function main() {
     if (!process.env.USDT_TOKEN) {
         throw new Error(`Please set your USDT_TOKEN in a .env-${network} file`);
     }
+    if (!process.env.USDC_TOKEN) {
+        throw new Error(`Please set your USDT_TOKEN in a .env-${network} file`);
+    }
     const BridgeToken = await hre.ethers.getContractFactory("WQBridgeToken");
 
     console.log("Upgrade tokens...");
@@ -38,6 +41,9 @@ async function main() {
     console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
 
     bridge_token = await upgrades.upgradeProxy(process.env.USDT_TOKEN, BridgeToken);
+    console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
+
+    bridge_token = await upgrades.upgradeProxy(process.env.USDC_TOKEN, BridgeToken);
     console.log(`Upgraded ${bridge_token.address} ${await bridge_token.name()}`)
 }
 

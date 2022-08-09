@@ -281,12 +281,17 @@ contract WQCollateralAuction is
     /**
      * @dev Get current liquidated collateral amount for given price (when price decreased)
      */
-    function getLiquidatedCollaterallAmount() public view returns (uint256) {
+    function getLiquidatedCollaterallAmount(uint256 index)
+        public
+        view
+        returns (uint256)
+    {
         string memory symbol = token.symbol();
         uint256 price = oracle.getTokenPriceUSD(symbol);
         uint256 factor = 10**(18 - token.decimals());
-        uint256 collateral = router.getCollateral(symbol) * factor;
-        uint256 debt = router.getDebt(symbol);
+        uint256 collateral = lots[index].amount * factor;
+        uint256 debt = (lots[index].amount * factor * lots[index].price) /
+            lots[index].ratio;
         if (
             collateral * price < liquidateThreshold * debt &&
             collateral * price > 1e18 * debt
@@ -303,11 +308,6 @@ contract WQCollateralAuction is
      */
     function startAuction(uint256 index, uint256 amount) external nonReentrant {
         uint256 price = oracle.getTokenPriceUSD(token.symbol());
-        // totalAuctioned += amount;
-        // require(
-        //     totalAuctioned <= getLiquidatedCollaterallAmount(),
-        //     'WQAuction: Amount of tokens purchased is greater than the amount liquidated'
-        // );
         LotInfo storage lot = lots[index];
         require(lot.status == LotStatus.New, 'WQAuction: Status is not New');
         uint256 curRatio = (price * lot.ratio) / lot.price;
@@ -319,7 +319,7 @@ contract WQCollateralAuction is
         lot.saleAmount = amount;
         //HACK: strict compare for liquidate collateral by owner
         require(
-            amount < (lot.amount * 1e18) / curRatio,
+            amount <= getLiquidatedCollaterallAmount(index),
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
         if (reservesEnabled) {
@@ -352,12 +352,10 @@ contract WQCollateralAuction is
         uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) /
             1e18;
         uint256 comission = getComission(index, lot.saleAmount);
-        // totalAuctioned -= lot.saleAmount;
         if ((lot.endPrice * lot.ratio) / lot.price >= 1e18) {
             lot.ratio =
                 (((lot.amount - lot.saleAmount) * factor) * 1e18) /
-                ((((lot.amount * lot.price) / lot.ratio - cost) *
-                    factor *
+                ((((lot.amount * lot.price * factor) / lot.ratio - cost) *
                     1e18) / lot.endPrice);
             lot.amount -= lot.saleAmount;
             lot.price = lot.endPrice;
@@ -418,7 +416,6 @@ contract WQCollateralAuction is
             block.timestamp > lot.endTime,
             'WQAuction: Auction time is not over yet'
         );
-        // totalAuctioned -= lot.saleAmount;
         lot.saleAmount = 0;
         lot.endPrice = 0;
         lot.endTime = 0;
