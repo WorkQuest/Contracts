@@ -13,8 +13,6 @@ import '@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 import './WQPriceOracleInterface.sol';
 import './WQRouterVault.sol';
 import './WQCollateralAuction.sol';
-import './WQSurplusAuction.sol';
-import './WQDebtAuction.sol';
 import '../WQBridgeTokenInterface.sol';
 
 contract WQRouter is
@@ -51,8 +49,6 @@ contract WQRouter is
 
     WQPriceOracleInterface oracle;
     WQBridgeTokenInterface wusd;
-    WQSurplusAuction surplusAuction;
-    WQDebtAuction debtAuction;
 
     mapping(string => TokenSettings) public tokens;
     mapping(string => mapping(address => UserCollateral)) private collaterals;
@@ -126,22 +122,6 @@ contract WQRouter is
         require(
             msg.sender == address(tokens[symbol].collateralAuction),
             'WQRouter: Only collateral auction'
-        );
-        _;
-    }
-
-    modifier onlySurplusAuction() {
-        require(
-            msg.sender == address(surplusAuction),
-            'WQRouter: Only surplus auction'
-        );
-        _;
-    }
-
-    modifier onlyDebtAuction() {
-        require(
-            msg.sender == address(debtAuction),
-            'WQRouter: Only debt auction'
         );
         _;
     }
@@ -557,32 +537,6 @@ contract WQRouter is
         }
     }
 
-    /**
-     * @dev Transfer WQT from user and mint him WUSD
-     */
-    function transferSurplus(
-        address user,
-        uint256 amount,
-        string calldata symbol
-    ) external payable onlySurplusAuction {
-        tokens[symbol].totalDebt += amount;
-        wusd.mint(user, amount);
-    }
-
-    /**
-     * @dev Burn WUSD from user and send him WQT
-     */
-    function transferDebt(
-        address user,
-        uint256 amount,
-        uint256 cost,
-        string calldata symbol
-    ) external onlyDebtAuction {
-        tokens[symbol].totalDebt -= cost;
-        wusd.burn(user, cost);
-        payable(user).sendValue(amount);
-    }
-
     /** View Functions */
 
     /**
@@ -629,14 +583,9 @@ contract WQRouter is
     function getParams()
         external
         view
-        returns (
-            WQPriceOracleInterface,
-            WQBridgeTokenInterface,
-            WQSurplusAuction,
-            WQDebtAuction
-        )
+        returns (WQPriceOracleInterface, WQBridgeTokenInterface)
     {
-        return (oracle, wusd, surplusAuction, debtAuction);
+        return (oracle, wusd);
     }
 
     /** Admin Functions */
@@ -652,14 +601,12 @@ contract WQRouter is
      * @dev Set address of price oracle contract
      * @param _oracle Address of oracle
      */
-    function setContracts(
-        address _oracle,
-        address _debtAuction,
-        address _surplusAuction
-    ) external onlyRole(ADMIN_ROLE) {
+    function setContracts(address _oracle, address _wusd)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         oracle = WQPriceOracleInterface(_oracle);
-        debtAuction = WQDebtAuction(_debtAuction);
-        surplusAuction = WQSurplusAuction(_surplusAuction);
+        wusd = WQBridgeTokenInterface(_wusd);
     }
 
     /**

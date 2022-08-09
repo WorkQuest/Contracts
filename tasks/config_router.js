@@ -13,15 +13,12 @@ task("config_router", "Config router")
         if (!process.env.ROUTER) {
             throw new Error(`Please set your ROUTER in a .env-${network} file`);
         }
-        // if (!process.env.DEBT_AUCTION) {
-        //     throw new Error(`Please set your DEBT_AUCTION in a .env-${network} file`);
-        // }
-        // if (!process.env.SURPLUS_AUCTION) {
-        //     throw new Error(`Please set your SURPLUS_AUCTION in a .env-${network} file`);
-        // }
-        // if (!process.env.PRICE_ORACLE) {
-        //     throw new Error(`Please set your PRICE_ORACLE in a .env-${network} file`);
-        // }
+        if (!process.env.PRICE_ORACLE) {
+            throw new Error(`Please set your PRICE_ORACLE in a .env-${network} file`);
+        }
+        if (!process.env.WUSD_TOKEN) {
+            throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
+        }
         if (!process.env.ETH_TOKEN) {
             throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
         }
@@ -60,7 +57,7 @@ task("config_router", "Config router")
         }
         const router = await hre.ethers.getContractAt("WQRouter", process.env.ROUTER);
         console.log("Try to config router:", router.address);
-        // await router.setContracts(process.env.PRICE_ORACLE, process.env.DEBT_AUCTION, process.env.SURPLUS_AUCTION);
+        // await router.setContracts(process.env.PRICE_ORACLE, process.env.WUSD_TOKEN);
         await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
         await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
         await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");
