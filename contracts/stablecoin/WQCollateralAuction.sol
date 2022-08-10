@@ -195,11 +195,10 @@ contract WQCollateralAuction is
         returns (uint256)
     {
         lots[index].amount -= collaterralPart;
-        uint256 remain = lots[index].amount;
-        if (remain == 0) {
+        if (lots[index].amount == 0) {
             _removeLot(index);
         }
-        return remain;
+        return lots[index].amount;
     }
 
     function _removeLot(uint256 index) internal {
@@ -293,7 +292,8 @@ contract WQCollateralAuction is
             return
                 (collateral * (lots[index].price - price) * 1e18) /
                 lots[index].ratio /
-                price;
+                price /
+                factor;
         }
         return 0;
     }
@@ -347,10 +347,9 @@ contract WQCollateralAuction is
         uint256 factor = 10**(18 - token.decimals());
         uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) /
             1e18;
-        uint256 comission = getComission(index);
         if ((lot.endPrice * lot.ratio) / lot.price >= 1e18) {
             lot.ratio =
-                ((lot.amount - lot.saleAmount - comission) *
+                ((lot.amount - lot.saleAmount - getComission(lot.saleAmount)) *
                     factor *
                     lot.price) /
                 ((lot.amount * lot.price * factor) / lot.ratio - cost);
@@ -369,7 +368,7 @@ contract WQCollateralAuction is
                 msg.sender,
                 index,
                 cost,
-                lot.amount + comission,
+                lot.amount,
                 token.symbol()
             );
             //Transfer reserves
@@ -442,12 +441,10 @@ contract WQCollateralAuction is
 
     /**
      * @dev Get current comission of lot
-     * @param index Index value
+     * @param amount Collateral amount value
      */
-    function getComission(uint256 index) public view returns (uint256) {
-        return
-            (lots[index].saleAmount *
-                (feeRewards + feePlatform + feeReserves)) / 1e18;
+    function getComission(uint256 amount) public view returns (uint256) {
+        return (amount * (feeRewards + feePlatform + feeReserves)) / 1e18;
     }
 
     /**

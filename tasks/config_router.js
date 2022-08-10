@@ -57,7 +57,7 @@ task("config_router", "Config router")
         }
         const router = await hre.ethers.getContractAt("WQRouter", process.env.ROUTER);
         console.log("Try to config router:", router.address);
-        // await router.setContracts(process.env.PRICE_ORACLE, process.env.WUSD_TOKEN);
+        // await router.setContracts(process.env.PRICE_ORACLE, process.env.WUSD_TOKEN, process.env.ROUTER_FEE_RECEIVER);
         await router.setToken(1, process.env.ETH_TOKEN, process.env.ETH_AUCTION, process.env.ETH_AUCTION_MIN_RATIO, "ETH");
         await router.setToken(1, process.env.BNB_TOKEN, process.env.BNB_AUCTION, process.env.BNB_AUCTION_MIN_RATIO, "BNB");
         await router.setToken(1, process.env.USDT_TOKEN, process.env.USDT_AUCTION, process.env.USDT_AUCTION_MIN_RATIO, "USDT");

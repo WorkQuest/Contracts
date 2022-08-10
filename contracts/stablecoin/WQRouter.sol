@@ -30,7 +30,6 @@ contract WQRouter is
     uint256 constant YEAR = 31536000;
 
     struct UserCollateral {
-        uint256 collateralAmount;
         WQRouterVault vault;
         EnumerableSetUpgradeable.UintSet lots;
     }
@@ -39,8 +38,6 @@ contract WQRouter is
      * @dev Settings of collateral token
      */
     struct TokenSettings {
-        uint256 totalCollateral;
-        uint256 totalDebt;
         address token;
         WQCollateralAuction collateralAuction;
         uint256 minRatio;
@@ -49,6 +46,7 @@ contract WQRouter is
 
     WQPriceOracleInterface oracle;
     WQBridgeTokenInterface wusd;
+    address payable feeReceiver;
 
     mapping(string => TokenSettings) public tokens;
     mapping(string => mapping(address => UserCollateral)) private collaterals;
@@ -136,7 +134,11 @@ contract WQRouter is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address _oracle, address _wusd) external initializer {
+    function initialize(
+        address _oracle,
+        address _wusd,
+        address payable _feeReceiver
+    ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -146,6 +148,7 @@ contract WQRouter is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         oracle = WQPriceOracleInterface(_oracle);
         wusd = WQBridgeTokenInterface(_wusd);
+        feeReceiver = _feeReceiver;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -183,8 +186,6 @@ contract WQRouter is
                 msg.sender
             );
         }
-        collaterals[symbol][msg.sender].collateralAmount += collateralAmount;
-        tokens[symbol].totalCollateral += collateralAmount;
 
         uint256 debtAmount = (collateralAmount *
             price *
@@ -192,7 +193,6 @@ contract WQRouter is
                 (18 -
                     IERC20MetadataUpgradeable(tokens[symbol].token)
                         .decimals()))) / collateralRatio;
-        tokens[symbol].totalDebt += debtAmount;
 
         //Add lot to collateralAuction
         uint256 index = tokens[symbol].collateralAuction.addLot(
@@ -251,7 +251,6 @@ contract WQRouter is
                     IERC20MetadataUpgradeable(tokens[symbol].token)
                         .decimals())) / collateralRatio;
 
-        tokens[symbol].totalDebt += extraDebt;
         wusd.mint(msg.sender, extraDebt);
         tokens[symbol].collateralAuction.moveLot(index, price, lotAmount);
         emit Moved(
@@ -296,7 +295,6 @@ contract WQRouter is
                 (18 -
                     IERC20MetadataUpgradeable(tokens[symbol].token)
                         .decimals())) / collateralRatio;
-        tokens[symbol].totalDebt -= returnDebt;
         tokens[symbol].collateralAuction.moveLot(index, price, lotAmount);
         wusd.burn(msg.sender, returnDebt);
         emit Moved(
@@ -337,8 +335,6 @@ contract WQRouter is
             'WQRouter: Status not new'
         );
         uint256 addedCollateral = (lotPrice * lotAmount) / price - lotAmount;
-        tokens[symbol].totalCollateral += addedCollateral;
-        collaterals[symbol][msg.sender].collateralAmount += addedCollateral;
         tokens[symbol].collateralAuction.moveLot(
             index,
             price,
@@ -382,6 +378,8 @@ contract WQRouter is
         uint256 price;
         uint256 collateral;
         uint256 collateralRatio;
+        uint256 factor = (10 **
+            (18 - IERC20MetadataUpgradeable(tokens[symbol].token).decimals()));
         {
             (collateral, price, collateralRatio) = tokens[symbol]
                 .collateralAuction
@@ -393,36 +391,30 @@ contract WQRouter is
             );
             require(
                 debtPart <=
-                    (collateral *
+                    ((collateral -
+                        tokens[symbol].collateralAuction.getComission(
+                            collateral
+                        )) *
                         price *
-                        10 **
-                            (18 -
-                                IERC20MetadataUpgradeable(tokens[symbol].token)
-                                    .decimals())) /
+                        factor) /
                         collateralRatio,
                 'WQRouter: Removed debt part is greater than all debt'
             );
             uint256 collateralPart = (debtPart * collateralRatio) /
                 price /
-                (10 **
-                    (18 -
-                        IERC20MetadataUpgradeable(tokens[symbol].token)
-                            .decimals()));
-            // uint256 comission = tokens[symbol].collateralAuction.getComission(
-            //     index,
-            //     collateralPart
-            // );
-            tokens[symbol].totalDebt -= debtPart;
-            tokens[symbol].totalCollateral -= collateralPart;
+                factor;
+            collateralPart += tokens[symbol].collateralAuction.getComission(
+                collateralPart
+            );
             UserCollateral storage userCollateral = collaterals[symbol][
                 msg.sender
             ];
-            userCollateral.collateralAmount -= collateralPart;
-            uint256 remain = tokens[symbol].collateralAuction.decreaseLotAmount(
-                index,
-                collateralPart
-            );
-            if (remain == 0) {
+            if (
+                tokens[symbol].collateralAuction.decreaseLotAmount(
+                    index,
+                    collateralPart
+                ) == 0
+            ) {
                 collaterals[symbol][msg.sender].lots.remove(index);
             }
             collateral -= collateralPart;
@@ -433,23 +425,24 @@ contract WQRouter is
                 collateralPart,
                 tokens[symbol].token
             );
-            // Stability comission
-            // userCollateral.vault.transfer(
-            //     payable(address(tokens[symbol].collateralAuction)),
-            //     comission,
-            //     tokens[symbol].token
-            // );
+            userCollateral.vault.transfer(
+                payable(address(tokens[symbol].collateralAuction)),
+                (tokens[symbol].collateralAuction.feeReserves() *
+                    collateralPart) / 1e18,
+                tokens[symbol].token
+            );
+            userCollateral.vault.transfer(
+                feeReceiver,
+                (tokens[symbol].collateralAuction.feePlatform() *
+                    collateralPart) / 1e18,
+                tokens[symbol].token
+            );
             wusd.burn(msg.sender, debtPart);
         }
         emit Removed(
             msg.sender,
             collateral,
-            (collateral *
-                price *
-                10 **
-                    (18 -
-                        IERC20MetadataUpgradeable(tokens[symbol].token)
-                            .decimals())) / collateralRatio,
+            (collateral * price * factor) / collateralRatio,
             price,
             collateralRatio,
             index,
@@ -498,20 +491,26 @@ contract WQRouter is
     ) external nonReentrant onlyCollateralAuction(symbol) {
         address owner = tokens[symbol].collateralAuction.getLotOwner(index);
         {
-            collaterals[symbol][owner].collateralAmount -= collateralAmount;
-            tokens[symbol].totalCollateral -= collateralAmount;
-            tokens[symbol].totalDebt -= debtAmount;
             collaterals[symbol][owner].vault.transfer(
                 payable(buyer),
-                collateralAmount,
+                collateralAmount +
+                    (tokens[symbol].collateralAuction.feeRewards() *
+                        collateralAmount) /
+                    1e18,
                 tokens[symbol].token
             );
-            // Stability comission
-            // collaterals[symbol][owner].vault.transfer(
-            //     payable(address(tokens[symbol].collateralAuction)),
-            //     comission,
-            //     tokens[symbol].token
-            // );
+            collaterals[symbol][owner].vault.transfer(
+                payable(address(tokens[symbol].collateralAuction)),
+                (tokens[symbol].collateralAuction.feeReserves() *
+                    collateralAmount) / 1e18,
+                tokens[symbol].token
+            );
+            collaterals[symbol][owner].vault.transfer(
+                feeReceiver,
+                (tokens[symbol].collateralAuction.feePlatform() *
+                    collateralAmount) / 1e18,
+                tokens[symbol].token
+            );
             wusd.burn(buyer, debtAmount);
         }
 
@@ -563,49 +562,31 @@ contract WQRouter is
         return page;
     }
 
-    function getCollateral(string calldata symbol)
-        external
-        view
-        returns (uint256 amount)
-    {
-        return tokens[symbol].totalCollateral;
-    }
-
-    function getDebt(string calldata symbol)
-        external
-        view
-        returns (uint256 amount)
-    {
-        return tokens[symbol].totalDebt;
-    }
-
     function getParams()
         external
         view
-        returns (WQPriceOracleInterface, WQBridgeTokenInterface)
+        returns (
+            WQPriceOracleInterface,
+            WQBridgeTokenInterface,
+            address payable
+        )
     {
-        return (oracle, wusd);
+        return (oracle, wusd, feeReceiver);
     }
 
     /** Admin Functions */
-    function syncState(
-        address user,
-        uint256 index,
-        string calldata symbol
-    ) external onlyRole(ADMIN_ROLE) {
-        collaterals[symbol][user].lots.add(index);
-    }
-
     /**
      * @dev Set address of price oracle contract
      * @param _oracle Address of oracle
      */
-    function setContracts(address _oracle, address _wusd)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function setContracts(
+        address _oracle,
+        address _wusd,
+        address payable _feeReeiver
+    ) external onlyRole(ADMIN_ROLE) {
         oracle = WQPriceOracleInterface(_oracle);
         wusd = WQBridgeTokenInterface(_wusd);
+        feeReceiver = _feeReeiver;
     }
 
     /**

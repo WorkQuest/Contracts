@@ -18,7 +18,9 @@ async function main() {
     if (!process.env.WUSD_TOKEN) {
         throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
     }
-
+    if (!process.env.ROUTER_FEE_RECEIVER) {
+        throw new Error(`Please set your ROUTER_FEE_RECEIVER in a .env-${network} file`);
+    }
 
     console.log("Deploying...");
     const Router = await ethers.getContractFactory("WQRouter");
@@ -26,7 +28,8 @@ async function main() {
         Router,
         [
             process.env.PRICE_ORACLE,
-            process.env.WUSD_TOKEN
+            process.env.WUSD_TOKEN,
+            process.env.ROUTER_FEE_RECEIVER
         ],
         { initializer: 'initialize', kind: 'uups' }
     );
