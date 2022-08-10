@@ -190,6 +190,26 @@
       "address": "0xA83d2aDedb99ccd6504f522e90A7F9Be96CED053",
       "txHash": "0x10892b233b615981b297ad7ad54ca27fc84311c6fa73f1d45d3c76afb7656fa5",
       "kind": "uups"
+    },
+    {
+      "address": "0xce41eD1A55e89de0d64B870400466572501aA67A",
+      "txHash": "0xe823d492ac6dec1a8c0ff50cac90789f2da58ab2e7ce09f3da6b8cefc9ab306f",
+      "kind": "uups"
+    },
+    {
+      "address": "0xC9bda0FA861Bd3F66c7d0Fd75A9A8344e6Caa94A",
+      "txHash": "0x118c7952678e9b8b51b99467e074d21368d9c1d0f98e507369fd9b8fe4c57390",
+      "kind": "uups"
+    },
+    {
+      "address": "0xE8BCd0495757c72d85C36EC52EbB83F79936AB48",
+      "txHash": "0x4ab068e430ae0f17599b86f958f9eee7c75517e8441270055d4ce4d05ff0b0a1",
+      "kind": "uups"
+    },
+    {
+      "address": "0xdb7344e9C1aC2808b9d6d77b3B786d5fc8F8a198",
+      "txHash": "0x54243b11e15f7d12d4aee801aafc140ca648fe23606b02284aac6a52b42b4bdf",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -7534,6 +7554,237 @@
           },
           "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
             "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          }
+        }
+      }
+    },
+    "e8508388f2454b5a7c7a63d020d7bac16f48f0579124664129413fd5fbb1d287": {
+      "address": "0xCDB21507c91615CbA869FE705FEC4991BEc9260A",
+      "txHash": "0x3f896d619cfaac1424bc0f6f0ba5264aa5990f7f01713c966f738e3d6a9d7b42",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:235"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "_status",
+            "type": "t_uint256",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:74"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "oracle",
+            "type": "t_contract(WQPriceOracleInterface)23557",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:45"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "router",
+            "type": "t_contract(WQRouterInterface)25113",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:47"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "token",
+            "type": "t_contract(IERC20MetadataUpgradeable)2070",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:49"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "liquidateThreshold",
+            "type": "t_uint256",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:52"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "auctionDuration",
+            "type": "t_uint256",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:54"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "totalAuctioned",
+            "type": "t_uint256",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:56"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "feePlatform",
+            "type": "t_uint256",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:58"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "feeRewards",
+            "type": "t_uint256",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:60"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "feeReserves",
+            "type": "t_uint256",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:62"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "reservesEnabled",
+            "type": "t_bool",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:64"
+          },
+          {
+            "contract": "WQCollateralAuction",
+            "label": "lots",
+            "type": "t_array(t_struct(LotInfo)21849_storage)dyn_storage",
+            "src": "contracts/stablecoin/WQCollateralAuction.sol:66"
+          }
+        ],
+        "types": {
+          "t_contract(WQPriceOracleInterface)23557": {
+            "label": "contract WQPriceOracleInterface"
+          },
+          "t_contract(WQRouterInterface)25113": {
+            "label": "contract WQRouterInterface"
+          },
+          "t_contract(IERC20MetadataUpgradeable)2070": {
+            "label": "contract IERC20MetadataUpgradeable"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_array(t_struct(LotInfo)21849_storage)dyn_storage": {
+            "label": "struct WQCollateralAuction.LotInfo[]"
+          },
+          "t_struct(LotInfo)21849_storage": {
+            "label": "struct WQCollateralAuction.LotInfo",
+            "members": [
+              {
+                "label": "user",
+                "type": "t_address"
+              },
+              {
+                "label": "price",
+                "type": "t_uint256"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256"
+              },
+              {
+                "label": "ratio",
+                "type": "t_uint256"
+              },
+              {
+                "label": "saleAmount",
+                "type": "t_uint256"
+              },
+              {
+                "label": "endPrice",
+                "type": "t_uint256"
+              },
+              {
+                "label": "endTime",
+                "type": "t_uint256"
+              },
+              {
+                "label": "status",
+                "type": "t_enum(LotStatus)21831"
+              }
+            ]
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_enum(LotStatus)21831": {
+            "label": "enum WQCollateralAuction.LotStatus",
+            "members": [
+              "Unknown",
+              "New",
+              "Auctioned",
+              "Liquidated"
+            ]
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
           },
           "t_struct(RoleData)34_storage": {
             "label": "struct AccessControlUpgradeable.RoleData",
