@@ -35,7 +35,6 @@ contract WQCollateralAuction is
         uint256 price;
         uint256 amount;
         uint256 ratio;
-        uint256 created;
         uint256 saleAmount;
         uint256 endPrice;
         uint256 endTime;
@@ -51,18 +50,16 @@ contract WQCollateralAuction is
 
     /// @dev Threshold value when collateral liquidated
     uint256 public liquidateThreshold;
-    /// @dev Upper bound coefficient of auctioned collateral
-    uint256 public upperBoundCost;
-    /// @dev Lower bound coefficient of auctioned collateral
-    uint256 public lowerBoundCost;
     /// @dev Duration of collaterall auction
     uint256 public auctionDuration;
     /// @dev Total amount of collateral auctioned
     uint256 public totalAuctioned;
-    /// @dev Fixed rate
-    uint256 public fixedRate;
-    /// @dev Annual interest rate
-    uint256 public annualInterestRate;
+    /// @dev Platform fee coefficient
+    uint256 public feePlatform;
+    /// @dev Rewards coefficient for lot buyer
+    uint256 public feeRewards;
+    /// @dev Fee coefficient for reserves
+    uint256 public feeReserves;
     /// @dev Is reserves enabled
     bool public reservesEnabled;
     /// @dev Array of lots
@@ -114,11 +111,10 @@ contract WQCollateralAuction is
         address _oracle,
         address _router,
         uint256 _liquidateThreshold,
-        uint256 _upperBoundCost,
-        uint256 _lowerBoundCost,
         uint256 _auctionDuration,
-        uint256 _fixedRate,
-        uint256 _annualInterestRate
+        uint256 _feeRewards,
+        uint256 _feePlatform,
+        uint256 _feeReserves
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -132,11 +128,10 @@ contract WQCollateralAuction is
         oracle = WQPriceOracleInterface(_oracle);
         router = WQRouterInterface(_router);
         liquidateThreshold = _liquidateThreshold;
-        upperBoundCost = _upperBoundCost;
-        lowerBoundCost = _lowerBoundCost;
         auctionDuration = _auctionDuration;
-        fixedRate = _fixedRate;
-        annualInterestRate = _annualInterestRate;
+        feeRewards = _feeRewards;
+        feePlatform = _feePlatform;
+        feeReserves = _feeReserves;
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -163,7 +158,6 @@ contract WQCollateralAuction is
                 price: price,
                 amount: amount,
                 ratio: ratio,
-                created: block.timestamp,
                 saleAmount: 0,
                 endPrice: 0,
                 endTime: 0,
@@ -296,7 +290,10 @@ contract WQCollateralAuction is
             collateral * price < liquidateThreshold * debt &&
             collateral * price > 1e18 * debt
         ) {
-            return ((liquidateThreshold * debt) / price - collateral) / factor;
+            return
+                (collateral * (lots[index].price - price) * 1e18) /
+                lots[index].ratio /
+                price;
         }
         return 0;
     }
@@ -317,7 +314,6 @@ contract WQCollateralAuction is
             'WQAuction: This lot is not available for sale'
         );
         lot.saleAmount = amount;
-        //HACK: strict compare for liquidate collateral by owner
         require(
             amount <= getLiquidatedCollaterallAmount(index),
             'WQAuction: Amount of tokens purchased is greater than lot amount'
@@ -351,20 +347,19 @@ contract WQCollateralAuction is
         uint256 factor = 10**(18 - token.decimals());
         uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) /
             1e18;
-        uint256 comission = getComission(index, lot.saleAmount);
+        uint256 comission = getComission(index);
         if ((lot.endPrice * lot.ratio) / lot.price >= 1e18) {
             lot.ratio =
-                (((lot.amount - lot.saleAmount) * factor) * 1e18) /
-                ((((lot.amount * lot.price * factor) / lot.ratio - cost) *
-                    1e18) / lot.endPrice);
+                ((lot.amount - lot.saleAmount - comission) *
+                    factor *
+                    lot.price) /
+                ((lot.amount * lot.price * factor) / lot.ratio - cost);
             lot.amount -= lot.saleAmount;
-            lot.price = lot.endPrice;
             router.buyCollateral(
                 msg.sender,
                 index,
                 cost,
                 lot.saleAmount,
-                comission,
                 token.symbol()
             );
         } else {
@@ -374,8 +369,7 @@ contract WQCollateralAuction is
                 msg.sender,
                 index,
                 cost,
-                lot.amount,
-                comission,
+                lot.amount + comission,
                 token.symbol()
             );
             //Transfer reserves
@@ -450,17 +444,10 @@ contract WQCollateralAuction is
      * @dev Get current comission of lot
      * @param index Index value
      */
-    function getComission(uint256 index, uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function getComission(uint256 index) public view returns (uint256) {
         return
-            (amount *
-                (fixedRate +
-                    (annualInterestRate *
-                        (block.timestamp - lots[index].created)) /
-                    YEAR)) / 1e18;
+            (lots[index].saleAmount *
+                (feeRewards + feePlatform + feeReserves)) / 1e18;
     }
 
     /**
@@ -485,13 +472,9 @@ contract WQCollateralAuction is
         returns (uint256)
     {
         return
-            (lot.endPrice * lowerBoundCost) /
-            1e18 +
-            ((lot.endTime - block.timestamp) *
-                (upperBoundCost - lowerBoundCost) *
-                lot.endPrice) /
-            auctionDuration /
-            1e18;
+            lot.endPrice +
+            ((lot.endTime - block.timestamp) * (lot.price - lot.endPrice)) /
+            auctionDuration;
     }
 
     /** Admin Functions */
@@ -532,22 +515,6 @@ contract WQCollateralAuction is
     }
 
     /**
-     * @dev Set factor of start coefficient of cost for dutch auction
-     * @param percent Coefficient with 18 decimals, i.e. 120% is 1.2e18
-     */
-    function setUpperBoundCost(uint256 percent) external onlyRole(ADMIN_ROLE) {
-        upperBoundCost = percent;
-    }
-
-    /**
-     * @dev Set factor of end coefficient of cost for dutch auction
-     * @param percent Coefficient with 18 decimals, i.e. 95% is 0.95e18
-     */
-    function setLowerBoundCost(uint256 percent) external onlyRole(ADMIN_ROLE) {
-        lowerBoundCost = percent;
-    }
-
-    /**
      * @dev Set duration of dutch auction
      * @param duration Duration value in seconds
      */
@@ -558,11 +525,13 @@ contract WQCollateralAuction is
         auctionDuration = duration;
     }
 
-    function setRate(uint256 _fixedRate, uint256 _annualInterestRate)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
-        fixedRate = _fixedRate;
-        annualInterestRate = _annualInterestRate;
+    function setRate(
+        uint256 _feeRewards,
+        uint256 _feePlatform,
+        uint256 _feeReserves
+    ) external onlyRole(ADMIN_ROLE) {
+        feeRewards = _feeRewards;
+        feePlatform = _feePlatform;
+        feeReserves = _feeReserves;
     }
 }

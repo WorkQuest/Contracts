@@ -13,7 +13,7 @@ task("start_auction", "Start auction")
         let amount;
         let auction;
         if (args.sym == "ETH") {
-            amount = args.am; await ethers.utils.parseEther(args.am);
+            amount = await ethers.utils.parseEther(args.am);
             auction = await ethers.getContractAt("WQCollateralAuction", process.env.ETH_AUCTION);
         }
         if (args.sym == "BNB") {

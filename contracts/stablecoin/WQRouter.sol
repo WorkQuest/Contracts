@@ -368,7 +368,7 @@ contract WQRouter is
 
     /**
      * @dev Partial liquidate of a collateral.
-     * @dev User gives WUSD (debeted WUSD + comission) and takes part of collateral tokens
+     * @dev User gives WUSD and takes part of collateral tokens
      * @param index index of lot
      * @param debtPart Amount of part of debt
      * @param symbol Symbol of token
@@ -408,10 +408,10 @@ contract WQRouter is
                     (18 -
                         IERC20MetadataUpgradeable(tokens[symbol].token)
                             .decimals()));
-            uint256 comission = tokens[symbol].collateralAuction.getComission(
-                index,
-                collateralPart
-            );
+            // uint256 comission = tokens[symbol].collateralAuction.getComission(
+            //     index,
+            //     collateralPart
+            // );
             tokens[symbol].totalDebt -= debtPart;
             tokens[symbol].totalCollateral -= collateralPart;
             UserCollateral storage userCollateral = collaterals[symbol][
@@ -430,15 +430,15 @@ contract WQRouter is
             //Transfer collateral token
             userCollateral.vault.transfer(
                 payable(msg.sender),
-                collateralPart - comission,
+                collateralPart,
                 tokens[symbol].token
             );
             // Stability comission
-            userCollateral.vault.transfer(
-                payable(address(tokens[symbol].collateralAuction)),
-                comission,
-                tokens[symbol].token
-            );
+            // userCollateral.vault.transfer(
+            //     payable(address(tokens[symbol].collateralAuction)),
+            //     comission,
+            //     tokens[symbol].token
+            // );
             wusd.burn(msg.sender, debtPart);
         }
         emit Removed(
@@ -494,7 +494,6 @@ contract WQRouter is
         uint256 index,
         uint256 debtAmount,
         uint256 collateralAmount,
-        uint256 comission,
         string memory symbol
     ) external nonReentrant onlyCollateralAuction(symbol) {
         address owner = tokens[symbol].collateralAuction.getLotOwner(index);
@@ -504,15 +503,15 @@ contract WQRouter is
             tokens[symbol].totalDebt -= debtAmount;
             collaterals[symbol][owner].vault.transfer(
                 payable(buyer),
-                collateralAmount - comission,
+                collateralAmount,
                 tokens[symbol].token
             );
             // Stability comission
-            collaterals[symbol][owner].vault.transfer(
-                payable(address(tokens[symbol].collateralAuction)),
-                comission,
-                tokens[symbol].token
-            );
+            // collaterals[symbol][owner].vault.transfer(
+            //     payable(address(tokens[symbol].collateralAuction)),
+            //     comission,
+            //     tokens[symbol].token
+            // );
             wusd.burn(buyer, debtAmount);
         }
 
