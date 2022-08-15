@@ -391,10 +391,7 @@ contract WQRouter is
             );
             require(
                 debtPart <=
-                    ((collateral -
-                        tokens[symbol].collateralAuction.getComission(
-                            collateral
-                        )) *
+                    (collateral *
                         price *
                         factor) /
                         collateralRatio,
@@ -403,9 +400,6 @@ contract WQRouter is
             uint256 collateralPart = (debtPart * collateralRatio) /
                 price /
                 factor;
-            collateralPart += tokens[symbol].collateralAuction.getComission(
-                collateralPart
-            );
             UserCollateral storage userCollateral = collaterals[symbol][
                 msg.sender
             ];
@@ -418,11 +412,10 @@ contract WQRouter is
                 collaterals[symbol][msg.sender].lots.remove(index);
             }
             collateral -= collateralPart;
-
-            //Transfer collateral token
+            // Transfer collateral token
             userCollateral.vault.transfer(
                 payable(msg.sender),
-                collateralPart,
+                collateralPart - tokens[symbol].collateralAuction.getComission(collateralPart),
                 tokens[symbol].token
             );
             userCollateral.vault.transfer(

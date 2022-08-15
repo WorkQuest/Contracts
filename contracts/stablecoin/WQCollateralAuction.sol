@@ -192,13 +192,13 @@ contract WQCollateralAuction is
     function decreaseLotAmount(uint256 index, uint256 collaterralPart)
         external
         onlyRouter
-        returns (uint256)
+        returns (uint256 amount_)
     {
         lots[index].amount -= collaterralPart;
+        amount_ = lots[index].amount;
         if (lots[index].amount == 0) {
             _removeLot(index);
         }
-        return lots[index].amount;
     }
 
     function _removeLot(uint256 index) internal {
