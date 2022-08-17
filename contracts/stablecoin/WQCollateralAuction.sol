@@ -353,7 +353,7 @@ contract WQCollateralAuction is
                     factor *
                     lot.price) /
                 ((lot.amount * lot.price * factor) / lot.ratio - cost);
-            lot.amount -= lot.saleAmount;
+            lot.amount -= lot.saleAmount + getComission(lot.saleAmount);
             router.buyCollateral(
                 msg.sender,
                 index,

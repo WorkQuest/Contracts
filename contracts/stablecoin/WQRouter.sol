@@ -390,11 +390,7 @@ contract WQRouter is
                 'WQRouter: Status not new'
             );
             require(
-                debtPart <=
-                    (collateral *
-                        price *
-                        factor) /
-                        collateralRatio,
+                debtPart <= (collateral * price * factor) / collateralRatio,
                 'WQRouter: Removed debt part is greater than all debt'
             );
             uint256 collateralPart = (debtPart * collateralRatio) /
@@ -415,7 +411,11 @@ contract WQRouter is
             // Transfer collateral token
             userCollateral.vault.transfer(
                 payable(msg.sender),
-                collateralPart - tokens[symbol].collateralAuction.getComission(collateralPart),
+                collateralPart -
+                    (collateralPart *
+                        (tokens[symbol].collateralAuction.feeReserves() +
+                            tokens[symbol].collateralAuction.feePlatform())) /
+                    1e18,
                 tokens[symbol].token
             );
             userCollateral.vault.transfer(
