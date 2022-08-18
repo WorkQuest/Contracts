@@ -234,19 +234,19 @@ contract WQPensionFund is
         address depositor,
         uint256 amount,
         uint256 duration
-    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) returns (uint256) {
         require(
-            amount <= balanceOf(depositor),
-            'WQPension: Insufficient amount in wallet'
-        );
-        require(
-            block.timestamp + duration * 1 days <=
-                wallets[depositor].unlockDate,
-            'WQPension: Invalid duration'
+            block.timestamp < wallets[depositor].unlockDate,
+            'WQPension: Credit unavailable'
         );
         wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount, block.timestamp);
+        uint256 borrowedTo = block.timestamp + duration * 1 days;
+        return
+            borrowedTo < wallets[depositor].unlockDate
+                ? borrowedTo
+                : wallets[depositor].unlockDate;
     }
 
     function refund(

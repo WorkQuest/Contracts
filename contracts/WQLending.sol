@@ -92,7 +92,7 @@ contract WQLending is
             'WQSavingProduct: already deposited'
         );
         if (wallet.unlockDate == 0) {
-            wallet.unlockDate = block.timestamp + (lockTime + 3) * 1 days;
+            wallet.unlockDate = block.timestamp + lockTime * 1 days;
         }
         wallet.amount += amount;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
@@ -163,16 +163,19 @@ contract WQLending is
         address depositor,
         uint256 amount,
         uint256 duration
-    ) external override nonReentrant onlyRole(BORROWER_ROLE) {
-        require(amount == balanceOf(depositor), 'WQLending: Invalid amount');
+    ) external override nonReentrant onlyRole(BORROWER_ROLE) returns (uint256) {
         require(
-            block.timestamp + duration * 1 days <=
-                wallets[depositor].unlockDate,
-            'WQLending: Invalid duration'
+            block.timestamp < wallets[depositor].unlockDate,
+            'WQLending: Credit unavailable'
         );
         wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
+        uint256 borrowedTo = block.timestamp + duration * 1 days;
+        return
+            borrowedTo < wallets[depositor].unlockDate
+                ? borrowedTo
+                : wallets[depositor].unlockDate;
     }
 
     /**

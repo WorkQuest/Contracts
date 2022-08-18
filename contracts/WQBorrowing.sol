@@ -28,6 +28,7 @@ contract WQBorrowing is
         uint256 collateral;
         uint256 credit;
         uint256 borrowedAt;
+        uint256 borrowedTo;
         uint256 duration;
         uint256 apy;
         uint256 saleAmount;
@@ -182,12 +183,19 @@ contract WQBorrowing is
                 (18 -
                     IERC20MetadataUpgradeable(address(tokens[symbol]))
                         .decimals()));
+
+        // Get coins from fund
         borrowers[msg.sender].push(
             BorrowInfo({
                 depositor: depositor,
                 collateral: collateralAmount,
                 credit: credit,
                 borrowedAt: block.timestamp,
+                borrowedTo: funds[fundIndex].borrow(
+                    depositor,
+                    credit,
+                    duration
+                ),
                 duration: duration,
                 apy: apys[duration],
                 saleAmount: 0,
@@ -204,8 +212,6 @@ contract WQBorrowing is
             address(this),
             collateralAmount
         );
-        // Get coins from fund
-        funds[fundIndex].borrow(depositor, credit, duration);
         // Send wusd credit
         wusd.safeTransfer(msg.sender, credit);
 
@@ -254,7 +260,7 @@ contract WQBorrowing is
     ) external nonReentrant {
         BorrowInfo storage loan = borrowers[borrower][index];
         require(
-            block.timestamp > loan.borrowedAt + loan.duration * 1 days,
+            block.timestamp > loan.borrowedTo,
             'WQBorrowing: Collateral is not available for purchase'
         );
         require(
