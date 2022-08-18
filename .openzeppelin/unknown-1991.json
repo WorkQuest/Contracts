@@ -235,6 +235,31 @@
       "address": "0x9a02C7Cde2d83556870F91c78c58052D0D330e37",
       "txHash": "0x2ab283714dd52b2a505b065dab7430708dd49500a3ce5387db2dbbc1de665c04",
       "kind": "uups"
+    },
+    {
+      "address": "0xE0bE064a7C1573837E58fdD943133265358e235D",
+      "txHash": "0xabc253ef10d2ce9763aa3792f0b25e630ea94e02325925074dab8c16164f17db",
+      "kind": "uups"
+    },
+    {
+      "address": "0xC16F2efbE0FF219d3c60bF9B1fF088c679d73D79",
+      "txHash": "0xc9936c3519228ddb1b85e4537fabfda1908acd1218df9302afc0211831e49bae",
+      "kind": "uups"
+    },
+    {
+      "address": "0x816dE5B5fF23b4962dD6f044309F07aA432Dd1f3",
+      "txHash": "0x6e39fa308e863cb4af12bcf27342a4a199b4572ecba799561d10de642f9c9fdb",
+      "kind": "uups"
+    },
+    {
+      "address": "0x07d27E0662201Dc5D91eFDCa943a68Bc5B5377Ec",
+      "txHash": "0x3168608569acc38bbdc21b5a49758a8d2dea1abd5766dd15007df31643d685f1",
+      "kind": "uups"
+    },
+    {
+      "address": "0xe5F75B3bfB8cFaBF0CF2b71d609Dad46a9398F6E",
+      "txHash": "0x5a77f5cf96c82226d86a79ee9052b5137c6e3ac36b2b75d1c42a8fef86293272",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -8740,6 +8765,998 @@
           },
           "t_mapping(t_address,t_bool)": {
             "label": "mapping(address => bool)"
+          }
+        }
+      }
+    },
+    "bd588d6528f47dc49e0942874c29e7fbfedf9b53914d6c28cefe5ba777d3fccc": {
+      "address": "0x250b4c5eA6b418BDaa60CB31901652cf032C7932",
+      "txHash": "0xd836198149d96e279a08ce2986ee99eccdc3e2e8b95d37347f7290d54e0dd123",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint8",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:259"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "_status",
+            "type": "t_uint256",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:74"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "lockTime",
+            "type": "t_uint256",
+            "src": "contracts/WQPensionFund.sol:37"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "defaultFee",
+            "type": "t_uint256",
+            "src": "contracts/WQPensionFund.sol:38"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "apys",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "src": "contracts/WQPensionFund.sol:40"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "wusd",
+            "type": "t_contract(IERC20Upgradeable)2095",
+            "src": "contracts/WQPensionFund.sol:41"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "feeReceiver",
+            "type": "t_address",
+            "src": "contracts/WQPensionFund.sol:44"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "feePerMonth",
+            "type": "t_uint256",
+            "src": "contracts/WQPensionFund.sol:45"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "feeWithdraw",
+            "type": "t_uint256",
+            "src": "contracts/WQPensionFund.sol:46"
+          },
+          {
+            "contract": "WQPensionFund",
+            "label": "wallets",
+            "type": "t_mapping(t_address,t_struct(PensionWallet)16351_storage)",
+            "src": "contracts/WQPensionFund.sol:49"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)"
+          },
+          "t_contract(IERC20Upgradeable)2095": {
+            "label": "contract IERC20Upgradeable"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_mapping(t_address,t_struct(PensionWallet)16351_storage)": {
+            "label": "mapping(address => struct WQPensionFund.PensionWallet)"
+          },
+          "t_struct(PensionWallet)16351_storage": {
+            "label": "struct WQPensionFund.PensionWallet",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256"
+              },
+              {
+                "label": "borrowed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "fee",
+                "type": "t_uint256"
+              },
+              {
+                "label": "unlockDate",
+                "type": "t_uint256"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint256"
+              },
+              {
+                "label": "rewardAllowed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "rewardDistributed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "serviceComission",
+                "type": "t_uint256"
+              }
+            ]
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          }
+        }
+      }
+    },
+    "317c2c6ee2fe95573e8b0fc78cc9ede16d78b1cafe5ed08f542aaff1fa23aa1a": {
+      "address": "0x0815079DE0898604c2E72511c2D274f16D4FAF69",
+      "txHash": "0xc16f996220ce785a0a595e03528e3894046625df11f3eb3886871fd10ea14bf7",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint8",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:259"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "feeEmployer",
+            "type": "t_uint256",
+            "src": "contracts/WorkQuestFactory.sol:29"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "feeWorker",
+            "type": "t_uint256",
+            "src": "contracts/WorkQuestFactory.sol:30"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "feeTx",
+            "type": "t_uint256",
+            "src": "contracts/WorkQuestFactory.sol:31"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "feeReceiver",
+            "type": "t_address_payable",
+            "src": "contracts/WorkQuestFactory.sol:34"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "pensionFund",
+            "type": "t_address_payable",
+            "src": "contracts/WorkQuestFactory.sol:37"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "referral",
+            "type": "t_address_payable",
+            "src": "contracts/WorkQuestFactory.sol:40"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "wusd",
+            "type": "t_contract(IERC20Upgradeable)2095",
+            "src": "contracts/WorkQuestFactory.sol:43"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "workquests",
+            "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
+            "src": "contracts/WorkQuestFactory.sol:46"
+          },
+          {
+            "contract": "WorkQuestFactory",
+            "label": "workquestValid",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "contracts/WorkQuestFactory.sol:49"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_address_payable": {
+            "label": "address payable"
+          },
+          "t_contract(IERC20Upgradeable)2095": {
+            "label": "contract IERC20Upgradeable"
+          },
+          "t_mapping(t_address,t_array(t_address)dyn_storage)": {
+            "label": "mapping(address => address[])"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          }
+        }
+      }
+    },
+    "b6f2a24308a5f7b0dfe28e33c0eaba2b810acd0d586967f7fd7241bc7de48ccb": {
+      "address": "0x8BbB85Ff47687Dae4683C660F04261FDb0494Af4",
+      "txHash": "0x679f24a1385f7575654a30eddb355404b8fabb8cd44c4d8bcd75b6c318c2c763",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint8",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:259"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "_status",
+            "type": "t_uint256",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:74"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WQLending",
+            "label": "apys",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "src": "contracts/WQLending.sol:33"
+          },
+          {
+            "contract": "WQLending",
+            "label": "wusd",
+            "type": "t_contract(IERC20Upgradeable)2095",
+            "src": "contracts/WQLending.sol:34"
+          },
+          {
+            "contract": "WQLending",
+            "label": "feeReceiver",
+            "type": "t_address",
+            "src": "contracts/WQLending.sol:37"
+          },
+          {
+            "contract": "WQLending",
+            "label": "fee",
+            "type": "t_uint256",
+            "src": "contracts/WQLending.sol:38"
+          },
+          {
+            "contract": "WQLending",
+            "label": "wallets",
+            "type": "t_mapping(t_address,t_struct(DepositWallet)14425_storage)",
+            "src": "contracts/WQLending.sol:41"
+          }
+        ],
+        "types": {
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_contract(IERC20Upgradeable)2095": {
+            "label": "contract IERC20Upgradeable"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_mapping(t_address,t_struct(DepositWallet)14425_storage)": {
+            "label": "mapping(address => struct WQLending.DepositWallet)"
+          },
+          "t_struct(DepositWallet)14425_storage": {
+            "label": "struct WQLending.DepositWallet",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256"
+              },
+              {
+                "label": "borrowed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "rewardAllowed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "rewardDistributed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "unlockDate",
+                "type": "t_uint256"
+              }
+            ]
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          }
+        }
+      }
+    },
+    "5af2fe176eb4be6a9ea7f808a694014049cd9e616ea0da985cb54e83bc879e58": {
+      "address": "0xfb9a8429110F8FA372244b8Dcf5E5d86D0E93675",
+      "txHash": "0xa063e58b30caf4bcbd98d75d020e0d54b04619076baa1d1d079fe6999c72549f",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint8",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:259"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "_status",
+            "type": "t_uint256",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:74"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WQSavingProduct",
+            "label": "wusd",
+            "type": "t_contract(IERC20Upgradeable)2095",
+            "src": "contracts/WQSavingProduct.sol:36"
+          },
+          {
+            "contract": "WQSavingProduct",
+            "label": "feeReceiver",
+            "type": "t_address",
+            "src": "contracts/WQSavingProduct.sol:39"
+          },
+          {
+            "contract": "WQSavingProduct",
+            "label": "feePerMonth",
+            "type": "t_uint256",
+            "src": "contracts/WQSavingProduct.sol:40"
+          },
+          {
+            "contract": "WQSavingProduct",
+            "label": "feeWithdraw",
+            "type": "t_uint256",
+            "src": "contracts/WQSavingProduct.sol:41"
+          },
+          {
+            "contract": "WQSavingProduct",
+            "label": "apys",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "src": "contracts/WQSavingProduct.sol:44"
+          },
+          {
+            "contract": "WQSavingProduct",
+            "label": "wallets",
+            "type": "t_mapping(t_address,t_struct(DepositWallet)18185_storage)",
+            "src": "contracts/WQSavingProduct.sol:47"
+          }
+        ],
+        "types": {
+          "t_contract(IERC20Upgradeable)2095": {
+            "label": "contract IERC20Upgradeable"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)"
+          },
+          "t_mapping(t_address,t_struct(DepositWallet)18185_storage)": {
+            "label": "mapping(address => struct WQSavingProduct.DepositWallet)"
+          },
+          "t_struct(DepositWallet)18185_storage": {
+            "label": "struct WQSavingProduct.DepositWallet",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256"
+              },
+              {
+                "label": "borrowed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "rewardAllowed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "rewardDistributed",
+                "type": "t_uint256"
+              },
+              {
+                "label": "unlockDate",
+                "type": "t_uint256"
+              },
+              {
+                "label": "duration",
+                "type": "t_uint256"
+              },
+              {
+                "label": "serviceComission",
+                "type": "t_uint256"
+              }
+            ]
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          }
+        }
+      }
+    },
+    "d7f2b3f87c346e75a90eee7764807b5983be1063f57bf1736566cb06e4bbcd43": {
+      "address": "0x05Ea3F1D4238D3C3bdd411b31763623eda602455",
+      "txHash": "0xa0a68df510b5b05da724639b24482c31805a78c57e42736a45cda6446258b1e0",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint8",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "_roles",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "contract": "AccessControlUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:259"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "_status",
+            "type": "t_uint256",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "contract": "ReentrancyGuardUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:74"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "oracle",
+            "type": "t_contract(WQPriceOracleInterface)25805",
+            "src": "contracts/WQBorrowing.sol:41"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "fixedRate",
+            "type": "t_uint256",
+            "src": "contracts/WQBorrowing.sol:42"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "wusd",
+            "type": "t_contract(IERC20Upgradeable)2095",
+            "src": "contracts/WQBorrowing.sol:43"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "feeReceiver",
+            "type": "t_address",
+            "src": "contracts/WQBorrowing.sol:46"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "fee",
+            "type": "t_uint256",
+            "src": "contracts/WQBorrowing.sol:47"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "auctionDuration",
+            "type": "t_uint256",
+            "src": "contracts/WQBorrowing.sol:50"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "upperBoundCost",
+            "type": "t_uint256",
+            "src": "contracts/WQBorrowing.sol:52"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "lowerBoundCost",
+            "type": "t_uint256",
+            "src": "contracts/WQBorrowing.sol:54"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "apys",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "src": "contracts/WQBorrowing.sol:57"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "tokens",
+            "type": "t_mapping(t_string_memory_ptr,t_contract(IERC20Upgradeable)2095)",
+            "src": "contracts/WQBorrowing.sol:59"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "borrowers",
+            "type": "t_mapping(t_address,t_array(t_struct(BorrowInfo)8541_storage)dyn_storage)",
+            "src": "contracts/WQBorrowing.sol:62"
+          },
+          {
+            "contract": "WQBorrowing",
+            "label": "funds",
+            "type": "t_array(t_contract(WQFundInterface)13185)dyn_storage",
+            "src": "contracts/WQBorrowing.sol:65"
+          }
+        ],
+        "types": {
+          "t_contract(WQPriceOracleInterface)25805": {
+            "label": "contract WQPriceOracleInterface"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_contract(IERC20Upgradeable)2095": {
+            "label": "contract IERC20Upgradeable"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)"
+          },
+          "t_mapping(t_string_memory_ptr,t_contract(IERC20Upgradeable)2095)": {
+            "label": "mapping(string => contract IERC20Upgradeable)"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_mapping(t_address,t_array(t_struct(BorrowInfo)8541_storage)dyn_storage)": {
+            "label": "mapping(address => struct WQBorrowing.BorrowInfo[])"
+          },
+          "t_array(t_struct(BorrowInfo)8541_storage)dyn_storage": {
+            "label": "struct WQBorrowing.BorrowInfo[]"
+          },
+          "t_struct(BorrowInfo)8541_storage": {
+            "label": "struct WQBorrowing.BorrowInfo",
+            "members": [
+              {
+                "label": "depositor",
+                "type": "t_address"
+              },
+              {
+                "label": "collateral",
+                "type": "t_uint256"
+              },
+              {
+                "label": "credit",
+                "type": "t_uint256"
+              },
+              {
+                "label": "borrowedAt",
+                "type": "t_uint256"
+              },
+              {
+                "label": "borrowedTo",
+                "type": "t_uint256"
+              },
+              {
+                "label": "duration",
+                "type": "t_uint256"
+              },
+              {
+                "label": "apy",
+                "type": "t_uint256"
+              },
+              {
+                "label": "saleAmount",
+                "type": "t_uint256"
+              },
+              {
+                "label": "endCost",
+                "type": "t_uint256"
+              },
+              {
+                "label": "endTime",
+                "type": "t_uint256"
+              },
+              {
+                "label": "fund",
+                "type": "t_contract(WQFundInterface)13185"
+              },
+              {
+                "label": "symbol",
+                "type": "t_string_storage"
+              }
+            ]
+          },
+          "t_contract(WQFundInterface)13185": {
+            "label": "contract WQFundInterface"
+          },
+          "t_array(t_contract(WQFundInterface)13185)dyn_storage": {
+            "label": "contract WQFundInterface[]"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)"
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32"
+              }
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_uint8": {
+            "label": "uint8"
           }
         }
       }

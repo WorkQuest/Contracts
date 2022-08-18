@@ -34,11 +34,11 @@ task("config_workquest", "Config workquest")
             throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
         }
         let factory = await ethers.getContractAt("WorkQuestFactory", process.env.WORK_QUEST_FACTORY);
-        console.log("Try to config referral...");
+        console.log("Try to config factory...");
         // await factory.setOracle(process.env.PRICE_ORACLE);
         // await factory.setFeeReceiver(process.env.WORKQUEST_FEE_RECEIVER);
         // await factory.setRefferal(process.env.REFERRAL);
-        // await factory.setPensionFund(process.env.PENSION_FUND);
+        await factory.setPensionFund(process.env.PENSION_FUND);
         // await factory.setWusd(process.env.WUSD_TOKEN);
         // await factory.setFeeEmployer(process.env.WORKQUEST_FEE_EMPLOYER);
         // await factory.setFeeWorker(process.env.WORKQUEST_FEE_WORKER);

@@ -378,7 +378,13 @@ contract WQCollateralAuction is
             );
             _removeLot(index);
         }
-        emit LotBuyed(msg.sender, index, lot.saleAmount, cost, lot.endPrice);
+        emit LotBuyed(
+            msg.sender,
+            index,
+            lot.saleAmount + (lot.saleAmount * feeRewards) / 1e18,
+            cost,
+            lot.endPrice
+        );
         lot.endPrice = 0;
         lot.saleAmount = 0;
         lot.endTime = 0;

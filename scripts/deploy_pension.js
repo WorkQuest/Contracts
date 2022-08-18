@@ -22,9 +22,6 @@ async function main() {
   if (!process.env.PENSION_DEFAULT_FEE) {
     throw new Error(`Please set your PENSION_DEFAULT_FEE in a .env-${network} file`);
   }
-  if (!process.env.PENSION_APY) {
-    throw new Error(`Please set your PENSION_APY in a .env-${network} file`);
-  }
   if (!process.env.WUSD_TOKEN) {
     throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
   }

@@ -17,9 +17,6 @@ async function main() {
     if (!process.env.WUSD_TOKEN) {
         throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
     }
-    if (!process.env.WUSD_TOKEN) {
-        throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
-    }
     if (!process.env.SAVING_PRODUCT_FEE_RECEIVER) {
         throw new Error(`Please set your SAVING_PRODUCT_FEE_RECEIVER in a .env-${network} file`);
     }
