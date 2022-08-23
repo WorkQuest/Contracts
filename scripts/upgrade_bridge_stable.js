@@ -18,7 +18,7 @@ async function main() {
   }
 
   console.log("Upgrade...");
-  const WQBridge = await ethers.getContractFactory("contracts/WQBridgeStable.sol:WQBridge");
+  const WQBridge = await ethers.getContractFactory("WQBridgeStable");
   const bridge = await upgrades.upgradeProxy(process.env.STABLE_BRIDGE, WQBridge, { kind: "transparent" });
   console.log("Bridge has been upgraded to:", bridge.address);
 }

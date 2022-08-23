@@ -6,7 +6,6 @@ require('hardhat-docgen')
 require("@nomiclabs/hardhat-etherscan")
 require('@openzeppelin/hardhat-upgrades')
 require('./tasks');
-
 require('dotenv').config();
 const BigNumber = require('bignumber.js');
 BigNumber.config({ EXPONENTIAL_AT: 60 });
@@ -84,10 +83,10 @@ module.exports = {
       chainId: 2009
     },
     bsctestnet: {
-      url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
+      url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
       chainId: 97,
       gas: "auto",
-      gasPrice: 5000000000,
+      gasPrice: 10000000000,
       accounts: { mnemonic: mnemonic }
     },
     bscmainnet: {
@@ -98,7 +97,7 @@ module.exports = {
       accounts: { mnemonic: mnemonic }
     },
     mumbai: {
-      url: `https://rpc-mumbai.matic.today/`,
+      url: `https://rpc-mumbai.maticvigil.com/`,
       chainId: 80001,
       gas: "auto",
       gasPrice: 5000000000,

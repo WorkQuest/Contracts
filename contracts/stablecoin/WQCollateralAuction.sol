@@ -364,19 +364,19 @@ contract WQCollateralAuction is
         } else {
             require(reservesEnabled, 'WQAuction: Reserves is not enabled');
             //FIXME: calculate reserves
-            router.buyCollateral(
-                msg.sender,
-                index,
-                cost,
-                lot.amount,
-                token.symbol()
-            );
-            //Transfer reserves
-            IERC20Upgradeable(address(token)).safeTransfer(
-                msg.sender,
-                lot.saleAmount - lot.amount
-            );
-            _removeLot(index);
+            // router.buyCollateral(
+            //     msg.sender,
+            //     index,
+            //     cost,
+            //     lot.amount,
+            //     token.symbol()
+            // );
+            // //Transfer reserves
+            // IERC20Upgradeable(address(token)).safeTransfer(
+            //     msg.sender,
+            //     lot.saleAmount - lot.amount
+            // );
+            // _removeLot(index);
         }
         emit LotBuyed(
             msg.sender,

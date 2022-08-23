@@ -14,16 +14,26 @@ task("produce_wusd", "Produce WUSD")
 
         /**
                 const or = await ethers.getContractAt("WQPriceOracle", process.env.PRICE_ORACLE)
+
                 const wusd = await ethers.getContractAt("WQBridgeToken", process.env.WUSD_TOKEN)
                 const usdt = await ethers.getContractAt("WQBridgeToken", process.env.USDT_TOKEN)
                 const usdc = await ethers.getContractAt("WQBridgeToken", process.env.USDC_TOKEN)
                 const weth = await ethers.getContractAt("WQBridgeToken", process.env.ETH_TOKEN)
                 const wbnb = await ethers.getContractAt("WQBridgeToken", process.env.BNB_TOKEN)
+
                 const rou = await ethers.getContractAt("WQRouter", process.env.ROUTER)
                 const aue = await ethers.getContractAt("WQCollateralAuction", process.env.ETH_AUCTION)
                 const aub = await ethers.getContractAt("WQCollateralAuction", process.env.BNB_AUCTION)
                 const auu = await ethers.getContractAt("WQCollateralAuction", process.env.USDT_AUCTION)
                 const auc = await ethers.getContractAt("WQCollateralAuction", process.env.USDC_AUCTION)
+
+                const bor = await ethers.getContractAt("WQBorrowing", process.env.BORROWING)
+                const lend = await ethers.getContractAt("WQLending", process.env.LENDING)
+                const pens = await ethers.getContractAt("WQPensionFund", process.env.PENSION_FUND)
+                const sav = await ethers.getContractAt("WQSavingProduct", process.env.SAVING_PRODUCT)
+
+                const br = await ethers.getContractAt("WQBridge", process.env.BRIDGE)
+                const br = await ethers.getContractAt("WQBridgeStable", process.env.STABLE_BRIDGE)
         */
 
         const router = await ethers.getContractAt("WQRouter", process.env.ROUTER);

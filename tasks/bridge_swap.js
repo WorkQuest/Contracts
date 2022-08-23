@@ -22,6 +22,6 @@ task("bridge_swap", "Swap token on bridge")
         // const wqt = await hre.ethers.getContractAt("WQBridgeToken", process.env.USDT_TOKEN);
         // await wqt.approve(process.env.STABLE_BRIDGE, "1000000000");
         // nonce, chainTo, amount, recipient, symbol
-        await bridge.swap(7, 3, "100000000000000000", "0xE24f99419d788003c0D5212f05F47B1572cDC38a", "WQT", { value: "100000000000000000" });
+        await bridge.swap(100500, 1, "11000000", "0x3b4da64210cc0de7c9a187c314e51983aa1d5304", "USDC");
         console.log("Done");
     });
