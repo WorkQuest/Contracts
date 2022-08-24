@@ -158,7 +158,6 @@ contract WQBridge is
         address recipient,
         string memory symbol
     ) external payable whenNotPaused {
-        require(chainTo != chainId, 'WorkQuest Bridge: Invalid chainTo id');
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
         require(
@@ -190,6 +189,16 @@ contract WQBridge is
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
+        // HACK: fix binance tokens decimals
+        if (
+            chainTo == 3 &&
+            (compareStrings(symbol, 'USDT') || compareStrings(symbol, 'USDC'))
+        ) amount *= 10**12;
+        if (
+            chainId == 3 &&
+            (compareStrings(symbol, 'USDT') || compareStrings(symbol, 'USDC'))
+        ) amount /= 10**12;
+
         emit SwapInitialized(
             block.timestamp,
             msg.sender,
@@ -223,7 +232,6 @@ contract WQBridge is
         bytes32 s,
         string memory symbol
     ) external whenNotPaused {
-        require(chainFrom != chainId, 'WorkQuest Bridge: Invalid chainFrom ID');
         require(
             chains[chainFrom],
             'WorkQuest Bridge: chainFrom ID is not allowed'
@@ -359,5 +367,13 @@ contract WQBridge is
             recipient.sendValue(amount);
         }
         emit Transferred(token, recipient, amount);
+    }
+
+    function compareStrings(string memory a, string memory b)
+        public
+        pure
+        returns (bool)
+    {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 }

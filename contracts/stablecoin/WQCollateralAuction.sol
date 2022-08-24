@@ -363,6 +363,7 @@ contract WQCollateralAuction is
             );
         } else {
             require(reservesEnabled, 'WQAuction: Reserves is not enabled');
+            uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price;
             //FIXME: calculate reserves
             // router.buyCollateral(
             //     msg.sender,

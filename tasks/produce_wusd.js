@@ -33,7 +33,8 @@ task("produce_wusd", "Produce WUSD")
                 const sav = await ethers.getContractAt("WQSavingProduct", process.env.SAVING_PRODUCT)
 
                 const br = await ethers.getContractAt("WQBridge", process.env.BRIDGE)
-                const br = await ethers.getContractAt("WQBridgeStable", process.env.STABLE_BRIDGE)
+                const pool = await ethers.getContractAt("WQBridge", process.env.BRIDGE_POOL)
+                const brs = await ethers.getContractAt("WQBridgeStable", process.env.STABLE_BRIDGE)
         */
 
         const router = await ethers.getContractAt("WQRouter", process.env.ROUTER);
