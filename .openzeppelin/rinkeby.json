@@ -10759,7 +10759,7 @@
           {
             "contract": "WQBridgeStable",
             "label": "tokens",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)10834_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)10894_storage)",
             "src": "contracts/WQBridgeStable.sol:52"
           },
           {
@@ -10782,13 +10782,13 @@
           "t_bool": {
             "label": "bool"
           },
-          "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)10834_storage)": {
+          "t_mapping(t_string_memory_ptr,t_struct(TokenSettings)10894_storage)": {
             "label": "mapping(string => struct WQBridgeStable.TokenSettings)"
           },
           "t_string_storage": {
             "label": "string"
           },
-          "t_struct(TokenSettings)10834_storage": {
+          "t_struct(TokenSettings)10894_storage": {
             "label": "struct WQBridgeStable.TokenSettings",
             "members": [
               {

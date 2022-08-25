@@ -18,8 +18,8 @@ async function main() {
   }
 
   console.log("Upgrade...");
-  const WQBridge = await ethers.getContractFactory("contracts/WQBridge.sol:WQBridge");
-  const bridge = await upgrades.upgradeProxy(process.env.STABLE_BRIDGE, WQBridge, { kind: "uups" });
+  const WQBridge = await ethers.getContractFactory("WQBridge");
+  const bridge = await upgrades.upgradeProxy(process.env.BRIDGE, WQBridge, { kind: "uups" });
   console.log("Bridge has been upgraded to:", bridge.address);
 }
 

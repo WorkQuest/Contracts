@@ -191,13 +191,15 @@ contract WQBridge is
         }
         // HACK: fix binance tokens decimals
         if (
-            chainTo == 3 &&
-            (compareStrings(symbol, 'USDT') || compareStrings(symbol, 'USDC'))
-        ) amount *= 10**12;
-        if (
-            chainId == 3 &&
-            (compareStrings(symbol, 'USDT') || compareStrings(symbol, 'USDC'))
-        ) amount /= 10**12;
+            tokens[symbol].token == tokens['USDT'].token ||
+            tokens[symbol].token == tokens['USDC'].token
+        ) {
+            if (chainTo == 3) amount *= 10**12;
+            if (chainId == 3) {
+                require(amount >= 1e12, 'WorkQuest Bridge: Invalid amount');
+                amount /= 10**12;
+            }
+        }
 
         emit SwapInitialized(
             block.timestamp,
@@ -367,13 +369,5 @@ contract WQBridge is
             recipient.sendValue(amount);
         }
         emit Transferred(token, recipient, amount);
-    }
-
-    function compareStrings(string memory a, string memory b)
-        public
-        pure
-        returns (bool)
-    {
-        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 }
