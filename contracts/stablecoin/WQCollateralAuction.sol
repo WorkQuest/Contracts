@@ -294,6 +294,11 @@ contract WQCollateralAuction is
                 lots[index].ratio /
                 price /
                 factor;
+        } else if (reservesEnabled && collateral * price < 1e18 * debt) {
+            uint256 liquidated = (collateral * lots[index].price * 1e18) /
+                (price * lots[index].ratio) /
+                factor;
+            return liquidated - (liquidated * (feePlatform + feeReserves)) / 1e18;
         }
         return 0;
     }
@@ -318,12 +323,6 @@ contract WQCollateralAuction is
             amount <= getLiquidatedCollaterallAmount(index),
             'WQAuction: Amount of tokens purchased is greater than lot amount'
         );
-        if (reservesEnabled) {
-            require(
-                amount <= lot.amount + token.balanceOf(address(this)),
-                'WQAuction: Amount of tokens purchased is greater than lot amount and reserves'
-            );
-        }
         lot.endPrice = price;
         lot.endTime = block.timestamp + auctionDuration;
         lot.status = LotStatus.Auctioned;
@@ -347,7 +346,8 @@ contract WQCollateralAuction is
         uint256 factor = 10**(18 - token.decimals());
         uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) /
             1e18;
-        if ((lot.endPrice * lot.ratio) / lot.price >= 1e18) {
+        uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price;
+        if (curRatio >= 1e18) {
             lot.ratio =
                 ((lot.amount - lot.saleAmount - getComission(lot.saleAmount)) *
                     factor *
@@ -363,21 +363,30 @@ contract WQCollateralAuction is
             );
         } else {
             require(reservesEnabled, 'WQAuction: Reserves is not enabled');
-            uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price;
-            //FIXME: calculate reserves
-            // router.buyCollateral(
-            //     msg.sender,
-            //     index,
-            //     cost,
-            //     lot.amount,
-            //     token.symbol()
-            // );
-            // //Transfer reserves
-            // IERC20Upgradeable(address(token)).safeTransfer(
-            //     msg.sender,
-            //     lot.saleAmount - lot.amount
-            // );
-            // _removeLot(index);
+            lot.ratio =
+                ((lot.amount -
+                    (curRatio * lot.saleAmount) /
+                    1e18 -
+                    getComission(lot.saleAmount)) *
+                    factor *
+                    lot.price) /
+                ((lot.amount * lot.price * factor) / lot.ratio - cost);
+            lot.amount -=
+                (curRatio * lot.saleAmount) /
+                1e18 +
+                getComission(lot.saleAmount);
+            router.buyCollateral(
+                msg.sender,
+                index,
+                cost,
+                (curRatio * lot.saleAmount) / 1e18,
+                token.symbol()
+            );
+            // Transfer reserves
+            IERC20Upgradeable(address(token)).safeTransfer(
+                msg.sender,
+                ((1e18 - curRatio) * lot.saleAmount) / 1e18
+            );
         }
         emit LotBuyed(
             msg.sender,
@@ -390,6 +399,9 @@ contract WQCollateralAuction is
         lot.saleAmount = 0;
         lot.endTime = 0;
         lot.status = LotStatus.New;
+        if (lot.amount == 0) {
+            _removeLot(index);
+        }
     }
 
     function enableReserves() external nonReentrant onlyRole(SERVICE_ROLE) {
@@ -430,7 +442,6 @@ contract WQCollateralAuction is
      */
     function restartAuction(uint256 index) external {
         uint256 price = oracle.getTokenPriceUSD(token.symbol());
-        // for (uint256 i = 0; i < indexes.length; i++) {
         LotInfo storage lot = lots[index];
         require(
             lot.status == LotStatus.Auctioned,
@@ -443,7 +454,6 @@ contract WQCollateralAuction is
         lot.endPrice = price;
         lot.endTime = block.timestamp + auctionDuration;
         emit LotCanceled(index, lot.saleAmount, lot.endPrice);
-        // }
     }
 
     /**

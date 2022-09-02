@@ -366,21 +366,21 @@ contract WQRouter is
      * @dev Partial liquidate of a collateral.
      * @dev User gives WUSD and takes part of collateral tokens
      * @param index index of lot
-     * @param debtPart Amount of part of debt
+     * param debtPart Amount of part of debt
      * @param symbol Symbol of token
      */
-    function removeCollateral(
-        uint256 index,
-        uint256 debtPart,
-        string calldata symbol
-    ) external nonReentrant onlyEnabledToken(symbol) {
+    function removeCollateral(uint256 index, string calldata symbol)
+        external
+        nonReentrant
+        onlyEnabledToken(symbol)
+    {
         isLotExist(index, symbol);
         uint256 price;
-        uint256 collateral;
         uint256 collateralRatio;
         uint256 factor = (10 **
             (18 - IERC20MetadataUpgradeable(tokens[symbol].token).decimals()));
         {
+            uint256 collateral;
             (collateral, price, collateralRatio) = tokens[symbol]
                 .collateralAuction
                 .getLotInfo(index);
@@ -389,30 +389,20 @@ contract WQRouter is
                     uint8(1),
                 'WQRouter: Status not new'
             );
-            require(
-                debtPart <= (collateral * price * factor) / collateralRatio,
-                'WQRouter: Removed debt part is greater than all debt'
-            );
-            uint256 collateralPart = (debtPart * collateralRatio) /
-                price /
-                factor;
             UserCollateral storage userCollateral = collaterals[symbol][
                 msg.sender
             ];
-            if (
-                tokens[symbol].collateralAuction.decreaseLotAmount(
-                    index,
-                    collateralPart
-                ) == 0
-            ) {
-                collaterals[symbol][msg.sender].lots.remove(index);
-            }
-            collateral -= collateralPart;
+            tokens[symbol].collateralAuction.decreaseLotAmount(
+                index,
+                collateral
+            );
+            collaterals[symbol][msg.sender].lots.remove(index);
+
             // Transfer collateral token
             userCollateral.vault.transfer(
                 payable(msg.sender),
-                collateralPart -
-                    (collateralPart *
+                collateral -
+                    (collateral *
                         (tokens[symbol].collateralAuction.feeReserves() +
                             tokens[symbol].collateralAuction.feePlatform())) /
                     1e18,
@@ -420,27 +410,22 @@ contract WQRouter is
             );
             userCollateral.vault.transfer(
                 payable(address(tokens[symbol].collateralAuction)),
-                (tokens[symbol].collateralAuction.feeReserves() *
-                    collateralPart) / 1e18,
+                (tokens[symbol].collateralAuction.feeReserves() * collateral) /
+                    1e18,
                 tokens[symbol].token
             );
             userCollateral.vault.transfer(
                 feeReceiver,
-                (tokens[symbol].collateralAuction.feePlatform() *
-                    collateralPart) / 1e18,
+                (tokens[symbol].collateralAuction.feePlatform() * collateral) /
+                    1e18,
                 tokens[symbol].token
             );
-            wusd.burn(msg.sender, debtPart);
+            wusd.burn(
+                msg.sender,
+                (collateral * price * factor) / collateralRatio
+            );
         }
-        emit Removed(
-            msg.sender,
-            collateral,
-            (collateral * price * factor) / collateralRatio,
-            price,
-            collateralRatio,
-            index,
-            symbol
-        );
+        emit Removed(msg.sender, 0, 0, price, collateralRatio, index, symbol);
     }
 
     function moveUserLot(
