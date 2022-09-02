@@ -14,9 +14,6 @@ async function main() {
     const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
     for (const k in envConfig) { process.env[k] = envConfig[k]; }
-    if (!process.env.LENDING_APY) {
-        throw new Error(`Please set your LENDING_APY in a .env-${network} file`);
-    }
     if (!process.env.WUSD_TOKEN) {
         throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
     }

@@ -100,7 +100,6 @@ async function main() {
 
     await borrowing.setToken(process.env.ETH_TOKEN, "ETH");
     await borrowing.setToken(process.env.BNB_TOKEN, "BNB");
-    // await borrowing.setToken(process.env.WQT_TOKEN, "WQT");
     console.log("Token setting complete");
 
     await borrowing.addFund(process.env.PENSION_FUND);

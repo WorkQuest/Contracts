@@ -56,21 +56,20 @@ task("config_borrowing", "Config borrowers roles in funds")
 
         // await borrowing.setToken(process.env.ETH_TOKEN, "ETH");
         // await borrowing.setToken(process.env.BNB_TOKEN, "BNB");
-        // await borrowing.setToken(process.env.WQT_TOKEN, "WQT");
         // console.log("Token setting complete");
 
         // await borrowing.addFund(process.env.PENSION_FUND);
         // await borrowing.addFund(process.env.LENDING);
         // await borrowing.addFund(process.env.SAVING_PRODUCT);
         // await borrowing.updateFund(0, process.env.PENSION_FUND);
-        await borrowing.updateFund(1, process.env.LENDING);
+        // await borrowing.updateFund(1, process.env.LENDING);
         // await borrowing.updateFund(2, process.env.SAVING_PRODUCT);
         console.log("Funds setting complete");
 
         // const pension = await hre.ethers.getContractAt("WQPensionFund", process.env.PENSION_FUND);
         // await pension.grantRole(await pension.BORROWER_ROLE(), borrowing.address);
-        const lending = await hre.ethers.getContractAt("WQLending", process.env.LENDING);
-        await lending.grantRole(await lending.BORROWER_ROLE(), borrowing.address);
+        // const lending = await hre.ethers.getContractAt("WQLending", process.env.LENDING);
+        // await lending.grantRole(await lending.BORROWER_ROLE(), borrowing.address);
         // const saving = await hre.ethers.getContractAt("WQSavingProduct", process.env.SAVING_PRODUCT);
         // await saving.grantRole(await saving.BORROWER_ROLE(), borrowing.address);
         console.log("Set borrower roles complete");

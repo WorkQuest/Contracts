@@ -17,5 +17,6 @@ task("config_price_oracle", "Config price oracle")
         await oracle.updateToken(1, "ETH");
         await oracle.updateToken(1, "BNB");
         await oracle.updateToken(1, "USDT");
+        await oracle.updateToken(1, "USDC");
         console.log("Done.")
     });
