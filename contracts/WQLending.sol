@@ -144,7 +144,8 @@ contract WQLending is
     }
 
     /**
-     * @notice Balance of funds on contract
+     * @notice Balance of depositor
+     * @param depositor Address of depositor
      */
     function balanceOf(address depositor)
         public
@@ -157,7 +158,9 @@ contract WQLending is
 
     /**
      * @notice Borrow funds from contract. Service function.
+     * @param depositor Address of depositor
      * @param amount Amount of coins
+     * @param duration Duration of lock time
      */
     function borrow(
         address depositor,
@@ -179,9 +182,11 @@ contract WQLending is
     }
 
     /**
-     * @notice Borrow funds to contract. Service function.
+     * @notice Repay funds to contract. Service function.
+     * @param depositor Address of depositor
      * @param amount Amount of coins
      * @param elapsedTime Time elapsed since the beginning of the borrowing
+     * @param duration Duration of lock time
      */
     function refund(
         address depositor,

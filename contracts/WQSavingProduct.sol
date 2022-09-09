@@ -93,6 +93,7 @@ contract WQSavingProduct is
     /**
      * @notice Contribute native coins to contract
      * @param lockTime Lock time in days
+     * @param amount Amount of deposited coins
      */
     function deposit(uint256 lockTime, uint256 amount) external nonReentrant {
         require(apys[lockTime] != 0, 'WQSavingProduct: lockTime is invalid');
@@ -158,7 +159,7 @@ contract WQSavingProduct is
 
     /**
      * @notice Get rewards amount of user
-     * @param depositor Address of user
+     * @param depositor Address of depositor
      */
     function getRewards(address depositor) public view returns (uint256) {
         DepositWallet storage wallet = wallets[depositor];
@@ -166,7 +167,8 @@ contract WQSavingProduct is
     }
 
     /**
-     * @notice Balance of funds on contract
+     * @notice Balance of depositor
+     * @param depositor Address of depositor
      */
     function balanceOf(address depositor)
         public
@@ -179,7 +181,9 @@ contract WQSavingProduct is
 
     /**
      * @notice Borrow funds from contract. Service function.
+     * @param depositor Address of depositor
      * @param amount Amount of coins
+     * @param duration Duration of lock time
      */
     function borrow(
         address depositor,
@@ -201,7 +205,8 @@ contract WQSavingProduct is
     }
 
     /**
-     * @notice Borrow funds to contract. Service function.
+     * @notice Repay funds to contract. Service function.
+     * @param depositor Address of depositor
      * @param amount Amount of coins
      * @param elapsedTime Time elapsed since the beginning of the borrowing
      * @param duration Duration of lock time

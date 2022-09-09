@@ -221,6 +221,10 @@ contract WQPensionFund is
 
     /** Borrowing interface */
 
+    /**
+     * @notice Balance of depositor
+     * @param depositor Address of depositor
+     */
     function balanceOf(address depositor)
         public
         view
@@ -230,6 +234,12 @@ contract WQPensionFund is
         return wallets[depositor].amount - wallets[depositor].borrowed;
     }
 
+    /**
+     * @notice Borrow funds from contract. Service function.
+     * @param depositor Address of depositor
+     * @param amount Amount of coins
+     * @param duration Duration of lock time
+     */
     function borrow(
         address depositor,
         uint256 amount,
@@ -249,6 +259,13 @@ contract WQPensionFund is
                 : wallets[depositor].unlockDate;
     }
 
+    /**
+     * @notice Repay funds to contract. Service function.
+     * @param depositor Address of depositor
+     * @param amount Amount of coins
+     * @param elapsedTime Time elapsed since the beginning of the borrowing
+     * @param duration Duration of lock time
+     */
     function refund(
         address depositor,
         uint256 amount,
