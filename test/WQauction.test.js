@@ -496,4 +496,41 @@ describe('Collateral auction test', function () {
             ).equal(ONE);
         });
     });
+
+    describe('Check auction: fails', () => {
+    
+        beforeEach(async () => {
+            const collateralAmount = parseEther('2')
+            const collateralRatio = parseEther('1.2')
+
+            await wusd_token.mint(bob.address, parseEther("23"));
+            await wusd_token.connect(bob).approve(router.address, parseEther("23"))
+
+            await oracleSetPrice(parseEther("0.999999999999999999"), SYMBOL_wETH)            
+
+            await weth.connect(alice).approve(router.address, collateralAmount);
+            await router.connect(alice).produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH);
+
+            const oraclePrice = parseEther("0.969999999999999999")
+            await oracleSetPrice(oraclePrice, SYMBOL_wETH)
+        });
+
+        it("STEP1: Start auction when total auctioned greater liquidated amount", async function() {
+            await wusd_token
+                .connect(alice)
+                .approve(router.address, parseEther('20')) 
+            await router.connect(alice).disposeDebt(0, SYMBOL_wETH)
+
+            await expect(
+                auction.connect(bob).startAuction(0, parseEther("10"))
+            ).revertedWith("WQAuction: Amount of tokens purchased is greater than lot amount");
+        });
+
+        it("STEP2: Start auction when price:(oldPrice/ratio) less than liquidationThreshold", async () => {
+            await oracleSetPrice(parseEther("19"), SYMBOL_wETH);
+            await expect(
+                auction.connect(bob).startAuction(0, parseEther("0.1"))
+            ).revertedWith("WQAuction: This lot is not available for sale");
+        });
+    });
 })
