@@ -9,6 +9,8 @@ import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import './stablecoin/WQPriceOracleInterface.sol';
 import './WorkQuestFactory.sol';
+import "hardhat/console.sol";
+
 
 contract WQReferral is
     Initializable,
@@ -137,10 +139,10 @@ contract WQReferral is
         external
         nonReentrant
     {
-        require(
-            factory.workquestValid(msg.sender),
-            'WQReferal: Sender is not WorkQuest contract'
-        );
+        require(factory.workquestValid(msg.sender), 'WQReferal: Sender is not WorkQuest contract');
+
+        // console.log("==>>>", referral, earnedAmount);
+
         Account storage userAccount = referrals[referral];
         if (userAccount.affiliat != address(0) && !userAccount.paid) {
             userAccount.earnedAmount += earnedAmount;

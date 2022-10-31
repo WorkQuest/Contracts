@@ -293,13 +293,10 @@ contract WorkQuest {
     function _transferFunds() internal {
         uint256 newCost = cost;
         uint256 comission = (newCost * factory.feeWorker()) / 1e18;
-        uint256 pensionContribute = (newCost *
-            WQPensionFundInterface(factory.pensionFund()).getFee(worker)) /
-            1e18;
-        IERC20(factory.wusd()).safeTransfer(
-            worker,
-            newCost - comission - pensionContribute
-        );
+        uint256 pensionContribute = (newCost * WQPensionFundInterface(factory.pensionFund()).getFee(worker)) / 1e18;
+
+        IERC20(factory.wusd()).safeTransfer(worker, newCost - comission - pensionContribute);
+
         if (pensionContribute > 0) {
             if (
                 IERC20(factory.wusd()).allowance(
