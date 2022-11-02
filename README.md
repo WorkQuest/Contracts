@@ -19,7 +19,7 @@ First of all, you need to deploy wrapped tokens: WUSD, ETH, BNB, USDT, etc.
 Next you should deploy the bridge
 * Set CHAIN_ID (id of current network), NATIVE_COIN (symbol of native coin for this network) and BRIDGE_VALIDATOR (address of validator) to .env-_yourNetwork_ file
 * Run `npx hardhat run scripts/deploy_bridge_pool.js --network` _yourNetwork_ to deploy pool of bridge - special contract for storing tokens
-* Run `npx hardhat run scripts/deploy_bridge.js --network` _yourNetwork_ to deploy bridge
+* Run `npx hardhat run scripts/deploy_bridge.js --network` _yourNetwork_ to deploy bridge +
 * Run `npx hardhat add_chains_to_bridge --chain` _chainId_ `--network` _yourNetwork_ to add allowed networks for swapping
 * Run `npx hardhat add_token_to_bridge --symbol` _tokenSymbol_ `--locable 1 --network` _yourNetwork_ to add allowed tokens for swapping. If `locable` option is set to false then tokens will be burned and minted, else they will be transferred to pool of bridge.
 * Run `npx hardhat grant_roles_for_bridge --network` _yourNetwork_ to grant minter and burner roles of tokens for bridge address

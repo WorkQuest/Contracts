@@ -103,29 +103,15 @@ contract WQReferral is
         bytes32 s,
         address[] calldata referral
     ) external {
-        require(
-            hasRole(
-                SERVICE_ROLE,
-                keccak256(abi.encodePacked(msg.sender, referral))
-                    .toEthSignedMessageHash()
-                    .recover(v, r, s)
-            ),
+        require(hasRole(SERVICE_ROLE,
+                keccak256(abi.encodePacked(msg.sender, referral)).toEthSignedMessageHash().recover(v, r, s)),
             'WQReferal: validator is not a service'
         );
 
         for (uint256 i = 0; i < referral.length; i++) {
-            require(
-                referral[i] != address(0),
-                'WQReferral: affiliate cannot be zero address'
-            );
-            require(
-                referral[i] != msg.sender,
-                'WQReferral: affiliate cannot be sender address'
-            );
-            require(
-                referrals[referral[i]].affiliat == address(0),
-                'WQReferral: Address is already registered'
-            );
+            require(referral[i] != address(0), 'WQReferral: affiliate cannot be zero address');
+            require(referral[i] != msg.sender, 'WQReferral: affiliate cannot be sender address');
+            require(referrals[referral[i]].affiliat == address(0), 'WQReferral: Address is already registered');
             referrals[referral[i]].affiliat = msg.sender;
             referrals[msg.sender].referredCount++;
             emit RegisteredAffiliat(referral[i], msg.sender);
@@ -140,8 +126,6 @@ contract WQReferral is
         nonReentrant
     {
         require(factory.workquestValid(msg.sender), 'WQReferal: Sender is not WorkQuest contract');
-
-        // console.log("==>>>", referral, earnedAmount);
 
         Account storage userAccount = referrals[referral];
         if (userAccount.affiliat != address(0) && !userAccount.paid) {

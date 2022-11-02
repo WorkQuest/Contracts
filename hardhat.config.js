@@ -14,48 +14,45 @@ const chainIds = {
     ganache: 1337,
     goerli: 5,
     hardhat: 31337,
-    kovan: 42,
     mainnet: 1,
-    rinkeby: 4,
-    ropsten: 3,
 }
 
-// let mnemonic
-// if (!process.env.MNEMONIC) {
-//     throw new Error('Please set your MNEMONIC in a .env file')
-// } else {
-//     mnemonic = process.env.MNEMONIC
-// }
+let mnemonic
+if (!process.env.MNEMONIC) {
+    throw new Error('Please set your MNEMONIC in a .env file')
+} else {
+    mnemonic = process.env.MNEMONIC
+}
 
-const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+// const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+// const PRIVATE_KEY = process.env.PRIVATE_KEY;
+// const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
-// let providerApiKey
-// if (!process.env.PROVIDER_API_KEY) {
-//     throw new Error('Please set your PROVIDER_API_KEY in a .env file')
-// } else {
-//     providerApiKey = process.env.PROVIDER_API_KEY
-// }
+let providerApiKey
+if (!process.env.PROVIDER_API_KEY) {
+    throw new Error('Please set your PROVIDER_API_KEY in a .env file')
+} else {
+    providerApiKey = process.env.PROVIDER_API_KEY
+}
 
-// let explorerApiKey
-// if (!process.env.EXPLORER_API_KEY) {
-//     throw new Error('Please set your EXPLORER_API_KEY in a .env file')
-// } else {
-//     explorerApiKey = process.env.EXPLORER_API_KEY
-// }
+let explorerApiKey
+if (!process.env.EXPLORER_API_KEY) {
+    throw new Error('Please set your EXPLORER_API_KEY in a .env file')
+} else {
+    explorerApiKey = process.env.EXPLORER_API_KEY
+}
 
-// function createNetworkConfig(network) {
-//     const url = `https://${network}.infura.io/v3/${providerApiKey}`;
-//     // const url = `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/eth/${network}`;
-//     return {
-//         accounts: { mnemonic: mnemonic },
-//         chainId: chainIds[network],
-//         gas: 'auto',
-//         gasPrice: 35000000000,
-//         url: url,
-//     }
-// }
+function createNetworkConfig(network) {
+    const url = `https://${network}.infura.io/v3/${providerApiKey}`;
+    // const url = `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/eth/${network}`;
+    return {
+        accounts: { mnemonic: mnemonic },
+        chainId: chainIds[network],
+        gas: 'auto',
+        gasPrice: 35000000000,
+        url: url,
+    }
+}
 
 module.exports = {
     defaultNetwork: 'dev',
@@ -66,19 +63,19 @@ module.exports = {
                 // interval: 5000
             },
         },
-        dev: {
-            url: 'http://127.0.0.1:8545/',
-        },
-        goerli: {
-          url: GOERLI_RPC_URL,
-          accounts: [PRIVATE_KEY],
-          chainId: 5,
-        },
-        // wqdevnet: {
-        //     url: 'https://dev-node-fra1.workquest.co/',
-        //     accounts: { mnemonic: mnemonic },
-        //     chainId: 20220112,
+        // dev: {
+        //     url: 'http://127.0.0.1:8545/',
         // },
+        // goerli: {
+        //   url: GOERLI_RPC_URL,
+        //   accounts: [PRIVATE_KEY],
+        //   chainId: 5,
+        // },
+        wqdevnet: {
+            url: 'https://dev-node-fra1.workquest.co/',
+            accounts: { mnemonic: mnemonic },
+            chainId: 20220112,
+        },
         // wqtestnet: {
         //     url: 'https://testnet-gate.workquest.co/',
         //     accounts: { mnemonic: mnemonic },
@@ -117,9 +114,9 @@ module.exports = {
         //     gasPrice: 60000000000,
         //     accounts: { mnemonic: mnemonic },
         // },
-        // mainnet: createNetworkConfig('mainnet'),
-        // rinkeby: createNetworkConfig('rinkeby'),
-        // ropsten: createNetworkConfig('ropsten'),
+        goerli: createNetworkConfig('goerli'),
+        // mainnet: createNetworkConfig('mainnet')
+        
     },
     paths: {
         artifacts: './artifacts',
@@ -150,7 +147,7 @@ module.exports = {
         ],
     },
     etherscan: {
-        apiKey: ETHERSCAN_API_KEY,
+        apiKey: explorerApiKey,
     },
     mocha: {
         timeout: 20000,
