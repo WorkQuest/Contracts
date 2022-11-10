@@ -14,7 +14,10 @@ const chainIds = {
     ganache: 1337,
     goerli: 5,
     hardhat: 31337,
+    kovan: 42,
     mainnet: 1,
+    rinkeby: 4,
+    ropsten: 3,
 }
 
 let mnemonic
@@ -63,24 +66,24 @@ module.exports = {
                 // interval: 5000
             },
         },
-        // dev: {
-        //     url: 'http://127.0.0.1:8545/',
-        // },
+        dev: {
+            url: 'http://127.0.0.1:8545/',
+        },
         // goerli: {
         //   url: GOERLI_RPC_URL,
         //   accounts: [PRIVATE_KEY],
         //   chainId: 5,
         // },
-        wqdevnet: {
-            url: 'https://dev-node-fra1.workquest.co/',
-            accounts: { mnemonic: mnemonic },
-            chainId: 20220112,
-        },
-        // wqtestnet: {
-        //     url: 'https://testnet-gate.workquest.co/',
+        // wqdevnet: {
+        //     url: 'https://dev-node-fra1.workquest.co/',
         //     accounts: { mnemonic: mnemonic },
-        //     chainId: 1991,
+        //     chainId: 20220112,
         // },
+        wqtestnet: {
+            url: 'https://testnet-gate.workquest.co/',
+            accounts: { mnemonic: mnemonic },
+            chainId: 1991,
+        },
         // wqmainnet: {
         //     url: 'https://mainnet-gate.workquest.co/',
         //     accounts: { mnemonic: mnemonic },

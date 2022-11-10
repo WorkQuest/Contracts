@@ -14,9 +14,9 @@ async function main() {
   for (const k in envConfig) {
     process.env[k] = envConfig[k]
   }
-  if (!process.env.DAO_CHAIR_PERSON) {
-    throw new Error(`Please set your DAO_CHAIR_PERSON in a .env-${network} file`);
-  }
+  // if (!process.env.DAO_CHAIR_PERSON) {
+  //   throw new Error(`Please set your DAO_CHAIR_PERSON in a .env-${network} file`);
+  // }
   if (!process.env.DAO_MINIMUM_QUORUM) {
     throw new Error(`Please set your DAO_MINIMUM_QUORUM in a .env-${network} file`);
   }
@@ -39,7 +39,7 @@ async function main() {
   const DAOBallot = await hre.ethers.getContractFactory("WQDAOVoting");
   const dao_ballot = await upgrades.deployProxy(DAOBallot,
     [
-      process.env.DAO_CHAIR_PERSON,
+      // process.env.DAO_CHAIR_PERSON,
       process.env.DAO_MINIMUM_QUORUM,
       process.env.DAO_VOTING_PERIOD,
       process.env.DAO_PROPOSAL_THRESHOLD,

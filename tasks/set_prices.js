@@ -53,5 +53,6 @@ task("set_prices", "Set all prices of tokens")
         let signature = await web3.eth.sign(message, accounts[0].address);
         let sig = ethers.utils.splitSignature(signature);
         let tx = await priceOracle.setTokenPricesUSD(nonce, sig.v, sig.r, sig.s, prices, maxRatio, symbols);
+        console.log("tx", tx)
         console.log("fee:", (tx.gasPrice * tx.gasLimit) / 1e18);
     });

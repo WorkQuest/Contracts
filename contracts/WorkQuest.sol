@@ -136,11 +136,7 @@ contract WorkQuest {
     }
 
     function cancelJob() external {
-        require(
-            (status == JobStatus.Published || status == JobStatus.WaitWorker) &&
-                msg.sender == employer,
-            errMsg
-        );
+        require((status == JobStatus.Published || status == JobStatus.WaitWorker) && msg.sender == employer, errMsg);
         status = JobStatus.Finished;
         IERC20(factory.wusd()).safeTransfer(employer, cost);
         emit JobCancelled();
@@ -176,10 +172,7 @@ contract WorkQuest {
      * @param _worker Address of worker
      */
     function assignJob(address _worker) external {
-        require(
-            msg.sender == employer &&
-                (status == JobStatus.Published ||
-                    status == JobStatus.WaitWorker),
+        require(msg.sender == employer && (status == JobStatus.Published || status == JobStatus.WaitWorker),
             errMsg
         );
         require(_worker != address(0), 'WorkQuest: Invalid address');
@@ -224,8 +217,7 @@ contract WorkQuest {
      * @notice Employer or worker send job to arbitration
      */
     function arbitration() external payable {
-        require(
-            (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
+        require((msg.sender == employer && status == JobStatus.WaitJobVerify) ||
                 (
                     msg.sender == employer &&
                         status == JobStatus.InProgress &&
@@ -247,11 +239,7 @@ contract WorkQuest {
      * @notice Arbiter send job to rework
      */
     function arbitrationRework() external {
-        require(
-            factory.hasRole(ARBITER_ROLE, msg.sender) &&
-                status == JobStatus.Arbitration,
-            errMsg
-        );
+        require(factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration, errMsg);
         deadline = block.timestamp + 3 days;
         status = JobStatus.InProgress;
         payable(msg.sender).sendValue(address(this).balance);

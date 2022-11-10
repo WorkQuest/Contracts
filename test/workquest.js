@@ -106,7 +106,7 @@ describe('Work Quest test', () => {
         );
         let signature = await web3.eth.sign(message, validator.address);
         let sig = ethers.utils.splitSignature(signature);
-        await priceOracle.connect(worker).setTokenPriceUSD(nonce, PRICE, sig.v, sig.r, sig.s, SYMBOL);
+        await priceOracle.connect(worker).setTokenPricesUSD(nonce, sig.v, sig.r, sig.s, PRICE, "2000000000000000000", SYMBOL);
 
         const WQReferralContract = await hre.ethers.getContractFactory('WQReferral');
         referral = await upgrades.deployProxy(
@@ -134,7 +134,6 @@ describe('Work Quest test', () => {
                 wusd_token.address
             ], { initializer: 'initialize', kind: 'transparent' });
         await work_quest_factory.deployed();
-
         await referral.setFactory(work_quest_factory.address);
 
         await work_quest_factory.grantRole(await work_quest_factory.ARBITER_ROLE(), arbiter.address);

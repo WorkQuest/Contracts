@@ -122,6 +122,7 @@ describe('Price Oracle Test', () => {
             await price_oracle.connect(user).setTokenPriceUSD(nonce, PRICE, sig.v, sig.r, sig.s, SYMBOL);
             let blockNumber = await hre.ethers.provider.send("eth_blockNumber", []);
             let block = await web3.eth.getBlock(parseInt(blockNumber));
+            
             await expect(
                 await price_oracle.lastNonce()
             ).to.equal(nonce);
