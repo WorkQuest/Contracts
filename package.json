@@ -33,7 +33,7 @@
     "hardhat-upgrades": "^0.0.0",
     "hardhat-waffle": "^0.0.1-security",
     "hh": "^0.1.0",
-    "mocha": "^8.4.0",
+    "mocha": "^10.1.0",
     "solidity-coverage": "^0.7.21",
     "web3": "^1.7.5"
   },
