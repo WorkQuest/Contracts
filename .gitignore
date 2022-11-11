@@ -53,6 +53,7 @@ build
 artifacts
 cache
 .env
+.env-goerli
 *.addr
 .secret
 .solhint.json
