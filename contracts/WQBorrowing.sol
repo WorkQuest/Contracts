@@ -164,25 +164,11 @@ contract WQBorrowing is
         uint256 duration,
         string calldata symbol
     ) external nonReentrant {
-        require(
-            tokens[symbol] != IERC20Upgradeable(address(0)),
-            'WQBorrowing: This token is disabled to collateral'
-        );
-        require(
-            apys[duration] > 0 && funds[fundIndex].apys(duration) > 0,
-            'WQBorrowing: Invalid duration'
-        );
-        require(
-            credit <= funds[fundIndex].balanceOf(depositor),
-            'WQBorrowing: Insufficient amount in fund'
-        );
+        require(tokens[symbol] != IERC20Upgradeable(address(0)),'WQBorrowing: This token is disabled to collateral');
+        require(apys[duration] > 0 && funds[fundIndex].apys(duration) > 0, 'WQBorrowing: Invalid duration');
+        require(credit <= funds[fundIndex].balanceOf(depositor), 'WQBorrowing: Insufficient amount in fund');
         uint256 collateralAmount = (credit * 3e18) /
-            oracle.getTokenPriceUSD(symbol) /
-            2 /
-            (10 **
-                (18 -
-                    IERC20MetadataUpgradeable(address(tokens[symbol]))
-                        .decimals()));
+            oracle.getTokenPriceUSD(symbol) / 2 / (10 ** (18 - IERC20MetadataUpgradeable(address(tokens[symbol])).decimals()));
 
         // Get coins from fund
         borrowers[msg.sender].push(
@@ -423,11 +409,7 @@ contract WQBorrowing is
         uint256 apy,
         uint256 borrowedAt
     ) internal view returns (uint256) {
-        return
-            (amount *
-                fixedRate +
-                (amount * apy * (block.timestamp - borrowedAt)) /
-                YEAR) / 1e18;
+        return(amount * fixedRate + (amount * apy * (block.timestamp - borrowedAt)) / YEAR) / 1e18;
     }
 
     function _getRewards(

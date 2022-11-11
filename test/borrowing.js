@@ -50,7 +50,7 @@ describe("Borrowing test", () => {
     }
 
     beforeEach(async () => {
-        [deployer, depositor, borrower, validator, buyer, feeReceiver] = await ethers.getSigners();
+        [owner, depositor, borrower, validator, buyer, feeReceiver] = await ethers.getSigners();
 
         const BridgeToken = await ethers.getContractFactory("WQBridgeToken");
 
@@ -60,7 +60,7 @@ describe("Borrowing test", () => {
             { initializer: 'initialize', kind: 'transparent' }
         );
         await eth_token.deployed();
-        await eth_token.grantRole(await eth_token.MINTER_ROLE(), deployer.address);
+        await eth_token.grantRole(await eth_token.MINTER_ROLE(), owner.address);
         await eth_token.mint(borrower.address, parseEther("10"));
 
         wusd_token = await upgrades.deployProxy(
@@ -69,14 +69,14 @@ describe("Borrowing test", () => {
             { initializer: 'initialize', kind: 'transparent' }
         );
         await wusd_token.deployed();
-        await wusd_token.grantRole(await wusd_token.MINTER_ROLE(), deployer.address);
+        await wusd_token.grantRole(await wusd_token.MINTER_ROLE(), owner.address);
 
         const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle');
         priceOracle = await upgrades.deployProxy(PriceOracle, [validator.address, PRICE_ORACLE_VALID_TIME], { initializer: 'initialize', kind: 'transparent' });
         await priceOracle.deployed();
         await priceOracle.updateToken(1, "ETH");
 
-        const PensionFund = await hre.ethers.getContractFactory("WQPensionFund");
+        const PensionFund = await ethers.getContractFactory("WQPensionFund");
         pension = await upgrades.deployProxy(PensionFund,
             [
                 PENSION_LOCK_TIME,
@@ -107,7 +107,7 @@ describe("Borrowing test", () => {
         await borrowing.setApy(7, parseEther("0.1594"));
         await borrowing.setToken(eth_token.address, "ETH");
         await borrowing.addFund(pension.address);
-        await pension.grantRole(await pension.BORROWER_ROLE(), borrowing.address);
+        await pension.connect(owner).grantRole(await pension.BORROWER_ROLE(), borrowing.address);
 
         await eth_token.connect(borrower).approve(borrowing.address, parseEther("1"));
         await oracleSetPrice(parseEther("300"), "ETH");
@@ -121,9 +121,9 @@ describe("Borrowing test", () => {
         it('Should be set all variables and roles', async () => {
             expect(await borrowing.oracle()).equal(priceOracle.address);
             expect(await borrowing.fixedRate()).equal(FIXED_RATE);
-            expect(await borrowing.hasRole(await borrowing.DEFAULT_ADMIN_ROLE(), deployer.address)).equal(true);
-            expect(await borrowing.hasRole(await borrowing.ADMIN_ROLE(), deployer.address)).equal(true);
-            expect(await borrowing.hasRole(await borrowing.UPGRADER_ROLE(), deployer.address)).equal(true);
+            expect(await borrowing.hasRole(await borrowing.DEFAULT_ADMIN_ROLE(), owner.address)).equal(true);
+            expect(await borrowing.hasRole(await borrowing.ADMIN_ROLE(), owner.address)).equal(true);
+            expect(await borrowing.hasRole(await borrowing.UPGRADER_ROLE(), owner.address)).equal(true);
         });
     });
 
