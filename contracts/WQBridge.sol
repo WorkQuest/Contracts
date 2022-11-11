@@ -253,10 +253,7 @@ contract WQBridge is
                 symbol
             )
         );
-        require(
-            swaps[message].state == State.Empty,
-            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
-        );
+        require(swaps[message].state == State.Empty, 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
 
         require(
             hasRole(

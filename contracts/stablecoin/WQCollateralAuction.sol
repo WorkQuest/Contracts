@@ -11,6 +11,8 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import './WQPriceOracleInterface.sol';
 import './WQRouterInterface.sol';
 
+
+
 contract WQCollateralAuction is
     Initializable,
     AccessControlUpgradeable,
@@ -201,8 +203,8 @@ contract WQCollateralAuction is
         }
     }
 
-    function _removeLot(uint256 index) internal {
-        uint256 lastIndex = lots.length - 1;
+    function _removeLot(uint256 index) internal { 
+        uint256 lastIndex = lots.length - 1; 
         if (lastIndex != index) {
             router.moveUserLot(
                 lots[lastIndex].user,
@@ -282,18 +284,12 @@ contract WQCollateralAuction is
         string memory symbol = token.symbol();
         uint256 price = oracle.getTokenPriceUSD(symbol);
         uint256 factor = 10**(18 - token.decimals());
-        uint256 collateral = lots[index].amount * factor;
-        uint256 debt = (lots[index].amount * factor * lots[index].price) /
-            lots[index].ratio;
-        if (
-            collateral * price < liquidateThreshold * debt &&
-            collateral * price > 1e18 * debt
-        ) {
+        uint256 collateral = lots[index].amount * factor; 
+        uint256 debt = (lots[index].amount * factor * lots[index].price) / lots[index].ratio;
+        
+        if (collateral * price < liquidateThreshold * debt && collateral * price > 1e18 * debt) {
             return
-                (collateral * (lots[index].price - price) * 1e18) /
-                lots[index].ratio /
-                price /
-                factor;
+                (collateral * (lots[index].price - price) * 1e18) / lots[index].ratio / price / factor;
         } else if (reservesEnabled && collateral * price < 1e18 * debt) {
             uint256 liquidated = (collateral * lots[index].price * 1e18) /
                 (price * lots[index].ratio) /
@@ -313,16 +309,14 @@ contract WQCollateralAuction is
         LotInfo storage lot = lots[index];
         require(lot.status == LotStatus.New, 'WQAuction: Status is not New');
         uint256 curRatio = (price * lot.ratio) / lot.price;
-        require(
-            (curRatio < liquidateThreshold && curRatio >= 1e18) ||
-                (reservesEnabled && curRatio < 1e18),
+        require((curRatio < liquidateThreshold && curRatio >= 1e18) || (reservesEnabled && curRatio < 1e18),
             'WQAuction: This lot is not available for sale'
         );
         lot.saleAmount = amount;
-        require(
-            amount <= getLiquidatedCollaterallAmount(index),
-            'WQAuction: Amount of tokens purchased is greater than lot amount'
+        require(amount <= getLiquidatedCollaterallAmount(index),
+            'WQAuction: Amount of tokens purchased is greater than lot amount' 
         );
+        
         lot.endPrice = price;
         lot.endTime = block.timestamp + auctionDuration;
         lot.status = LotStatus.Auctioned;
@@ -335,57 +329,31 @@ contract WQCollateralAuction is
      */
     function buyLot(uint256 index) external nonReentrant {
         LotInfo storage lot = lots[index];
-        require(
-            lot.status == LotStatus.Auctioned,
-            'WQAuction: Lot is not auctioned'
-        );
-        require(
-            block.timestamp <= lot.endTime,
-            'WQAuction: Auction time is over'
-        );
-        uint256 factor = 10**(18 - token.decimals());
-        uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) /
-            1e18;
-        uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price;
-        if (curRatio >= 1e18) {
-            lot.ratio =
-                ((lot.amount - lot.saleAmount - getComission(lot.saleAmount)) *
-                    factor *
-                    lot.price) /
-                ((lot.amount * lot.price * factor) / lot.ratio - cost);
-            lot.amount -= lot.saleAmount + getComission(lot.saleAmount);
-            router.buyCollateral(
-                msg.sender,
-                index,
-                cost,
-                lot.saleAmount,
-                token.symbol()
-            );
+        require(lot.status == LotStatus.Auctioned, 'WQAuction: Lot is not auctioned');
+        require(block.timestamp <= lot.endTime, 'WQAuction: Auction time is over');
+
+        uint256 factor = 10**(18 - token.decimals());   // 1000000000000000000
+        uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) / 1e18; // 2,723333333E16
+
+        uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price; // (969999999999999999 * 1200000000000000000) / 999999999999999999 = 1,164E18 1164000000000000000000
+        if (curRatio >= 1e18) {                          // 0,26
+            lot.ratio = ((lot.amount - lot.saleAmount - getComission(lot.saleAmount)) * factor * lot.price) /     // 1,948453608E54 * 1E36 = 1,948453608E90 
+                ((lot.amount * lot.price * factor) / lot.ratio - cost); //  (2E54 / 1,172766667E18) = 1,70536907E36   final = 1,142540722E54
+
+            lot.amount -= lot.saleAmount + getComission(lot.saleAmount); // 1,948453608E18 
+            router.buyCollateral(msg.sender, index, cost, lot.saleAmount, token.symbol());
         } else {
             require(reservesEnabled, 'WQAuction: Reserves is not enabled');
-            lot.ratio =
-                ((lot.amount -
-                    (curRatio * lot.saleAmount) /
-                    1e18 -
-                    getComission(lot.saleAmount)) *
-                    factor *
-                    lot.price) /
+            lot.ratio = ((lot.amount - (curRatio * lot.saleAmount) /
+                    1e18 - getComission(lot.saleAmount)) * factor * lot.price) /
                 ((lot.amount * lot.price * factor) / lot.ratio - cost);
-            lot.amount -=
-                (curRatio * lot.saleAmount) /
-                1e18 +
-                getComission(lot.saleAmount);
-            router.buyCollateral(
-                msg.sender,
-                index,
-                cost,
-                (curRatio * lot.saleAmount) / 1e18,
-                token.symbol()
-            );
+
+            lot.amount -= (curRatio * lot.saleAmount) / 1e18 + getComission(lot.saleAmount);
+            router.buyCollateral(msg.sender, index, cost, (curRatio * lot.saleAmount) / 1e18, token.symbol());
+
             // Transfer reserves
             IERC20Upgradeable(address(token)).safeTransfer(
-                msg.sender,
-                ((1e18 - curRatio) * lot.saleAmount) / 1e18
+                msg.sender, ((1e18 - curRatio) * lot.saleAmount) / 1e18
             );
         }
         emit LotBuyed(
@@ -420,14 +388,8 @@ contract WQCollateralAuction is
         // for (uint256 i = 0; i < indexes.length; i++) {
         // LotInfo storage lot = lots[indexes[i]];
         LotInfo storage lot = lots[index];
-        require(
-            lot.status == LotStatus.Auctioned,
-            'WQAuction: Lot is not auctioned'
-        );
-        require(
-            block.timestamp > lot.endTime,
-            'WQAuction: Auction time is not over yet'
-        );
+        require(lot.status == LotStatus.Auctioned, 'WQAuction: Lot is not auctioned');
+        require(block.timestamp > lot.endTime, 'WQAuction: Auction time is not over yet');
         lot.saleAmount = 0;
         lot.endPrice = 0;
         lot.endTime = 0;
@@ -461,7 +423,7 @@ contract WQCollateralAuction is
      * @param amount Collateral amount value
      */
     function getComission(uint256 amount) public view returns (uint256) {
-        return (amount * (feeRewards + feePlatform + feeReserves)) / 1e18;
+        return (amount * (feeRewards + feePlatform + feeReserves)) / 1e18; // (amount * 0,13) / 1e18 = 0,26
     }
 
     /**
@@ -480,16 +442,10 @@ contract WQCollateralAuction is
                 _getCurrentLotPrice(lot)) / 1e18;
     }
 
-    function _getCurrentLotPrice(LotInfo storage lot)
-        internal
-        view
-        returns (uint256)
-    {
-        return
-            lot.endPrice +
-            ((lot.endTime - block.timestamp) * (lot.price - lot.endPrice)) /
-            auctionDuration;
-    }
+    function _getCurrentLotPrice(LotInfo storage lot) internal view returns (uint256){
+        return lot.endPrice + ((lot.endTime - block.timestamp) * (lot.price - lot.endPrice)) / auctionDuration; 
+        // 969999999999999999 + (240) * (3E16) / 300 = 2,723333333E16
+    }  
 
     /** Admin Functions */
 

@@ -9,6 +9,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WorkQuest.sol';
 
+
 contract WorkQuestFactory is
     Initializable,
     AccessControlUpgradeable,
@@ -24,6 +25,8 @@ contract WorkQuestFactory is
         uint256 idx;
         bool status;
     }
+
+    
 
     /// @notice Fee amount
     uint256 public feeEmployer;

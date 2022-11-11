@@ -72,10 +72,7 @@ contract WQPriceOracle is
     {
         TokenInfo storage token = tokens[symbol];
         require(token.enabled, 'WQPriceOracle: Token is disabled');
-        require(
-            block.timestamp <= token.updatedTime + validTime,
-            'WQPriceOracle: Price is outdated'
-        );
+        require(block.timestamp <= token.updatedTime + validTime, 'WQPriceOracle: Price is outdated');
         return token.price;
     }
 
@@ -86,10 +83,7 @@ contract WQPriceOracle is
     {
         TokenInfo storage token = tokens[symbol];
         require(token.enabled, 'WQPriceOracle: Token is disabled');
-        require(
-            block.timestamp <= token.updatedTime + validTime,
-            'WQPriceOracle: Price is outdated'
-        );
+        require(block.timestamp <= token.updatedTime + validTime, 'WQPriceOracle: Price is outdated');
         return token.maxRatio;
     }
 
@@ -111,27 +105,14 @@ contract WQPriceOracle is
         uint256[] memory maxRatio,
         string[] memory symbols
     ) external {
-        require(
-            timestamp > lastNonce,
-            'WQPriceOracle: Invalid nonce value, must be greater that lastNonce'
-        );
+        require(timestamp > lastNonce, 'WQPriceOracle: Invalid nonce value, must be greater that lastNonce');
         {
             bytes memory allsymbols;
             for (uint256 i = 0; i < symbols.length; i++) {
                 allsymbols = abi.encodePacked(allsymbols, symbols[i]);
             }
-            require(
-                hasRole(
-                    SERVICE_ROLE,
-                    keccak256(
-                        abi.encodePacked(
-                            timestamp,
-                            prices,
-                            maxRatio,
-                            allsymbols
-                        )
-                    ).toEthSignedMessageHash().recover(v, r, s)
-                ),
+            require(hasRole(SERVICE_ROLE, keccak256(abi.encodePacked(timestamp, prices, maxRatio, allsymbols))
+                .toEthSignedMessageHash().recover(v, r, s)),
                 'WQPriceOracle: validator is not a service'
             );
         }

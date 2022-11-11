@@ -161,6 +161,7 @@ contract WQDAOVoting is
      * @param _minimumQuorum Minimum quorum of voters for for making a decision
      * @param _votingPeriod The duration of voting on a proposal, in seconds
      */
+    
     function initialize(
         uint256 _minimumQuorum,
         uint256 _votingPeriod,

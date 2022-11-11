@@ -158,10 +158,7 @@ contract WQPensionFund is
      */
     function withdraw(uint256 amount) external nonReentrant {
         PensionWallet storage wallet = wallets[msg.sender];
-        require(
-            block.timestamp >= wallet.unlockDate,
-            'WQPension: Lock time is not over yet'
-        );
+        require(block.timestamp >= wallet.unlockDate, 'WQPension: Lock time is not over yet');
         require(amount <= wallet.amount, 'WQPension: Amount is invalid');
         uint256 reward = (amount * getRewards(msg.sender)) / wallet.amount;
         wallet.rewardDistributed += reward;
@@ -245,10 +242,7 @@ contract WQPensionFund is
         uint256 amount,
         uint256 duration
     ) external override nonReentrant onlyRole(BORROWER_ROLE) returns (uint256) {
-        require(
-            block.timestamp < wallets[depositor].unlockDate,
-            'WQPension: Credit unavailable'
-        );
+        require(block.timestamp < wallets[depositor].unlockDate, 'WQPension: Credit unavailable');
         wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount, block.timestamp);
