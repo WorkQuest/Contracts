@@ -130,16 +130,16 @@ describe('Borrowing test', function () {
 
         await eth_token
             .connect(borrower)
-            .approve(borrowing.address, parseEther('2'))
+            .approve(borrowing.address, parseEther('200'))
         await wusd_token
             .connect(owner)
             .mint(depositor.address, parseEther('400'))
         await wusd_token
             .connect(depositor)
-            .approve(pension_fund.address, parseEther('300'))
+            .approve(pension_fund.address, parseEther('400'))
         await pension_fund
             .connect(depositor)
-            .contribute(depositor.address, parseEther('300'))
+            .contribute(depositor.address, parseEther('400'))
         await wusd_token.mint(buyer.address, parseEther('200'))
 
         // ========================================================================================
@@ -200,7 +200,7 @@ describe('Borrowing test', function () {
     })
 
     describe('Borrowing: success execution', () => {
-        it('STEP 1: Borrow', async function(){
+        it.only('STEP 1: Borrow', async function(){
             const {
                 owner,
                 depositor,
@@ -215,14 +215,21 @@ describe('Borrowing test', function () {
                 borrowing,
             } = await loadFixture(deployWithFixture)
 
-            const credit = parseEther("200")
-            const balanceBefore = await wusd_token.balanceOf(borrower.address);
-            const balanceEthBefore = await eth_token.balanceOf(borrower.address);
+            const toBN = (num) => {
+                if (typeof num == "string") return new BigNumber(num);
+                return new BigNumber(num.toString());
+              };
+
+            const credit = parseEther("200") 
+            const balanceWusdBefore = await wusd_token.balanceOf(borrower.address);
+            const balanceEthBefore = await eth_token.balanceOf(borrower.address); // 1000000000000000000000
+
             await borrowing.connect(borrower).borrow(1, depositor.address, credit, 0, 7, SYMBOL_ETH);
-            const balanceAfter = await wusd_token.balanceOf(borrower.address);
-            const balanceEthAfter = await eth_token.balanceOf(borrower.address);
-            expect(((balanceEthBefore - balanceEthAfter) / 1e18).toFixed(2)).equal('1.00');
-            expect(((balanceAfter - balanceBefore) / 1e18).toFixed(2)).equal('200.00');
+
+            const balanceWusdAfter = await wusd_token.balanceOf(borrower.address);
+            const balanceEthAfter = await eth_token.balanceOf(borrower.address); // 990000000000000000000
+            expect(((balanceEthBefore - balanceEthAfter) / 1e18).toFixed(2)).equal('10.00');
+            expect(((balanceWusdAfter - balanceWusdBefore) / 1e18).toFixed(2)).equal(credit);
         });
 
         it('STEP 2: Refund', async () => {
