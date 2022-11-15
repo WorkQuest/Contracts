@@ -160,18 +160,12 @@ contract WQBridge is
     ) external payable whenNotPaused {
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
-        require(
-            token.enabled,
-            'WorkQuest Bridge: This token not registered or disabled'
-        );
+        require(token.enabled, 'WorkQuest Bridge: This token not registered or disabled');
 
         bytes32 message = keccak256(
             abi.encodePacked(nonce, amount, recipient, chainId, chainTo, symbol)
         );
-        require(
-            swaps[message].state == State.Empty,
-            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
-        );
+        require(swaps[message].state == State.Empty, 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
 
         swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
         if (token.lockable) {

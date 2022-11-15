@@ -112,10 +112,7 @@ contract WQLiquidityMining is
      */
     function stake(uint256 _amount) external nonReentrant {
         require(!stakingPaused, 'WQLiquidityMining: Staking is paused');
-        require(
-            block.timestamp > startTime,
-            'WQLiquidityMining: Staking time has not come yet'
-        );
+        require(block.timestamp > startTime, 'WQLiquidityMining: Staking time has not come yet');
         Staker storage staker = stakes[msg.sender];
         if (totalStaked > 0) {
             update();

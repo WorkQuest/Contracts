@@ -227,7 +227,7 @@ describe('Borrowing test', function () {
             expect(((balanceWusdAfter - balanceWusdBefore) / 1e18)).to.eq(credit / 1e18);
         });
 
-        it.only('STEP 2: Refund', async function(){
+        it('STEP 2: Refund', async function(){
             const {
                 owner,
                 depositor,

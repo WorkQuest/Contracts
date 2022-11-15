@@ -56,10 +56,7 @@ contract WQBridgePool is
         uint256 amount,
         address token
     ) external onlyRole(BRIDGE_ROLE) whenNotPaused {
-        require(
-            isBlockListed[recipient] == false,
-            'WQBridgePool: Recipient address is blocklisted'
-        );
+        require(isBlockListed[recipient] == false, 'WQBridgePool: Recipient address is blocklisted');
         if (token != address(0)) {
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
         } else {
