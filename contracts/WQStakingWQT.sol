@@ -94,7 +94,6 @@ contract WQStakingWQT is
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-
         startTime = _startTime;
         rewardTotal = _rewardTotal;
         distributionTime = _distributionTime;
@@ -103,7 +102,6 @@ contract WQStakingWQT is
         minStake = _minStake;
         maxStake = _maxStake;
         producedTime = _startTime;
-
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
@@ -168,14 +166,8 @@ contract WQStakingWQT is
 
     function unstake(uint256 amount) external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
-        require(
-            staker.unstakeTime <= block.timestamp,
-            'WQStaking: You cannot unstake tokens yet'
-        );
-        require(
-            staker.amount >= amount,
-            'WQStaking: Not enough tokens to unstake'
-        );
+        require(staker.unstakeTime <= block.timestamp, 'WQStaking: You cannot unstake tokens yet');
+        require(staker.amount >= amount, 'WQStaking: Not enough tokens to unstake');
         update();
         staker.rewardAllowed += (amount * tokensPerStake) / 1e20;
         staker.amount -= amount;

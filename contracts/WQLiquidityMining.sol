@@ -84,7 +84,6 @@ contract WQLiquidityMining is
         __AccessControl_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-
         startTime = _startTime;
         producedTime = _startTime;
         rewardTotal = _rewardTotal;
@@ -135,10 +134,7 @@ contract WQLiquidityMining is
     function unstake(uint256 _amount) external nonReentrant {
         require(!unstakingPaused, 'WQLiquidityMining: Unstaking is paused');
         Staker storage staker = stakes[msg.sender];
-        require(
-            staker.amount >= _amount,
-            'WQLiquidityMining: Not enough tokens to unstake'
-        );
+        require(staker.amount >= _amount, 'WQLiquidityMining: Not enough tokens to unstake');
         update();
         staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
         staker.amount -= _amount;

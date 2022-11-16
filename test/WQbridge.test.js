@@ -43,7 +43,7 @@ let tokenWeth
 let lockable_token
 let bridge_pool
 
-describe('Borrowing test', function () {
+describe('Bridge test', function () {
     async function deployWithFixture() {
         ;[bridge_owner, sender, recipient, validator, not_validator] =
             await ethers.getSigners()
@@ -64,7 +64,7 @@ describe('Borrowing test', function () {
         // ========================================================================================
 
         const BridgeToken2 = await ethers.getContractFactory('WQBridgeToken')
-        lockable_token = await upgrades.deployProxy(
+        wqt_token = await upgrades.deployProxy(
             BridgeToken2,
             ['WQT Token', WQT_SYMBOL, 18],
             { initializer: 'initialize', kind: 'transparent' }
@@ -78,43 +78,287 @@ describe('Borrowing test', function () {
 
         // ========================================================================================
 
-        const BridgePool = await ethers.getContractFactory("WQBridgePool");
-        bridge_pool = await upgrades.deployProxy(BridgePool, [], { initializer: 'initialize', kind: 'transparent' });
-        await bridge_pool.deployed();
-        
+        const BridgePool = await ethers.getContractFactory('WQBridgePool')
+        bridge_pool = await upgrades.deployProxy(BridgePool, [], {
+            initializer: 'initialize',
+            kind: 'transparent',
+        })
+        await bridge_pool.deployed()
 
         // ========================================================================================
 
-        const Bridge = await ethers.getContractFactory("WQBridge");
-        bridge = await upgrades.deployProxy(Bridge, [chainWQ, bridge_pool.address, validator.address], { initializer: 'initialize', kind: 'transparent' });
-        await bridge.deployed();
+        const Bridge = await ethers.getContractFactory('WQBridge')
+        bridge = await upgrades.deployProxy(
+            Bridge,
+            [chainWQ, bridge_pool.address, validator.address],
+            { initializer: 'initialize', kind: 'transparent' }
+        )
+        await bridge.deployed()
+        await bridge.updateChain(chainETH, true)
+        await bridge.updateToken(
+            wqt_token.address,
+            true,
+            false,
+            false,
+            WQT_SYMBOL
+        )
+        await bridge.updateToken(
+            lockable_token.address,
+            true,
+            false,
+            true,
+            LT_SYMBOL
+        )
 
+        await bridge_pool.grantRole(
+            await bridge_pool.BRIDGE_ROLE(),
+            bridge.address
+        )
+
+        const minter_role = await wqt_token.MINTER_ROLE()
+        const burner_role = await wqt_token.BURNER_ROLE()
+        await wqt_token.grantRole(minter_role, bridge.address)
+        await wqt_token.grantRole(burner_role, bridge.address)
         // ========================================================================================
 
         return {
             bridge_owner,
+            minter_role,
+            burner_role,
             sender,
             recipient,
             validator,
             not_validator,
-            tokenWeth,
+            wqt_token,
             lockable_token,
-            bridge_pool
+            bridge_pool,
         }
     }
 
-    describe('Borrowing: deploy', function () {
-        it('Should be set all variables and roles', async function () {
+    describe('Bridge: deploy', function () {
+        it('STEP 1: Deployer address must have ADMIN_ROLE role', async function () {
             const {
                 bridge_owner,
+                minter_role,
+                burner_role,
                 sender,
                 recipient,
                 validator,
                 not_validator,
-                tokenWeth,
+                wqt_token,
                 lockable_token,
-                bridge_pool
+                bridge_pool,
             } = await loadFixture(deployWithFixture)
+
+            expect(
+                await bridge.hasRole(
+                    await bridge.ADMIN_ROLE(),
+                    bridge_owner.address
+                )
+            ).to.equal(true)
+        })
+        it('STEP 2: Validator address must have VALIDATOR_ROLE role', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+            } = await loadFixture(deployWithFixture)
+
+            expect(
+                await bridge.hasRole(
+                    await bridge.VALIDATOR_ROLE(),
+                    validator.address
+                )
+            ).to.equal(true)
+        })
+        it("STEP 3: Not validator address sholdn't have VALIDATOR_ROLE role", async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+            } = await loadFixture(deployWithFixture)
+
+            expect(
+                await bridge.hasRole(
+                    await bridge.VALIDATOR_ROLE(),
+                    not_validator.address
+                )
+            ).to.equal(false)
+        })
+    })
+
+    describe('Bridge: swap', function () {
+        it('Swap with non existing chain id: fail', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+            } = await loadFixture(deployWithFixture)
+
+            await expect(
+                bridge
+                    .connect(sender)
+                    .swap(
+                        nonce,
+                        chainBSC,
+                        AMOUNT,
+                        recipient.address,
+                        WQT_SYMBOL,
+                        { value: 0 }
+                    )
+            ).to.be.revertedWith('WorkQuest Bridge: ChainTo ID is not allowed')
+        })
+
+        it('Swap with non existing chain id: fail', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+            } = await loadFixture(deployWithFixture)
+
+            await expect(
+                bridge
+                    .connect(sender)
+                    .swap(
+                        nonce,
+                        chainWQ,
+                        AMOUNT,
+                        recipient.address,
+                        native_coin,
+                        { value: 0 }
+                    )
+            ).to.be.revertedWith('WorkQuest Bridge: ChainTo ID is not allowed')
+        })
+
+        it('Swap with duplicate transaction: fail', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+            } = await loadFixture(deployWithFixture)
+
+            await wqt_token.connect(sender).approve(bridge.address, AMOUNT)
+            await bridge
+                .connect(sender)
+                .swap(nonce, chainETH, AMOUNT, recipient.address, WQT_SYMBOL, {
+                    value: 0,
+                })
+
+            await expect(
+                bridge
+                    .connect(sender)
+                    .swap(
+                        nonce,
+                        chainETH,
+                        AMOUNT,
+                        recipient.address,
+                        WQT_SYMBOL,
+                        { value: 0 }
+                    )
+            ).to.be.revertedWith(
+                'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
+            )
+        })
+
+        it('Swap WQT token: success', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+            } = await loadFixture(deployWithFixture)
+
+            await wqt_token.connect(sender).approve(bridge.address, AMOUNT)
+            expect(await wqt_token.balanceOf(sender.address)).to.be.equal(
+                AMOUNT
+            )
+
+            const balanceBeforeWqt = await wqt_token
+                .connect(sender)
+                .balanceOf(sender.address)
+
+            await bridge
+                .connect(sender)
+                .swap(nonce, chainETH, AMOUNT, recipient.address, WQT_SYMBOL, {
+                    value: 0,
+                })
+            // const message = ethers.utils.solidityKeccak256(
+            //     { t: 'uint', v: nonce },
+            //     { t: 'uint', v: AMOUNT },
+            //     { t: 'address', v: recipient.address },
+            //     { t: 'uint256', v: chainWQ },
+            //     { t: 'uint256', v: chainETH },
+            //     { t: 'string', v: WQT_SYMBOL }
+            // )
+
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    AMOUNT,
+                    recipient.address,
+                    chainWQ,
+                    chainETH,
+                    WQT_SYMBOL,
+                ]
+            )
+
+            const balanceAfterWqt = await await wqt_token
+                .connect(sender)
+                .balanceOf(sender.address)
+
+            const data = await bridge.swaps(message)
+            expect(data.nonce).to.equal(nonce)
+            expect(data.state).to.equal(swapStatus.Initialized)
+            expect(balanceBeforeWqt - AMOUNT).to.eq(balanceAfterWqt)
         })
     })
 

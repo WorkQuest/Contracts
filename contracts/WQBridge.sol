@@ -175,10 +175,7 @@ contract WQBridge is
                 amount
             );
         } else if (token.native) {
-            require(
-                msg.value == amount,
-                'WorkQuest Bridge: Amount value is not equal to transfered funds'
-            );
+            require(msg.value == amount, 'WorkQuest Bridge: Amount value is not equal to transfered funds');
             pool.sendValue(amount);
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);

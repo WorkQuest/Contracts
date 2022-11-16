@@ -123,14 +123,8 @@ contract WQBridgeStable is
         require(chainTo != chainId, 'WorkQuest Bridge: Invalid chainTo id');
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
-        require(
-            token.enabled,
-            'WorkQuest Bridge: This token not registered or disabled'
-        );
-        require(
-            amount >= token.minAmount && amount <= token.maxAmount,
-            'WorkQuest Bridge: Invalid amount'
-        );
+        require(token.enabled, 'WorkQuest Bridge: This token not registered or disabled');
+        require(amount >= token.minAmount && amount <= token.maxAmount, 'WorkQuest Bridge: Invalid amount');
         bytes32 message = keccak256(
             abi.encodePacked(
                 nonce,
@@ -142,11 +136,7 @@ contract WQBridgeStable is
                 symbol
             )
         );
-        require(
-            !swaps[message],
-            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
-        );
-
+        require(!swaps[message], 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
         swaps[message] = true;
         IERC20Upgradeable(token.token).safeTransferFrom(
             msg.sender,
