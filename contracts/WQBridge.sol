@@ -325,10 +325,7 @@ contract WQBridge is
         bool lockable,
         string memory symbol
     ) public onlyRole(ADMIN_ROLE) {
-        require(
-            bytes(symbol).length > 0,
-            'WorkQuest Bridge: Symbol length must be greater than 0'
-        );
+        require(bytes(symbol).length > 0, 'WorkQuest Bridge: Symbol length must be greater than 0');
         tokens[symbol] = TokenSettings({
             token: token,
             enabled: enabled,
