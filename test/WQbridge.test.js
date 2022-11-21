@@ -134,6 +134,7 @@ describe('Bridge test', function () {
             not_validator,
             wqt_token,
             lockable_token,
+            bridge,
             bridge_pool,
         }
     }
@@ -151,6 +152,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             expect(
@@ -172,6 +174,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             expect(
@@ -193,6 +196,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             expect(
@@ -217,6 +221,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             await expect(
@@ -245,6 +250,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             await expect(
@@ -273,6 +279,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             await wqt_token.connect(sender).approve(bridge.address, AMOUNT)
@@ -310,6 +317,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
@@ -374,8 +382,6 @@ describe('Bridge test', function () {
             expect((balanceBeforeLT - valueToSwap) / 1e18).to.eq(
                 balanceAfterLT / 1e18
             )
-
-            console.log(await ethers.provider.getBalance(bridge_pool.address))
         })
 
         it('fails when Symbol < 0', async function () {
@@ -390,6 +396,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             await expect(
@@ -413,6 +420,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             await wqt_token.connect(sender).approve(bridge.address, AMOUNT)
@@ -451,6 +459,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
@@ -521,6 +530,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
@@ -576,7 +586,7 @@ describe('Bridge test', function () {
     })
 
     describe('Bridge: redeem', function () {
-        it('Redeem with same chain id: fail', async function() {
+        it('Redeem with same chain id: fail', async function () {
             const {
                 bridge_owner,
                 minter_role,
@@ -588,6 +598,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
+                bridge
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -606,14 +617,533 @@ describe('Bridge test', function () {
                     recipient.address,
                     chainETH,
                     chainWQ,
-                    WQT_SYMBOL
+                    WQT_SYMBOL,
                 ]
             )
-            
+
             const signature = await web3.eth.sign(message, validator.address)
             const sig = ethers.utils.splitSignature(signature)
+
+            await expect(
+                bridge
+                    .connect(sender)
+                    .redeem(
+                        nonce,
+                        chainWQ,
+                        amount,
+                        recipient.address,
+                        sig.v,
+                        sig.r,
+                        sig.s,
+                        WQT_SYMBOL
+                    )
+            ).to.be.revertedWith(
+                'WorkQuest Bridge: chainFrom ID is not allowed'
+            )
+        })
+
+        it('Redeem with not registered or disabled token', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('200')
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    amount,
+                    recipient.address,
+                    chainETH,
+                    chainWQ,
+                    WQT_SYMBOL,
+                ]
+            )
+
+            const signature = await web3.eth.sign(message, validator.address)
+            const sig = ethers.utils.splitSignature(signature)
+
+            await expect(
+                bridge
+                    .connect(sender)
+                    .redeem(
+                        nonce,
+                        chainETH,
+                        amount,
+                        recipient.address,
+                        sig.v,
+                        sig.r,
+                        sig.s,
+                        NATIVE_SYMBOL
+                    )
+            ).to.be.revertedWith(
+                'WorkQuest Bridge: This token not registered or disabled'
+            )
+        })
+
+        it('Should revert if swap already redeemed', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('200')
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    amount,
+                    recipient.address,
+                    chainETH,
+                    chainWQ,
+                    WQT_SYMBOL,
+                ]
+            )
+
+            const signature = await web3.eth.sign(message, validator.address)
+            const sig = ethers.utils.splitSignature(signature)
+
+            await bridge
+                .connect(sender)
+                .redeem(
+                    nonce,
+                    chainETH,
+                    amount,
+                    recipient.address,
+                    sig.v,
+                    sig.r,
+                    sig.s,
+                    WQT_SYMBOL
+                )
+
+            await expect(
+                bridge
+                    .connect(sender)
+                    .redeem(
+                        nonce,
+                        chainETH,
+                        amount,
+                        recipient.address,
+                        sig.v,
+                        sig.r,
+                        sig.s,
+                        WQT_SYMBOL
+                    )
+            ).to.be.revertedWith(
+                'WorkQuest Bridge: Swap is not empty state or duplicate'
+            )
+        })
+
+        it('Should revert if swap already redeemed', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('200')
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    amount,
+                    recipient.address,
+                    chainETH,
+                    chainWQ,
+                    WQT_SYMBOL,
+                ]
+            )
+
+            const signature = await web3.eth.sign(message, validator.address)
+            const sig = ethers.utils.splitSignature(signature)
+
+            await expect(
+                bridge
+                    .connect(sender)
+                    .redeem(
+                        nonce,
+                        chainETH,
+                        amount,
+                        not_validator.address,
+                        sig.v,
+                        sig.r,
+                        sig.s,
+                        WQT_SYMBOL
+                    )
+            ).to.be.revertedWith(
+                'WorkQuest Bridge: Validator address is invalid or signature is faked'
+            )
+        })
+
+        it('Should redeem successfully', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('200')
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    amount,
+                    recipient.address,
+                    chainETH,
+                    chainWQ,
+                    WQT_SYMBOL,
+                ]
+            )
+
+            expect(await wqt_token.balanceOf(recipient.address)).to.be.equal(0)
+
+            const signature = await web3.eth.sign(message, validator.address)
+            const sig = ethers.utils.splitSignature(signature)
+
+            await bridge
+                .connect(sender)
+                .redeem(
+                    nonce,
+                    chainETH,
+                    amount,
+                    recipient.address,
+                    sig.v,
+                    sig.r,
+                    sig.s,
+                    WQT_SYMBOL
+                )
+
+            const data = await bridge.connect(sender).swaps(message)
+            expect(data.nonce).to.eq(nonce)
+            expect(data.state).to.eq(swapStatus.Redeemed)
+
+            const balaneAfter = await wqt_token
+                .connect(recipient)
+                .balanceOf(recipient.address)
+            expect(balaneAfter).to.eq(amount)
+        })
+
+        it('Should redeem native coin successfully', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('200')
+            await bridge.updateToken(
+                null_addr,
+                true,
+                true,
+                false,
+                NATIVE_SYMBOL
+            )
+            const banceSenderBefore = await ethers.provider.getBalance(
+                sender.address
+            )
+            await bridge
+                .connect(sender)
+                .swap(
+                    nonce,
+                    chainETH,
+                    amount,
+                    recipient.address,
+                    NATIVE_SYMBOL,
+                    { value: amount }
+                )
+            const banceSenderAfter = await ethers.provider.getBalance(
+                sender.address
+            )
+            expect(
+                ((banceSenderBefore - banceSenderAfter) / 1e18).toFixed(2)
+            ).to.eq((amount / 1e18).toFixed(2))
+            expect(await ethers.provider.getBalance(bridge_pool.address)).to.eq(
+                amount
+            )
+
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    amount,
+                    recipient.address,
+                    chainETH,
+                    chainWQ,
+                    NATIVE_SYMBOL,
+                ]
+            )
+            const signature = await web3.eth.sign(message, validator.address)
+            const sig = ethers.utils.splitSignature(signature)
+
+            const balanceRecipientBefore = await ethers.provider.getBalance(
+                recipient.address
+            )
+            await bridge
+                .connect(sender)
+                .redeem(
+                    nonce,
+                    chainETH,
+                    amount,
+                    recipient.address,
+                    sig.v,
+                    sig.r,
+                    sig.s,
+                    NATIVE_SYMBOL
+                )
+
+            const data = await bridge.connect(sender).swaps(message)
+            expect(data.nonce).to.eq(nonce)
+            expect(data.state).to.eq(swapStatus.Redeemed)
+
+            const balanceRecipientAfter = await ethers.provider.getBalance(
+                recipient.address
+            )
+            expect(
+                (
+                    (balanceRecipientAfter - balanceRecipientBefore) /
+                    1e18
+                ).toFixed(2)
+            ).to.eq((amount / 1e18).toFixed(2))
+            expect(await ethers.provider.getBalance(bridge_pool.address)).to.eq(
+                '0'
+            )
+        })
+
+        it('Should redeem lockable token successfully', async function () {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('200')
+            expect(
+                await lockable_token.balanceOf(recipient.address)
+            ).to.be.equal(0)
+            await lockable_token.connect(sender).approve(bridge.address, amount)
+            await bridge
+                .connect(sender)
+                .swap(nonce, chainETH, amount, recipient.address, LT_SYMBOL)
+
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    amount,
+                    recipient.address,
+                    chainETH,
+                    chainWQ,
+                    LT_SYMBOL,
+                ]
+            )
+            const signature = await web3.eth.sign(message, validator.address)
+            const sig = ethers.utils.splitSignature(signature)
+            await bridge
+                .connect(sender)
+                .redeem(
+                    nonce,
+                    chainETH,
+                    amount,
+                    recipient.address,
+                    sig.v,
+                    sig.r,
+                    sig.s,
+                    LT_SYMBOL
+                )
+
+            const data = await bridge.connect(sender).swaps(message)
+            expect(data.nonce).to.eq(nonce)
+            expect(data.state).to.eq(swapStatus.Redeemed)
+            
+            const balanceRecipientBefore = await lockable_token.balanceOf(recipient.address)
+            expect(balanceRecipientBefore).to.eq(amount)
         })
     })
+
+    describe('Bridge: admin functions', function(){
+        it('STEP1: updateChain: Should revert if caller is no admin', async () => {
+            try {
+                await bridge.connect(sender).updateChain(chainBSC, true);
+                throw new Error("Not reverted");
+            } catch (error) {
+                expect(error.message).to.include("AccessControl: account");
+            }
+        });
+        it('STEP2: Add chain id', async function(){
+            expect(
+                await bridge.chains(chainBSC)
+            ).to.be.equal(false);
+            await bridge.updateChain(chainBSC, true);
+            expect(
+                await bridge.chains(chainBSC)
+            ).to.be.equal(true);
+        });
+        it('STEP3: Remove chain id', async function(){
+            expect(
+                await bridge.chains(chainETH)
+            ).to.be.equal(true);
+            await bridge.updateChain(chainETH, false);
+            expect(
+                await bridge.chains(chainETH)
+            ).to.be.equal(false);
+        });
+        it('STEP4: updateToken: Should revert if caller is no admin', async function(){
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            await expect(bridge.connect(sender).updateToken(
+                null_addr,
+                true,
+                true,
+                false,
+                NATIVE_SYMBOL
+            )).to.be.revertedWith('AccessControl: account')
+        });
+        it('STEP5: Update token settings', async function(){
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+                bridge
+            } = await loadFixture(deployWithFixture)
+
+            const testSymbol = 'TestSymbol'
+
+            const token_info = await bridge.tokens(WQT_SYMBOL);
+            expect(
+                token_info.token
+            ).to.eq(wqt_token.address);
+            expect(
+                token_info.enabled
+            ).to.be.equal(true);
+            expect(
+                token_info.native
+            ).to.be.equal(false);
+
+            await bridge.updateToken(newToken, false, true, false, testSymbol);
+            const token_info2 = await bridge.tokens(testSymbol);
+            expect(
+                token_info2.token
+            ).to.be.equal(newToken);
+            expect(
+                token_info2.enabled
+            ).to.eq(false);
+            expect(
+                token_info2.native
+            ).to.be.equal(true);
+        });
+    });
 
     async function oracleSetPrice(price, symbol) {
         nonce += 1
