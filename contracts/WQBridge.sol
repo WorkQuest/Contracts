@@ -225,14 +225,8 @@ contract WQBridge is
         bytes32 s,
         string memory symbol
     ) external whenNotPaused {
-        require(
-            chains[chainFrom],
-            'WorkQuest Bridge: chainFrom ID is not allowed'
-        );
-        require(
-            tokens[symbol].enabled,
-            'WorkQuest Bridge: This token not registered or disabled'
-        );
+        require(chains[chainFrom], 'WorkQuest Bridge: chainFrom ID is not allowed');
+        require(tokens[symbol].enabled,'WorkQuest Bridge: This token not registered or disabled');
 
         bytes32 message = keccak256(
             abi.encodePacked(
@@ -245,9 +239,7 @@ contract WQBridge is
             )
         );
         require(swaps[message].state == State.Empty, 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
-
-        require(
-            hasRole(
+        require(hasRole(
                 VALIDATOR_ROLE,
                 message.toEthSignedMessageHash().recover(v, r, s)
             ),

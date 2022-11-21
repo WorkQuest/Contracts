@@ -313,9 +313,11 @@ describe('Bridge test', function () {
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
-            await lockable_token.connect(sender).approve(bridge.address, valueToSwap)
+            await lockable_token
+                .connect(sender)
+                .approve(bridge.address, valueToSwap)
             expect(await lockable_token.balanceOf(sender.address)).to.be.equal(
-                (AMOUNT)
+                AMOUNT
             )
 
             const balanceBeforeLT = await lockable_token
@@ -324,9 +326,16 @@ describe('Bridge test', function () {
 
             await bridge
                 .connect(sender)
-                .swap(nonce, chainETH, valueToSwap, recipient.address, LT_SYMBOL, {
-                    value: 0,
-                })
+                .swap(
+                    nonce,
+                    chainETH,
+                    valueToSwap,
+                    recipient.address,
+                    LT_SYMBOL,
+                    {
+                        value: 0,
+                    }
+                )
             // const message = ethers.utils.solidityKeccak256(
             //     { t: 'uint', v: nonce },
             //     { t: 'uint', v: AMOUNT },
@@ -345,7 +354,14 @@ describe('Bridge test', function () {
                     'uint256',
                     'string',
                 ],
-                [nonce, valueToSwap, recipient.address, chainWQ, chainETH, LT_SYMBOL]
+                [
+                    nonce,
+                    valueToSwap,
+                    recipient.address,
+                    chainWQ,
+                    chainETH,
+                    LT_SYMBOL,
+                ]
             )
 
             const balanceAfterLT = await await lockable_token
@@ -355,7 +371,9 @@ describe('Bridge test', function () {
             const data = await bridge.swaps(message)
             expect(data.nonce).to.equal(nonce)
             expect(data.state).to.equal(swapStatus.Initialized)
-            expect((balanceBeforeLT - valueToSwap) / 1e18).to.eq(balanceAfterLT / 1e18)
+            expect((balanceBeforeLT - valueToSwap) / 1e18).to.eq(
+                balanceAfterLT / 1e18
+            )
 
             console.log(await ethers.provider.getBalance(bridge_pool.address))
         })
@@ -506,10 +524,12 @@ describe('Bridge test', function () {
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
-            await lockable_token.connect(sender).approve(bridge.address, valueToSwap)
-            const senderBalanceBefore = await lockable_token.connect(sender).balanceOf(
-                sender.address
-            )
+            await lockable_token
+                .connect(sender)
+                .approve(bridge.address, valueToSwap)
+            const senderBalanceBefore = await lockable_token
+                .connect(sender)
+                .balanceOf(sender.address)
             await bridge
                 .connect(sender)
                 .swap(
@@ -517,7 +537,7 @@ describe('Bridge test', function () {
                     chainETH,
                     valueToSwap,
                     recipient.address,
-                    LT_SYMBOL,
+                    LT_SYMBOL
                 )
             const message = ethers.utils.solidityKeccak256(
                 [
@@ -528,24 +548,71 @@ describe('Bridge test', function () {
                     'uint256',
                     'string',
                 ],
-                [nonce, valueToSwap, recipient.address, chainWQ, chainETH, LT_SYMBOL]
+                [
+                    nonce,
+                    valueToSwap,
+                    recipient.address,
+                    chainWQ,
+                    chainETH,
+                    LT_SYMBOL,
+                ]
             )
 
             const data = await bridge.swaps(message)
             expect(data.nonce).to.eq(nonce)
             expect(data.state).to.eq(swapStatus.Initialized)
-            const balancePool = await lockable_token.balanceOf(bridge_pool.address)
+            const balancePool = await lockable_token.balanceOf(
+                bridge_pool.address
+            )
             expect(balancePool).to.eq(valueToSwap)
 
-            const senderBalanceAfter = await lockable_token.connect(sender).balanceOf(
-                sender.address
-            )
+            const senderBalanceAfter = await lockable_token
+                .connect(sender)
+                .balanceOf(sender.address)
             expect(
                 ((senderBalanceBefore - senderBalanceAfter) / 1e18).toFixed(2)
             ).to.eq((valueToSwap / 1e18).toFixed(2))
         })
+    })
 
-        
+    describe('Bridge: redeem', function () {
+        it('Redeem with same chain id: fail', async function() {
+            const {
+                bridge_owner,
+                minter_role,
+                burner_role,
+                sender,
+                recipient,
+                validator,
+                not_validator,
+                wqt_token,
+                lockable_token,
+                bridge_pool,
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('200')
+            const message = ethers.utils.solidityKeccak256(
+                [
+                    'uint256',
+                    'uint256',
+                    'address',
+                    'uint256',
+                    'uint256',
+                    'string',
+                ],
+                [
+                    nonce,
+                    amount,
+                    recipient.address,
+                    chainETH,
+                    chainWQ,
+                    WQT_SYMBOL
+                ]
+            )
+            
+            const signature = await web3.eth.sign(message, validator.address)
+            const sig = ethers.utils.splitSignature(signature)
+        })
     })
 
     async function oracleSetPrice(price, symbol) {
