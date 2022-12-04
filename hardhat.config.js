@@ -6,7 +6,7 @@ require('hardhat-docgen')
 require('@nomiclabs/hardhat-etherscan')
 require('@openzeppelin/hardhat-upgrades')
 require('./tasks')
-require('dotenv').config()
+require( 'dotenv' ).config()
 const BigNumber = require('bignumber.js')
 BigNumber.config({ EXPONENTIAL_AT: 60 })
 
