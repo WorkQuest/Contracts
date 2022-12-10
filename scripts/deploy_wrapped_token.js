@@ -57,7 +57,10 @@ async function main() {
     fs.writeFileSync( `.env-${network}`, stringify( envConfig ) )
 
     const minter_role = await bridge_token.MINTER_ROLE()
-    await bridge_token.grantRole( minter_role, owner )
+    const tx = await bridge_token.grantRole( minter_role, owner )
+    await tx.wait()
+    await bridge_token.mint(owner, AMOUNT)
+    console.log(await bridge_token.balanceOf(owner))
 }
 
 main()
