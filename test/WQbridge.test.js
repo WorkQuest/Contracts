@@ -216,19 +216,9 @@ describe('Bridge test', function () {
         })
 
         it('swap with duplicate transaction: fail', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge,
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, wqt_token, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             await wqt_token.connect(sender).approve(bridge.address, AMOUNT)
             await bridge
@@ -254,19 +244,8 @@ describe('Bridge test', function () {
         })
 
         it('swap WQT token: success', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge,
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, lockable_token, bridge } =
+                await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
             await lockable_token
@@ -287,10 +266,7 @@ describe('Bridge test', function () {
                     chainETH,
                     valueToSwap,
                     recipient.address,
-                    LT_SYMBOL,
-                    {
-                        value: 0,
-                    }
+                    LT_SYMBOL
                 )
             // const message = ethers.utils.solidityKeccak256(
             //     { t: 'uint', v: nonce },
@@ -376,19 +352,8 @@ describe('Bridge test', function () {
         })
 
         it('swaps native coin: success', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge,
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, bridge_pool, bridge } =
+                await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
             await bridge.updateToken(
@@ -446,22 +411,12 @@ describe('Bridge test', function () {
             )
         })
 
-        it('Swap lockable token: success', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge,
-            } = await loadFixture(deployWithFixture)
+        it.only('Swap lockable token: success', async function () {
+            const { sender, recipient, lockable_token, bridge_pool, bridge } =
+                await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
+
             await lockable_token
                 .connect(sender)
                 .approve(bridge.address, valueToSwap)
@@ -515,19 +470,9 @@ describe('Bridge test', function () {
 
     describe('Bridge: redeem', function () {
         it('Redeem with same chain id: fail', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge,
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, validator, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             const amount = toWei('200')
             const message = ethers.utils.solidityKeccak256(
@@ -571,19 +516,9 @@ describe('Bridge test', function () {
         })
 
         it('Redeem with not registered or disabled token', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge,
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, validator, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             const amount = toWei('200')
             const message = ethers.utils.solidityKeccak256(
