@@ -141,19 +141,9 @@ describe('Bridge test', function () {
 
     describe('Bridge: deploy', function () {
         it('STEP 1: Deployer address must have ADMIN_ROLE role', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge
-            } = await loadFixture(deployWithFixture)
+            const { bridge_owner, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             expect(
                 await bridge.hasRole(
@@ -163,19 +153,7 @@ describe('Bridge test', function () {
             ).to.equal(true)
         })
         it('STEP 2: Validator address must have VALIDATOR_ROLE role', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge
-            } = await loadFixture(deployWithFixture)
+            const { validator, bridge } = await loadFixture(deployWithFixture)
 
             expect(
                 await bridge.hasRole(
@@ -185,19 +163,9 @@ describe('Bridge test', function () {
             ).to.equal(true)
         })
         it("STEP 3: Not validator address shouldn't have VALIDATOR_ROLE role", async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge
-            } = await loadFixture(deployWithFixture)
+            const { not_validator, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             expect(
                 await bridge.hasRole(
@@ -210,19 +178,9 @@ describe('Bridge test', function () {
 
     describe('Bridge: swap', function () {
         it('swap with non existing chain id: fail', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             await expect(
                 bridge
@@ -239,19 +197,9 @@ describe('Bridge test', function () {
         })
 
         it('swap with non existing symbol: fail', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             await expect(
                 bridge
@@ -279,7 +227,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             await wqt_token.connect(sender).approve(bridge.address, AMOUNT)
@@ -317,7 +265,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
@@ -385,19 +333,9 @@ describe('Bridge test', function () {
         })
 
         it('fails when Symbol < 0', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge
-            } = await loadFixture(deployWithFixture)
+            const { bridge_owner, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             await expect(
                 bridge
@@ -409,19 +347,9 @@ describe('Bridge test', function () {
         })
 
         it('swaps native coin with wrong amount: fail', async function () {
-            const {
-                bridge_owner,
-                minter_role,
-                burner_role,
-                sender,
-                recipient,
-                validator,
-                not_validator,
-                wqt_token,
-                lockable_token,
-                bridge_pool,
-                bridge
-            } = await loadFixture(deployWithFixture)
+            const { sender, recipient, wqt_token, bridge } = await loadFixture(
+                deployWithFixture
+            )
 
             await wqt_token.connect(sender).approve(bridge.address, AMOUNT)
             await bridge.updateToken(
@@ -459,7 +387,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
@@ -530,7 +458,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const valueToSwap = toWei('200')
@@ -598,7 +526,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -654,7 +582,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -710,7 +638,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -779,7 +707,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -835,7 +763,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -898,7 +826,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -999,7 +927,7 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const amount = toWei('200')
@@ -1020,14 +948,7 @@ describe('Bridge test', function () {
                     'uint256',
                     'string',
                 ],
-                [
-                    nonce,
-                    amount,
-                    recipient.address,
-                    chainETH,
-                    chainWQ,
-                    LT_SYMBOL,
-                ]
+                [nonce, amount, recipient.address, chainETH, chainWQ, LT_SYMBOL]
             )
             const signature = await web3.eth.sign(message, validator.address)
             const sig = ethers.utils.splitSignature(signature)
@@ -1047,40 +968,34 @@ describe('Bridge test', function () {
             const data = await bridge.connect(sender).swaps(message)
             expect(data.nonce).to.eq(nonce)
             expect(data.state).to.eq(swapStatus.Redeemed)
-            
-            const balanceRecipientBefore = await lockable_token.balanceOf(recipient.address)
+
+            const balanceRecipientBefore = await lockable_token.balanceOf(
+                recipient.address
+            )
             expect(balanceRecipientBefore).to.eq(amount)
         })
     })
 
-    describe('Bridge: admin functions', function(){
+    describe('Bridge: admin functions', function () {
         it('STEP1: updateChain: Should revert if caller is no admin', async () => {
             try {
-                await bridge.connect(sender).updateChain(chainBSC, true);
-                throw new Error("Not reverted");
+                await bridge.connect(sender).updateChain(chainBSC, true)
+                throw new Error('Not reverted')
             } catch (error) {
-                expect(error.message).to.include("AccessControl: account");
+                expect(error.message).to.include('AccessControl: account')
             }
-        });
-        it('STEP2: Add chain id', async function(){
-            expect(
-                await bridge.chains(chainBSC)
-            ).to.be.equal(false);
-            await bridge.updateChain(chainBSC, true);
-            expect(
-                await bridge.chains(chainBSC)
-            ).to.be.equal(true);
-        });
-        it('STEP3: Remove chain id', async function(){
-            expect(
-                await bridge.chains(chainETH)
-            ).to.be.equal(true);
-            await bridge.updateChain(chainETH, false);
-            expect(
-                await bridge.chains(chainETH)
-            ).to.be.equal(false);
-        });
-        it('STEP4: updateToken: Should revert if caller is no admin', async function(){
+        })
+        it('STEP2: Add chain id', async function () {
+            expect(await bridge.chains(chainBSC)).to.be.equal(false)
+            await bridge.updateChain(chainBSC, true)
+            expect(await bridge.chains(chainBSC)).to.be.equal(true)
+        })
+        it('STEP3: Remove chain id', async function () {
+            expect(await bridge.chains(chainETH)).to.be.equal(true)
+            await bridge.updateChain(chainETH, false)
+            expect(await bridge.chains(chainETH)).to.be.equal(false)
+        })
+        it('STEP4: updateToken: Should revert if caller is no admin', async function () {
             const {
                 bridge_owner,
                 minter_role,
@@ -1092,18 +1007,16 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
-            await expect(bridge.connect(sender).updateToken(
-                null_addr,
-                true,
-                true,
-                false,
-                NATIVE_SYMBOL
-            )).to.be.revertedWith('AccessControl: account')
-        });
-        it('STEP5: Update token settings', async function(){
+            await expect(
+                bridge
+                    .connect(sender)
+                    .updateToken(null_addr, true, true, false, NATIVE_SYMBOL)
+            ).to.be.revertedWith('AccessControl: account')
+        })
+        it('STEP5: Update token settings', async function () {
             const {
                 bridge_owner,
                 minter_role,
@@ -1115,35 +1028,23 @@ describe('Bridge test', function () {
                 wqt_token,
                 lockable_token,
                 bridge_pool,
-                bridge
+                bridge,
             } = await loadFixture(deployWithFixture)
 
             const testSymbol = 'TestSymbol'
 
-            const token_info = await bridge.tokens(WQT_SYMBOL);
-            expect(
-                token_info.token
-            ).to.eq(wqt_token.address);
-            expect(
-                token_info.enabled
-            ).to.be.equal(true);
-            expect(
-                token_info.native
-            ).to.be.equal(false);
+            const token_info = await bridge.tokens(WQT_SYMBOL)
+            expect(token_info.token).to.eq(wqt_token.address)
+            expect(token_info.enabled).to.be.equal(true)
+            expect(token_info.native).to.be.equal(false)
 
-            await bridge.updateToken(newToken, false, true, false, testSymbol);
-            const token_info2 = await bridge.tokens(testSymbol);
-            expect(
-                token_info2.token
-            ).to.be.equal(newToken);
-            expect(
-                token_info2.enabled
-            ).to.eq(false);
-            expect(
-                token_info2.native
-            ).to.be.equal(true);
-        });
-    });
+            await bridge.updateToken(newToken, false, true, false, testSymbol)
+            const token_info2 = await bridge.tokens(testSymbol)
+            expect(token_info2.token).to.be.equal(newToken)
+            expect(token_info2.enabled).to.eq(false)
+            expect(token_info2.native).to.be.equal(true)
+        })
+    })
 
     async function oracleSetPrice(price, symbol) {
         nonce += 1
