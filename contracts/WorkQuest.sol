@@ -172,9 +172,7 @@ contract WorkQuest {
      * @param _worker Address of worker
      */
     function assignJob(address _worker) external {
-        require(msg.sender == employer && (status == JobStatus.Published || status == JobStatus.WaitWorker),
-            errMsg
-        );
+        require(msg.sender == employer && (status == JobStatus.Published || status == JobStatus.WaitWorker), errMsg);
         require(_worker != address(0), 'WorkQuest: Invalid address');
         status = JobStatus.WaitWorker;
         worker = _worker;
@@ -204,10 +202,7 @@ contract WorkQuest {
      * @notice Employer accepted job
      */
     function acceptJobResult() external {
-        require(
-            msg.sender == employer && status == JobStatus.WaitJobVerify,
-            errMsg
-        );
+        require(msg.sender == employer && status == JobStatus.WaitJobVerify, errMsg);
         status = JobStatus.Finished;
         _transferFunds();
         emit JobFinished();

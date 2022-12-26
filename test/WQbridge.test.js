@@ -298,7 +298,12 @@ describe('Bridge test', function () {
 
             const balanceAfterLT = await await lockable_token
                 .connect(sender)
-                .balanceOf(sender.address)
+                .balanceOf( sender.address )
+            
+            const balancePool = await lockable_token.balanceOf(
+                bridge_pool.address
+            )
+            expect(balancePool).to.eq(valueToSwap)
 
             const data = await bridge.swaps(message)
             expect(data.nonce).to.equal(nonce)
@@ -411,7 +416,7 @@ describe('Bridge test', function () {
             )
         })
 
-        it.only('Swap lockable token: success', async function () {
+        it('Swap lockable token: success', async function () {
             const { sender, recipient, lockable_token, bridge_pool, bridge } =
                 await loadFixture(deployWithFixture)
 
@@ -727,7 +732,7 @@ describe('Bridge test', function () {
             const sig = ethers.utils.splitSignature(signature)
 
             await bridge
-                .connect(sender)
+                .connect(validator)
                 .redeem(
                     nonce,
                     chainETH,
