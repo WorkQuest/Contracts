@@ -24,7 +24,7 @@ const PENSION_DEFAULT_FEE = '10000000000000000'
 const PENSION_FEE_PER_MONTH = '1200000000000000'
 const PENSION_FEE_WITHDRAW = '5000000000000000'
 const VALID_TIME = '600'
-const PRICE = parseEther('228')
+const PRICE = parseEther('30')
 const SYMBOL = 'WQT'
 const twentyBucksInWQT = (20 / 228).toFixed(18) // TODO 228 is fixed value that oracle returns now
 
@@ -57,7 +57,7 @@ const twentyWQT = parseEther('20')
 describe('WQreferral', function () {
     async function deployWithFixture() {
         ;[
-            work_quest_owner,
+            owner,
             employer,
             worker,
             arbiter,
@@ -65,6 +65,20 @@ describe('WQreferral', function () {
             affiliat,
             validator,
         ] = await ethers.getSigners()
+
+        // =============================== Price Oracle ==============================================
+
+        const PriceOracle = await ethers.getContractFactory('WQPriceOracle')
+        priceOracle = await upgrades.deployProxy(
+            PriceOracle,
+            [service.address, VALID_TIME],
+            { kind: 'transparent' }
+        )
+
+        await priceOracle.deployed()
+        await priceOracle.updateToken(1, SYMBOL)
+
+        await oracleSetPrice(PRICE, SYMBOL)
 
         // =============================== BridgeToken ==============================================
 
@@ -101,39 +115,6 @@ describe('WQreferral', function () {
 
         // =============================================================================
 
-        const PriceOracle = await hre.ethers.getContractFactory('WQPriceOracle')
-        priceOracle = await upgrades.deployProxy(
-            PriceOracle,
-            [validator.address, VALID_TIME],
-            { initializer: 'initialize', kind: 'transparent' }
-        )
-
-        await priceOracle.deployed()
-        await priceOracle.updateToken(1, SYMBOL)
-        let nonce = '1'
-        let message = web3.utils.soliditySha3(
-            { t: 'uint256', v: nonce },
-            { t: 'uint256', v: PRICE.toString() },
-            { t: 'uint256', v: [2] },
-            { t: 'string', v: SYMBOL }
-        )
-
-        // let signature = await web3.eth.sign(message, validator.address)
-        // let sig = ethers.utils.splitSignature(signature)
-        // await priceOracle
-        //     .connect(worker)
-        //     .setTokenPricesUSD(
-        //         nonce,
-        //         sig.v,
-        //         sig.r,
-        //         sig.s,
-        //         ['2.0'],
-        //         PRICE,
-        //         SYMBOL
-        //     )
-
-        // =============================================================================
-
         const WQReferralContract = await ethers.getContractFactory('WQReferral')
         referral = await upgrades.deployProxy(
             WQReferralContract,
@@ -155,118 +136,148 @@ describe('WQreferral', function () {
             validator.address
         )
 
-        // // =============================================================================
+        // =============================================================================
 
-        const WorkQuestFactory = await ethers.getContractFactory(
-            'WorkQuestFactory'
-        )
-        work_quest_factory = await upgrades.deployProxy(
-            WorkQuestFactory,
-            [
-                WORKQUEST_FEE,
-                WORKQUEST_FEE,
-                WORKQUEST_FEE,
-                feeReceiver.address,
-                pension_fund.address,
-                referral.address,
-                wusd_token.address,
-            ],
-            { initializer: 'initialize', kind: 'transparent' }
-        )
+    //     const WorkQuestFactory = await ethers.getContractFactory(
+    //         'WorkQuestFactory'
+    //     )
+    //     work_quest_factory = await upgrades.deployProxy(
+    //         WorkQuestFactory,
+    //         [
+    //             WORKQUEST_FEE,
+    //             WORKQUEST_FEE,
+    //             WORKQUEST_FEE,
+    //             feeReceiver.address,
+    //             pension_fund.address,
+    //             referral.address,
+    //             wusd_token.address,
+    //         ],
+    //         { initializer: 'initialize', kind: 'transparent' }
+    //     )
 
-        await work_quest_factory.deployed()
-        await referral.setFactory(work_quest_factory.address)
-        await work_quest_factory.grantRole(
-            await work_quest_factory.ARBITER_ROLE(),
-            arbiter.address
-        )
-        await wusd_token
-            .connect(employer)
-            .approve(work_quest_factory.address, cost_comission)
+    //     await work_quest_factory.deployed()
+    //     await referral.setFactory(work_quest_factory.address)
+    //     await work_quest_factory.grantRole(
+    //         await work_quest_factory.ARBITER_ROLE(),
+    //         arbiter.address
+    //     )
+    //     await wusd_token
+    //         .connect(employer)
+    //         .approve(work_quest_factory.address, cost_comission)
 
-        await work_quest_factory
-            .connect(employer)
-            .newWorkQuest(job_hash, cost, deadline, 1)
+    //     await work_quest_factory
+    //         .connect(employer)
+    //         .newWorkQuest(job_hash, cost, deadline, 1)
 
-        let work_quest_address = (
-            await work_quest_factory.getWorkQuests(employer.address, 0, 1)
-        )[0]
-        
-        work_quest = await ethers.getContractAt('WorkQuest', work_quest_address)
-        await work_quest.deployed()
+    //     let work_quest_address = (
+    //         await work_quest_factory.getWorkQuests(employer.address, 0, 1)
+    //     )[0]
 
-        return {
-            work_quest_owner,
-            employer,
-            worker,
-            arbiter,
-            feeReceiver,
-            affiliat,
-            validator,
-            wusd_token,
-            pension_fund,
-            priceOracle,
-            referral,
-            work_quest_factory,
-            work_quest,
-        }
+    //     work_quest = await ethers.getContractAt('WorkQuest', work_quest_address)
+    //     await work_quest.deployed()
+
+    //     return {
+    //         work_quest_owner,
+    //         employer,
+    //         worker,
+    //         arbiter,
+    //         feeReceiver,
+    //         affiliat,
+    //         validator,
+    //         wusd_token,
+    //         pension_fund,
+    //         priceOracle,
+    //         referral,
+    //         work_quest_factory,
+    //         work_quest,
+    //     }
     }
 
-    it('should calculate referral', async function () {
-        const {
-            work_quest_owner,
-            employer,
-            worker,
-            arbiter,
-            feeReceiver,
-            affiliat,
-            validator,
-            wusd_token,
-            pension_fund,
-            priceOracle,
-            referral,
-            work_quest_factory,
-            work_quest,
-        } = await loadFixture(deployWithFixture)
+    // it('should calculate referral', async function () {
+    //     const {
+    //         work_quest_owner,
+    //         employer,
+    //         worker,
+    //         arbiter,
+    //         feeReceiver,
+    //         affiliat,
+    //         validator,
+    //         wusd_token,
+    //         pension_fund,
+    //         priceOracle,
+    //         referral,
+    //         work_quest_factory,
+    //         work_quest,
+    //     } = await loadFixture(deployWithFixture)
 
-        const info = await work_quest.connect(employer).getInfo()
-        expect(info[5]).to.eq(JobStatus.Published)
+    //     const info = await work_quest.connect(employer).getInfo()
+    //     expect(info[5]).to.eq(JobStatus.Published)
 
-        await work_quest.connect(employer).assignJob(worker.address)
-        const infoQuest = await work_quest.connect(employer).getInfo()
-        expect(infoQuest._worker).to.eq(worker.address)
+    //     await work_quest.connect(employer).assignJob(worker.address)
+    //     const infoQuest = await work_quest.connect(employer).getInfo()
+    //     expect(infoQuest._worker).to.eq(worker.address)
 
-        await work_quest.connect(worker).acceptJob()
-        const infoWorker = await work_quest.connect(worker).getInfo()
-        expect(infoWorker._status).to.eq(JobStatus.InProgress)
+    //     await work_quest.connect(worker).acceptJob()
+    //     const infoWorker = await work_quest.connect(worker).getInfo()
+    //     expect(infoWorker._status).to.eq(JobStatus.InProgress)
 
-        await work_quest.connect(worker).verificationJob()
-        const verifyQuest = await await work_quest.connect(employer).getInfo()
-        expect(verifyQuest._jobHash).to.eq(job_hash)
-        expect(verifyQuest._cost).to.eq(cost)
-        expect(verifyQuest._employer).to.eq(employer.address)
-        expect(verifyQuest._worker).to.eq(worker.address)
-        expect(verifyQuest._factory).to.eq(work_quest_factory.address)
-        expect(verifyQuest._status).to.eq(JobStatus.WaitJobVerify)
+    //     await work_quest.connect(worker).verificationJob()
+    //     const verifyQuest = await await work_quest.connect(employer).getInfo()
+    //     expect(verifyQuest._jobHash).to.eq(job_hash)
+    //     expect(verifyQuest._cost).to.eq(cost)
+    //     expect(verifyQuest._employer).to.eq(employer.address)
+    //     expect(verifyQuest._worker).to.eq(worker.address)
+    //     expect(verifyQuest._factory).to.eq(work_quest_factory.address)
+    //     expect(verifyQuest._status).to.eq(JobStatus.WaitJobVerify)
 
-        expect(await wusd_token.balanceOf(work_quest.address)).to.eq(cost)
-        const feeReceiverBefore = BigInt(
-            await wusd_token.balanceOf(feeReceiver.address)
+    //     expect(await wusd_token.balanceOf(work_quest.address)).to.eq(cost)
+    //     const feeReceiverBefore = BigInt(
+    //         await wusd_token.balanceOf(feeReceiver.address)
+    //     )
+    //     const workerBefore = BigInt(await wusd_token.balanceOf(worker.address))
+
+    //     await work_quest.connect(employer).acceptJobResult()
+
+    //     const feeReceiverAfter = BigInt(
+    //         await wusd_token.balanceOf(feeReceiver.address)
+    //     )
+    //     const workerAfter = BigInt(await wusd_token.balanceOf(worker.address))
+
+    //     expect(feeReceiverAfter - feeReceiverBefore).to.eq(comission)
+    //     expect(workerAfter - workerBefore).to.eq(reward)
+    //     expect(await wusd_token.balanceOf(work_quest.address)).to.be.equal(0)
+
+    //     const statusQuest = await await work_quest.connect(employer).getInfo()
+    //     expect(statusQuest._status).to.eq(JobStatus.Finished)
+    // })
+
+    async function oracleSetPrice(price, symbol) {
+        nonce += 1
+        let message = web3.utils.soliditySha3(
+            { t: 'uint256', v: nonce },
+            { t: 'uint256', v: [price.toString()] },
+            { t: 'uint256', v: [parseEther('2').toString()] },
+            { t: 'string', v: [symbol] }
         )
-        const workerBefore = BigInt(await wusd_token.balanceOf(worker.address))
+        let signature = await web3.eth.sign(message, service.address)
 
-        await work_quest.connect(employer).acceptJobResult()
+        let sig = ethers.utils.splitSignature(signature)
+        let current_timestamp = (
+            await web3.eth.getBlock(await web3.eth.getBlockNumber())
+        ).timestamp
 
-        const feeReceiverAfter = BigInt(
-            await wusd_token.balanceOf(feeReceiver.address)
+        ethers.provider.send('evm_setNextBlockTimestamp', [
+            current_timestamp + VALID_TIME,
+        ])
+        await priceOracle.setTokenPricesUSD(
+            nonce,
+            sig.v,
+            sig.r,
+            sig.s,
+            [price],
+            [parseEther('2').toString()],
+            [symbol]
         )
-        const workerAfter = BigInt(await wusd_token.balanceOf(worker.address))
-
-        expect(feeReceiverAfter - feeReceiverBefore).to.eq(comission)
-        expect(workerAfter - workerBefore).to.eq(reward)
-        expect(await wusd_token.balanceOf(work_quest.address)).to.be.equal(0)
-
-        const statusQuest = await await work_quest.connect(employer).getInfo()
-        expect(statusQuest._status).to.eq(JobStatus.Finished)
-    })
+        await hre.ethers.provider.send('evm_mine', [])
+    }
 })
