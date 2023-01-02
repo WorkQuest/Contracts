@@ -32,8 +32,8 @@ const reward = parseEther('0.99')
 const forfeit = parseEther('0.1')
 const reward_after_forfeit = parseEther('0.891')
 const acces_denied_err = 'WorkQuest: Access denied or invalid status'
-const WORKER_FEE = parseEther('0.01')
 const EMPLOYER_FEE = parseEther('0.012')
+const WORKER_FEE = parseEther('0.01')
 const TX_FEE = parseEther('0.011')
 const PENSION_LOCK_TIME = 60
 const PENSION_DEFAULT_FEE = parseEther('0.01')
@@ -380,19 +380,6 @@ describe('Work Quest test', function () {
             await usdt_token
                 .connect(employer)
                 .approve(work_quest_factory.address, cost_comission_usdt)
-
-            await work_quest_factory
-                .connect(employer)
-                .newWorkQuest(job_hash2, cost2, deadline, 2)
-            // const work_quest_address = (
-            //     await work_quest_factory.getWorkQuests(employer.address, 0, 1)
-            // )[0]
-
-            // work_quest = await ethers.getContractAt(
-            //     'WorkQuest',
-            //     work_quest_address
-            // )
-            // await work_quest.deployed()
         })
     })
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -213,18 +213,9 @@ contract WorkQuest {
      */
     function arbitration() external payable {
         require((msg.sender == employer && status == JobStatus.WaitJobVerify) ||
-                (
-                    msg.sender == employer &&
-                        status == JobStatus.InProgress &&
-                        deadline > 0
-                        ? block.timestamp > deadline
-                        : false
-                ) ||
-                (msg.sender == worker &&
-                    status == JobStatus.WaitJobVerify &&
-                    block.timestamp > timeDone + 1 minutes),
-            errMsg
-        );
+                (msg.sender == employer && status == JobStatus.InProgress && deadline > 0 ? block.timestamp > deadline : false) ||
+                (msg.sender == worker && status == JobStatus.WaitJobVerify && block.timestamp > timeDone + 1 minutes), errMsg
+);
         require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');
         status = JobStatus.Arbitration;
         emit ArbitrationStarted(block.timestamp);
@@ -265,11 +256,11 @@ contract WorkQuest {
         emit ArbitrationRejectWork(block.timestamp);
     }
 
-    function _transferFunds() internal {
+    function _transferFunds() internal  {
         uint256 newCost = cost;
         uint256 comission = (newCost * factory.feeWorker()) / 1e18;
         uint256 pensionContribute = (newCost * WQPensionFundInterface(factory.pensionFund()).getFee(worker)) / 1e18;
-
+        
         IERC20(factory.wusd()).safeTransfer(worker, newCost - comission - pensionContribute);
 
         if (pensionContribute > 0) {
@@ -284,3 +275,4 @@ contract WorkQuest {
         IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
     }
 }
+ 

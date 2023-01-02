@@ -142,13 +142,7 @@ contract WorkQuestFactory is
         uint256 comission = (cost * feeEmployer) / 1e18;
         wusd.safeTransferFrom(msg.sender, workquest, cost);
         wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
-        emit WorkQuestCreated(
-            jobHash,
-            msg.sender,
-            workquest,
-            block.timestamp,
-            nonce
-        );
+        emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp, nonce);
     }
 
     /**
