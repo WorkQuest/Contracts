@@ -423,7 +423,7 @@ describe('WQreferral', function () {
         const pensionContribute = (cost * PENSION_DEFAULT_FEE) / 1e18 // 1
     })
 
-    it.only('calculate referral', async function () {
+    it('calculate referral', async function () {
         const {
             work_quest_owner,
             employer,
