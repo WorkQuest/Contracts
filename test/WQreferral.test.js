@@ -416,14 +416,14 @@ describe('WQreferral', function () {
 
         const feeReceiverBalanceAfter = await wusd_stablecoin.balanceOf(
             feeReceiver.address
-        ) // 2200000000000000000
+        )
         expect(feeReceiverBalanceAfter - feeReceiverBalanceBefore).to.eq(
             comission_transferFunds
         )
         const pensionContribute = (cost * PENSION_DEFAULT_FEE) / 1e18 // 1
     })
 
-    it.only('calculate referral', async function () {
+    it('calculate referral', async function () {
         const {
             work_quest_owner,
             employer,
@@ -461,9 +461,19 @@ describe('WQreferral', function () {
         await work_quest.connect(worker).verificationJob()
         await work_quest.connect(employer).acceptJobResult()
 
-        const referralInfoWorker = await referral_contract.connect( worker ).referrals( worker.address )
+        const referralInfoWorker = await referral_contract
+            .connect(worker)
+            .referrals(worker.address)
         expect(referralInfoWorker.affiliat).to.eq(employer.address)
-        expect( referralInfoWorker.earnedAmount ).to.eq(cost)
+        expect(referralInfoWorker.earnedAmount).to.eq(cost)
+
+        const verifyQuest = await await work_quest.connect(employer).getInfo()
+        expect(verifyQuest._jobHash).to.eq(job_hash)
+        expect(verifyQuest._cost).to.eq(cost)
+        expect(verifyQuest._employer).to.eq(employer.address)
+        expect(verifyQuest._worker).to.eq(worker.address)
+        expect(verifyQuest._factory).to.eq(work_quest_factory.address)
+        expect(verifyQuest._status).to.eq(JobStatus.Finished)
     })
 
     async function oracleSetPrice(price, symbol) {
