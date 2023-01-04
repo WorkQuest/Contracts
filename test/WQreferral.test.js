@@ -423,7 +423,7 @@ describe('WQreferral', function () {
         const pensionContribute = (cost * PENSION_DEFAULT_FEE) / 1e18 // 1
     })
 
-    it('calculate referral', async function () {
+    it.only('calculate referral', async function () {
         const {
             work_quest_owner,
             employer,
@@ -464,6 +464,7 @@ describe('WQreferral', function () {
         const referralInfoWorker = await referral_contract
             .connect(worker)
             .referrals(worker.address)
+        console.log('referralInfoWorker', referralInfoWorker)
         expect(referralInfoWorker.affiliat).to.eq(employer.address)
         expect(referralInfoWorker.earnedAmount).to.eq(cost)
 
