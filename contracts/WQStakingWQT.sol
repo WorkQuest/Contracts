@@ -121,31 +121,15 @@ contract WQStakingWQT is
      * - `amount` - stake amount
      */
     function stake(uint256 duration) external payable nonReentrant dailyLocked {
-        require(
-            block.timestamp > startTime,
-            'WQStaking: Staking time has not come yet'
-        );
-        require(
-            msg.value >= minStake,
-            'WQStaking: Amount should be greater than minimum stake'
-        );
+        require(block.timestamp > startTime, 'WQStaking: Staking time has not come yet');
+        require(msg.value >= minStake, 'WQStaking: Amount should be greater than minimum stake');
         Staker storage staker = stakes[msg.sender];
-        require(
-            msg.value + staker.amount <= maxStake,
-            'WQStaking: Amount should be less than maximum stake'
-        );
+        require(msg.value + staker.amount <= maxStake, 'WQStaking: Amount should be less than maximum stake');
         if (block.timestamp >= staker.unstakeTime) {
-            require(
-                duration == 30 || duration == 60 || duration == 90,
-                'WQStaking: duration must be 30, 60 or 90 days'
-            );
+            require(duration == 30 || duration == 60 || duration == 90, 'WQStaking: duration must be 30, 60 or 90 days');
             staker.unstakeTime = block.timestamp + duration * 86400;
         }
-        require(
-            block.timestamp - staker.stakedAt > stakePeriod,
-            'WQStaking: You cannot stake tokens yet'
-        );
-
+        require(block.timestamp - staker.stakedAt > stakePeriod, 'WQStaking: You cannot stake tokens yet');
         if (totalStaked > 0) {
             update();
         }
@@ -181,15 +165,10 @@ contract WQStakingWQT is
      */
     function claim() external nonReentrant dailyLocked {
         Staker storage staker = stakes[msg.sender];
-        require(
-            block.timestamp - staker.claimedAt > claimPeriod,
-            'WQStaking: You cannot claim tokens yet'
-        );
-
+        require(block.timestamp - staker.claimedAt > claimPeriod, 'WQStaking: You cannot claim tokens yet');
         if (totalStaked > 0) {
             update();
         }
-
         uint256 reward = calcReward(msg.sender, tokensPerStake);
         require(reward > 0, 'WQStaking: Nothing to claim');
         staker.distributed += reward;

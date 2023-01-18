@@ -78,8 +78,8 @@ contract WQLiquidityMining is
         uint256 _startTime,
         uint256 _rewardTotal,
         uint256 _distributionTime,
-        address _rewardToken,
-        address _stakeToken
+        address _rewardToken, // WQT
+        address _stakeToken // UNI V2
     ) public initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -96,11 +96,9 @@ contract WQLiquidityMining is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
-        onlyRole(UPGRADER_ROLE)
-    {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
 
     /**
      * @dev stake `amount` of tokens to the contract
@@ -134,7 +132,8 @@ contract WQLiquidityMining is
     function unstake(uint256 _amount) external nonReentrant {
         require(!unstakingPaused, 'WQLiquidityMining: Unstaking is paused');
         Staker storage staker = stakes[msg.sender];
-        require(staker.amount >= _amount, 'WQLiquidityMining: Not enough tokens to unstake');
+        require(staker.amount >= _amount,'WQLiquidityMining: Not enough tokens to unstake'
+);
         update();
         staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
         staker.amount -= _amount;
@@ -164,11 +163,10 @@ contract WQLiquidityMining is
     /**
      * @dev calcReward - calculates available reward
      */
-    function calcReward(address _staker, uint256 _tps)
-        private
-        view
-        returns (uint256 reward)
-    {
+    function calcReward(
+        address _staker,
+        uint256 _tps
+    ) private view returns (uint256 reward) {
         Staker storage staker = stakes[_staker];
 
         reward =
@@ -202,10 +200,7 @@ contract WQLiquidityMining is
      *
      */
     function produced() private view returns (uint256) {
-        return
-            allProduced +
-            (rewardTotal * (block.timestamp - producedTime)) /
-            distributionTime;
+        return allProduced + (rewardTotal * (block.timestamp - producedTime)) / distributionTime;
     }
 
     function update() public {
@@ -223,14 +218,12 @@ contract WQLiquidityMining is
     /**
      * @dev getInfoByAddress - return information about the staker
      */
-    function getInfoByAddress(address user)
+    function getInfoByAddress(
+        address user
+    )
         external
         view
-        returns (
-            uint256 staked_,
-            uint256 claim_,
-            uint256 _balance
-        )
+        returns (uint256 staked_, uint256 claim_, uint256 _balance)
     {
         Staker storage staker = stakes[user];
         staked_ = staker.amount;
@@ -286,10 +279,9 @@ contract WQLiquidityMining is
      * @dev Allows to update the value of produced reward
      * @param _rewardProduced Specifeies the new value of rewards produced
      */
-    function updateRewardProduced(uint256 _rewardProduced)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function updateRewardProduced(
+        uint256 _rewardProduced
+    ) external onlyRole(ADMIN_ROLE) {
         rewardProduced = _rewardProduced;
     }
 
@@ -297,10 +289,9 @@ contract WQLiquidityMining is
      * @dev Allows to update the daily reward parameter
      * @param _rewardTotal Specifeies the new daily reward value
      */
-    function updateRewardTotal(uint256 _rewardTotal)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function updateRewardTotal(
+        uint256 _rewardTotal
+    ) external onlyRole(ADMIN_ROLE) {
         rewardTotal = _rewardTotal;
     }
 
@@ -308,10 +299,9 @@ contract WQLiquidityMining is
      * @dev Allows to update the value of staked tokens
      * @param _totalStaked Specifeies the new value of totally staked tokens
      */
-    function updateTotalStaked(uint256 _totalStaked)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function updateTotalStaked(
+        uint256 _totalStaked
+    ) external onlyRole(ADMIN_ROLE) {
         totalStaked = _totalStaked;
     }
 
@@ -319,10 +309,9 @@ contract WQLiquidityMining is
      * @dev Allows to update the value of distributed rewards
      * @param _totalDistributed Specifeies the new value of totally distributed rewards
      */
-    function updateTotalDistributed(uint256 _totalDistributed)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function updateTotalDistributed(
+        uint256 _totalDistributed
+    ) external onlyRole(ADMIN_ROLE) {
         totalDistributed = _totalDistributed;
     }
 

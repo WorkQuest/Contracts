@@ -350,7 +350,7 @@ describe('Work Quest test', function () {
     } )
     
     describe( 'Change WUSD to USDT', function () {
-        it.only('Set address of USDT token', async function () {
+        it('Set address of USDT token', async function () {
             const {
                 work_quest_owner,
                 employer,

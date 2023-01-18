@@ -459,12 +459,11 @@ describe('WQreferral', function () {
         await work_quest.connect(employer).assignJob(worker.address)
         await work_quest.connect(worker).acceptJob()
         await work_quest.connect(worker).verificationJob()
-        await work_quest.connect(employer).acceptJobResult()
+        await work_quest.connect(employeparr).acceptJobResult()
 
         const referralInfoWorker = await referral_contract
             .connect(worker)
             .referrals(worker.address)
-        console.log('referralInfoWorker', referralInfoWorker)
         expect(referralInfoWorker.affiliat).to.eq(employer.address)
         expect(referralInfoWorker.earnedAmount).to.eq(cost)
 
