@@ -5,9 +5,9 @@ const stringify = require('dotenv-stringify')
 
 async function main() {
     dotenv.config()
-    const [owner] = await web3.eth.getAccounts();
-    console.log('my account address is: ', owner);
-    const AMOUNT = hre.ethers.utils.parseEther("1000000")
+    const [owner] = await web3.eth.getAccounts()
+    console.log('my account address is: ', owner)
+    const AMOUNT = hre.ethers.utils.parseEther('1000000')
 
     const network = hre.network.name
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
@@ -54,13 +54,14 @@ async function main() {
     )
 
     envConfig[`${process.env.BRIDGE_TOKEN_SYMBOL}_TOKEN`] = bridge_token.address
-    fs.writeFileSync( `.env-${network}`, stringify( envConfig ) )
+    fs.writeFileSync(`.env-${network}`, stringify(envConfig))
 
     const minter_role = await bridge_token.MINTER_ROLE()
-    const tx = await bridge_token.grantRole( minter_role, owner )
+    const tx = await bridge_token.grantRole(minter_role, owner)
     await tx.wait()
-    await bridge_token.mint(owner, AMOUNT)
-    console.log(await bridge_token.balanceOf(owner))
+    const mintTx = await bridge_token.mint( owner, AMOUNT )
+    await mintTx.wait()
+    console.log((await bridge_token.balanceOf(owner)).toString())
 }
 
 main()
