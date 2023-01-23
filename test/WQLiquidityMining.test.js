@@ -46,8 +46,6 @@ describe('Liquidity Mining', function () {
             await wqt_stablecoin.MINTER_ROLE(),
             owner.address
         )
-        await wqt_stablecoin.mint(staker1.address, twoK)
-        await wqt_stablecoin.mint(staker2.address, twoK)
 
         // ========================================= UNI V2 ========================================================
 
@@ -81,6 +79,8 @@ describe('Liquidity Mining', function () {
             await liquidity_mining.ADMIN_ROLE(),
             owner.address
         )
+
+        await wqt_stablecoin.mint(liquidity_mining.address, tenK)
 
         // ========================================================================================
 
@@ -793,7 +793,7 @@ describe('Liquidity Mining', function () {
     })
 
     describe('Claim Tokens', function () {
-        it('should calculate reward', async function () {
+        it('should calculate getClaim()', async function () {
             const {
                 START_TIME,
                 owner,
@@ -803,6 +803,263 @@ describe('Liquidity Mining', function () {
                 uniV2,
                 liquidity_mining,
             } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('1000')
+            await time.increaseTo(START_TIME + 1)
+
+            await uniV2.connect(owner).approve(liquidity_mining.address, tenK)
+            await liquidity_mining.connect(owner).stake(tenK)
+
+            await network.provider.send('evm_increaseTime', [10800])
+            await uniV2
+                .connect(staker1)
+                .approve(liquidity_mining.address, amount)
+            const tx_staker1 = await liquidity_mining
+                .connect(staker1)
+                .stake(amount)
+
+            await network.provider.send('evm_increaseTime', [10800])
+
+            await uniV2
+                .connect(staker2)
+                .approve(liquidity_mining.address, amount)
+            const tx_staker2 = await liquidity_mining
+                .connect(staker2)
+                .stake(amount)
+
+            await network.provider.send('evm_increaseTime', [10800])
+
+            const totalStakedAmount = toBN(tenK).plus(
+                toBN(amount).multipliedBy(toBN(2))
+            )
+            const stakeInfo = await liquidity_mining.getStakingInfo()
+            expect(stakeInfo.startTime).to.eq(START_TIME)
+            expect(stakeInfo.rewardTotal).to.eq(rewardTotal)
+            expect(stakeInfo.distributionTime).to.eq(DISTRIBUTIONS_TIME)
+            expect(stakeInfo.totalStaked.toString()).to.eq(
+                totalStakedAmount.toString()
+            )
+            expect(stakeInfo.totalDistributed.toString()).to.eq('0')
+            expect(stakeInfo.stakeTokenAddress.toString()).to.eq(uniV2.address)
+            expect(stakeInfo.rewardTokenAddress.toString()).to.eq(
+                wqt_stablecoin.address
+            )
+
+            // =========================== getClaim =============================
+
+            const tps = await liquidity_mining.tokensPerStake()
+            const rewardProduced = await liquidity_mining.rewardProduced()
+            const allProduced = await liquidity_mining.allProduced()
+            const timeStamp = await time.latest()
+            const totalStaked = await liquidity_mining.totalStaked()
+
+            const rewardProducedAtNow = toBN(allProduced)
+                .plus(
+                    toBN(rewardTotal).multipliedBy(
+                        toBN(timeStamp).minus(toBN(START_TIME))
+                    )
+                )
+                .div(toBN(DISTRIBUTIONS_TIME))
+
+            const producedNew = toBN(rewardProducedAtNow).minus(
+                toBN(rewardProduced)
+            )
+
+            const _tps = toBN(tps)
+                .plus(toBN(producedNew).multipliedBy(toBN(1e20)))
+                .div(toBN(totalStaked))
+
+            // ========================== calcReward =============================
+
+            const stakerInfo = await liquidity_mining.stakes(staker1.address)
+            const staker1Amount = stakerInfo.amount
+            const staker1RewardAllowed = stakerInfo.rewardAllowed
+            const staker1Distributed = stakerInfo.distributed
+            const staker1rewardDebt = stakerInfo.rewardDebt
+
+            const reward = toBN(staker1Amount)
+                .multipliedBy(toBN(tps))
+                .div(toBN(1e20))
+                .plus(toBN(staker1RewardAllowed))
+                .minus(toBN(staker1Distributed))
+                .minus(toBN(staker1rewardDebt))
+
+            const getClaimReward = await liquidity_mining.getClaim(
+                staker1.address
+            )
+            expect(getClaimReward.toString()).to.eq(reward.toString())
+        })
+
+        it('should calculate claim()', async function () {
+            const {
+                START_TIME,
+                owner,
+                staker1,
+                staker2,
+                wqt_stablecoin,
+                uniV2,
+                liquidity_mining,
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('1000')
+            await time.increaseTo(START_TIME + 1)
+
+            await uniV2.connect(owner).approve(liquidity_mining.address, tenK)
+            await liquidity_mining.connect(owner).stake(tenK)
+
+            await network.provider.send('evm_increaseTime', [10800])
+            await uniV2
+                .connect(staker1)
+                .approve(liquidity_mining.address, amount)
+            await liquidity_mining.connect(staker1).stake(amount)
+
+            await network.provider.send('evm_increaseTime', [10800])
+
+            await uniV2.connect(staker2).approve(liquidity_mining.address, twoK)
+            await liquidity_mining.connect(staker2).stake(twoK)
+
+            await network.provider.send('evm_increaseTime', [32400])
+
+            const totalStakedAmount = toBN(tenK).plus(
+                toBN(amount).plus(toBN(twoK))
+            )
+            const stakeInfo = await liquidity_mining.getStakingInfo()
+            expect(stakeInfo.startTime).to.eq(START_TIME)
+            expect(stakeInfo.rewardTotal).to.eq(rewardTotal)
+            expect(stakeInfo.distributionTime).to.eq(DISTRIBUTIONS_TIME)
+            expect(stakeInfo.totalStaked.toString()).to.eq(
+                totalStakedAmount.toString()
+            )
+            expect(stakeInfo.totalDistributed.toString()).to.eq('0')
+            expect(stakeInfo.stakeTokenAddress.toString()).to.eq(uniV2.address)
+            expect(stakeInfo.rewardTokenAddress.toString()).to.eq(
+                wqt_stablecoin.address
+            )
+
+            // =========================== claim ================================
+
+            await network.provider.send('evm_increaseTime', [10800])
+
+            const rewardProduced = await liquidity_mining.rewardProduced()
+
+            const allProduced = await liquidity_mining.allProduced()
+            const timeStamp = await time.latest()
+            const producedTime_tx = await liquidity_mining.producedTime()
+            const totalStaked = await liquidity_mining.totalStaked()
+            const tokensPerStake = await liquidity_mining.tokensPerStake()
+            const distributionTime = await liquidity_mining.distributionTime()
+
+            const rewardProducedAtNow = toBN(allProduced)
+                .plus(
+                    toBN(rewardTotal).multipliedBy(
+                        toBN(timeStamp).minus(toBN(producedTime_tx))
+                    )
+                )
+                .div(toBN(distributionTime))
+
+            const producedNew = toBN(rewardProducedAtNow).minus(
+                toBN(rewardProduced)
+            )
+
+            const tokensPerStake_new = toBN(tokensPerStake)
+                .plus(toBN(producedNew).multipliedBy(toBN(1e20)))
+                .div(toBN(totalStaked))
+
+            const rewardProducedAtNow_After = rewardProducedAtNow
+
+            // ========================== calcReward =============================
+
+            const stakerInfo = await liquidity_mining.stakes(staker1.address)
+            const staker1Amount = stakerInfo.amount
+            const staker1RewardAllowed = stakerInfo.rewardAllowed
+            const staker1Distributed = stakerInfo.distributed
+            const staker1rewardDebt = stakerInfo.rewardDebt
+
+            const reward = toBN(staker1Amount)
+                .multipliedBy(toBN(tokensPerStake))
+                .div(toBN(1e20))
+                .plus(toBN(staker1RewardAllowed))
+                .minus(toBN(staker1Distributed))
+                .minus(toBN(staker1rewardDebt))
+
+            const getClaimReward = await liquidity_mining.getClaim(
+                staker1.address
+            )
+            expect(getClaimReward.toString()).to.eq(reward.toString())
+
+            // ================================== claim ===================================================
+
+            const balanceClaimBefore = await wqt_stablecoin.balanceOf(
+                staker1.address
+            )
+            expect(balanceClaimBefore).to.eq('0')
+            await liquidity_mining.connect(staker1).claim()
+            const staker1InfoAfterClaim = await liquidity_mining
+                .connect(staker1)
+                .stakes(staker1.address)
+
+            const balanceClaimAfter = await wqt_stablecoin.balanceOf(
+                staker1.address
+            )
+            expect(balanceClaimAfter).to.eq(
+                staker1InfoAfterClaim.distributed.toString()
+            )
+        })
+
+        it.only('should able to unstake()', async function () {
+            const {
+                START_TIME,
+                owner,
+                staker1,
+                staker2,
+                wqt_stablecoin,
+                uniV2,
+                liquidity_mining,
+            } = await loadFixture(deployWithFixture)
+
+            const amount = toWei('1000')
+            await time.increaseTo(START_TIME + 1)
+
+            await uniV2.connect(owner).approve(liquidity_mining.address, tenK)
+            await liquidity_mining.connect(owner).stake(tenK)
+
+            await network.provider.send('evm_increaseTime', [10800])
+            await uniV2
+                .connect(staker1)
+                .approve(liquidity_mining.address, amount)
+            await liquidity_mining.connect(staker1).stake(amount)
+
+            await network.provider.send('evm_increaseTime', [10800])
+
+            await uniV2.connect(staker2).approve(liquidity_mining.address, twoK)
+            await liquidity_mining.connect(staker2).stake(twoK)
+
+            await network.provider.send('evm_increaseTime', [32400])
+
+            const totalStakedAmount = toBN(tenK).plus(
+                toBN(amount).plus(toBN(twoK))
+            )
+            const stakeInfo = await liquidity_mining.getStakingInfo()
+            expect(stakeInfo.startTime).to.eq(START_TIME)
+            expect(stakeInfo.rewardTotal).to.eq(rewardTotal)
+            expect(stakeInfo.distributionTime).to.eq(DISTRIBUTIONS_TIME)
+            expect(stakeInfo.totalStaked.toString()).to.eq(
+                totalStakedAmount.toString()
+            )
+            expect(stakeInfo.totalDistributed.toString()).to.eq('0')
+            expect(stakeInfo.stakeTokenAddress.toString()).to.eq(uniV2.address)
+            expect(stakeInfo.rewardTokenAddress.toString()).to.eq(
+                wqt_stablecoin.address
+            )
+
+            await liquidity_mining.connect(staker1).unstake(amount)
+            const stakeInfoUnstake = await liquidity_mining.stakes(
+                staker1.address
+            )
+            expect(stakeInfoUnstake.amount).to.eq('0')
+
+            const balanceAfter = await uniV2.balanceOf(staker1.address)
+            expect(balanceAfter.toString()).to.eq(twoK.toString())
         })
     })
 
