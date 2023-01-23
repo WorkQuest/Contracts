@@ -130,16 +130,16 @@ describe('Borrowing test', function () {
 
         await eth_token
             .connect(borrower)
-            .approve(borrowing.address, parseEther('2'))
+            .approve(borrowing.address, parseEther('200'))
         await wusd_token
             .connect(owner)
             .mint(depositor.address, parseEther('400'))
         await wusd_token
             .connect(depositor)
-            .approve(pension_fund.address, parseEther('300'))
+            .approve(pension_fund.address, parseEther('400'))
         await pension_fund
             .connect(depositor)
-            .contribute(depositor.address, parseEther('300'))
+            .contribute(depositor.address, parseEther('400'))
         await wusd_token.mint(buyer.address, parseEther('200'))
 
         // ========================================================================================
@@ -215,27 +215,46 @@ describe('Borrowing test', function () {
                 borrowing,
             } = await loadFixture(deployWithFixture)
 
-            const credit = parseEther("200")
-            const balanceBefore = await wusd_token.balanceOf(borrower.address);
-            const balanceEthBefore = await eth_token.balanceOf(borrower.address);
+            const credit = parseEther("200") 
+            const balanceWusdBefore = await wusd_token.balanceOf(borrower.address);
+            const balanceEthBefore = await eth_token.balanceOf(borrower.address); 
+
             await borrowing.connect(borrower).borrow(1, depositor.address, credit, 0, 7, SYMBOL_ETH);
-            const balanceAfter = await wusd_token.balanceOf(borrower.address);
-            const balanceEthAfter = await eth_token.balanceOf(borrower.address);
-            expect(((balanceEthBefore - balanceEthAfter) / 1e18).toFixed(2)).equal('1.00');
-            expect(((balanceAfter - balanceBefore) / 1e18).toFixed(2)).equal('200.00');
+
+            const balanceWusdAfter = await wusd_token.balanceOf(borrower.address);
+            const balanceEthAfter = await eth_token.balanceOf(borrower.address); 
+            expect(((balanceEthBefore - balanceEthAfter) / 1e18).toFixed(2)).equal('10.00');
+            expect(((balanceWusdAfter - balanceWusdBefore) / 1e18)).to.eq(credit / 1e18);
         });
 
-        it('STEP 2: Refund', async () => {
-            await borrowing.connect(borrower).borrow(1, depositor.address, parseEther("200"), 0, 7, "ETH");
-            await wusd_token.mint(borrower.address, parseEther("36"));
-            await wusd_token.connect(borrower).approve(borrowing.address, parseEther("236"));
+        it('STEP 2: Refund', async function(){
+            const {
+                owner,
+                depositor,
+                borrower,
+                service,
+                buyer,
+                feeReceiver,
+                priceOracle,
+                wusd_token,
+                eth_token,
+                pension,
+                borrowing,
+            } = await loadFixture(deployWithFixture)
+
+            const credit = parseEther("200") 
+            const amount = parseEther("36")
+
+            await borrowing.connect(borrower).borrow(1, depositor.address, credit, 0, 7, SYMBOL_ETH);
+            await wusd_token.mint(borrower.address, amount);
+            await wusd_token.connect(borrower).approve(borrowing.address, credit + amount);
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + YEAR]);
             let balanceBefore = await wusd_token.balanceOf(borrower.address);
             let balanceEthBefore = await eth_token.balanceOf(borrower.address);
             await borrowing.connect(borrower).refund(0, parseEther("200"));
             let balanceAfter = await wusd_token.balanceOf(borrower.address);
             let balanceEthAfter = await eth_token.balanceOf(borrower.address);
-            expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('1.00');
+            expect(((balanceEthAfter - balanceEthBefore) / 1e18).toFixed(2)).equal('10.00');
             expect(((balanceBefore - balanceAfter) / 1e18).toFixed(2)).equal('235.48');
         });
 

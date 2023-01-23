@@ -9,7 +9,6 @@ import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import './stablecoin/WQPriceOracleInterface.sol';
 import './WorkQuestFactory.sol';
-import "hardhat/console.sol";
 
 
 contract WQReferral is
@@ -133,11 +132,7 @@ contract WQReferral is
             if (userAccount.earnedAmount >= earnedThreshold) {
                 userAccount.paid = true;
                 referrals[userAccount.affiliat].rewardTotal += referralBonus;
-                emit PaidReferral(
-                    referral,
-                    userAccount.affiliat,
-                    referralBonus
-                );
+                emit PaidReferral(referral, userAccount.affiliat, referralBonus);
             }
         }
     }

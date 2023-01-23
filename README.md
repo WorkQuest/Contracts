@@ -89,3 +89,9 @@ This contracts requires a deployed router, price oracle and collateral tokens (E
 * Run `npx hardhat run scripts/deploy_collateral_auction.js --network` _yourNetwork_ to deploy collateral auction contracts
 * Run `npx hardhat config_router --network` _yourNetwork_ to config router and token credentials
 
+### Liquidity Mining
+* We have Listing on Uniswap & Pancakeswap
+* Uniswap ETH/WQT
+* UNIv2 for Ether
+* CakeLp for Pancekeswap
+** Staking formula APY динамический по формуле: Apy = (DailyReward * RewardTokenPrice)/(TotalStaked * StakeTokenPrice) * 100% 

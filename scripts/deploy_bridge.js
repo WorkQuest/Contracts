@@ -12,7 +12,10 @@ async function main() {
 
     const network = hre.network.name;
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
-    for (const k in envConfig) { process.env[k] = envConfig[k]; }
+    for ( const k in envConfig ) {
+        process.env[k] = envConfig[k];
+    }
+    
     if (!process.env.CHAIN_ID) {
         throw new Error(`Please set your CHAIN_ID in a .env-${network} file`);
     }

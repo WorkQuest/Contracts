@@ -271,7 +271,7 @@ describe('Work Quest test', function () {
         expect(questInfo._deadline).to.eq(deadline)
     })
 
-    it('Assigning worker to job from not employer: fail', async () => {
+    it('Assigning worker to job from not employer: fail', async function() {
         await expect(
             work_quest.connect(worker).assignJob(worker.address)
         ).revertedWith(acces_denied_err)
@@ -307,7 +307,7 @@ describe('Work Quest test', function () {
         ).revertedWith(acces_denied_err)
     })
 
-    it('Worker accepted job from status WaitWorker: success', async () => {
+    it('Worker accepted job from status WaitWorker: success', async function() {
         const {
             work_quest_owner,
             employer,

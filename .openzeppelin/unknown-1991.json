@@ -380,6 +380,111 @@
       "address": "0x09eA4321E9c864a8a424A6Dd7E40c2492099750e",
       "txHash": "0x77114e594445061d5e57d00a2e5d6d57e2dc9cf2ffd80a6698405ce3a303f736",
       "kind": "uups"
+    },
+    {
+      "address": "0x6Abf6aC5B1d30dCF5B47378011C55317f7eA9e46",
+      "txHash": "0x52c82ac88a8308b19339e1473cd9ab9bd00cd852810214e8a7f26c529a380c89",
+      "kind": "uups"
+    },
+    {
+      "address": "0xf6352e082400a9950a2a2937758a42807F259C72",
+      "txHash": "0xd250e417b1f444d244ea139ba1732129b366868327f97dc2cb9c48471afd7467",
+      "kind": "uups"
+    },
+    {
+      "address": "0x3b1a182293DEE2374B7521dF21A25849d30cE21A",
+      "txHash": "0x5e18c0f68424429e6df9df94ebe7971fe522e04a4f8924243989af90094f9c0f",
+      "kind": "uups"
+    },
+    {
+      "address": "0x26650b5B3B76307EE2e25EeB7e1844B557f588E9",
+      "txHash": "0x0e65fcbf63a6a36aa61017c9fccb546242b3420e29d10e4c85c89b0d15bf521d",
+      "kind": "uups"
+    },
+    {
+      "address": "0x13af00A8d98d78Cce4084Fbc3c53BC0E33D5514C",
+      "txHash": "0xe1bb06dc1baec0ffcfd31f10a4817af8ccc15c19604aee3c7f0b6e0776c1d316",
+      "kind": "uups"
+    },
+    {
+      "address": "0x6b92b66955281642119f6f35b5a6aB04Fb60671E",
+      "txHash": "0x78701e2ebc646c35ac859820a37521503ea2da3561f82712e670b35dc8f53ea9",
+      "kind": "uups"
+    },
+    {
+      "address": "0xe63931eB447750906eAf52c3B71971E0FfE4000d",
+      "txHash": "0xb4fd7ae39b204521ea9b5916dfbfe8978ca527dfb4112a9e21a6495f6a35891f",
+      "kind": "uups"
+    },
+    {
+      "address": "0xfb90f754454498043e71d6caAda0f0B86b4C2628",
+      "txHash": "0x3dcfe0dddfafb8e70bcc19459763f1806c8e8835e141ab57594c2f1b55afe386",
+      "kind": "uups"
+    },
+    {
+      "address": "0xC195C5A0a95b4bEC83C81058Fc115a820B8fCF76",
+      "txHash": "0xf7aae3c75d92d5a10b86127a9a558d55bd14b336a2bd6c9e35689d147a9f174d",
+      "kind": "uups"
+    },
+    {
+      "address": "0xEf72C4A007E577eA016F2b0E7410F3DbA6F3d786",
+      "txHash": "0xbc1c81749750aa1b8efb034af33bcbf0bdc169397a54bc79e2dfe88aca28a73b",
+      "kind": "uups"
+    },
+    {
+      "address": "0x0EdCF8AC9C35Ff3269fdc6d5176131A3A2bEc77A",
+      "txHash": "0xbadcda582eeba44bfd16ea13aed77b9431621ba0932085ed1295edbc0f0f4c60",
+      "kind": "uups"
+    },
+    {
+      "address": "0xa630E45Ac5eC18BB73CCd9729BD8A5F6B07484De",
+      "txHash": "0xdce41f079adc0dd231c6472fd529cf5b78db7ec965ef16549f1148630c469eb7",
+      "kind": "uups"
+    },
+    {
+      "address": "0x5160e542671c526Cd1186c9Ef41DB81eB693Bd7B",
+      "txHash": "0xe68900f170629103160356d528cdb8520d6002b1a3f5437399fbbac87dd48fbc",
+      "kind": "uups"
+    },
+    {
+      "address": "0x525C83519CF185087a27C4AfAdb69aE7031cEB0d",
+      "txHash": "0xc224b1a722a044505e162404f6c2319526388128dfcff3868ab5513f8eeae7bf",
+      "kind": "uups"
+    },
+    {
+      "address": "0x0ed492149bf9C4354784B9a5e8DEbd41D9014f84",
+      "txHash": "0xaec610a1b73ab61b22c2f019463c3d82f83c259eec0e71adcf01ef3f1fb48dc8",
+      "kind": "uups"
+    },
+    {
+      "address": "0x89893C688BeF810d3D9E7De6426BD6E62bD01C61",
+      "txHash": "0xec2bd5499d4eeedad790b02beca3b2333dfa45cbb27965bd66d582db379ca305",
+      "kind": "uups"
+    },
+    {
+      "address": "0x5d062Ecf00Bbd7D592780a1EAc313F01820C7b64",
+      "txHash": "0xe8c91260045de9da8b180b739afdb45c510659a7f7f0710c52ccbcbe9383003c",
+      "kind": "uups"
+    },
+    {
+      "address": "0x4bde754e6Fd830cFBCe49b609Aa4d218dA5205fC",
+      "txHash": "0x787dd0a4a59ab30618452a2caad484093456e2755f79684fdb37172a4cb25cc4",
+      "kind": "uups"
+    },
+    {
+      "address": "0x0FE9eACdeBEA25c883788783e18d0B86601d6F10",
+      "txHash": "0xe7c0cdc27f81517f466bf3c68993fb8ee968aac64d733637c8f100aad2aac339",
+      "kind": "uups"
+    },
+    {
+      "address": "0x760cFBa449e6897FD4fcF370cdAc37E978198252",
+      "txHash": "0x5fb6bc9c3135df0bcab2e599c22b207e8a01de4916879c082fa8f2deab641708",
+      "kind": "uups"
+    },
+    {
+      "address": "0x6E15Be0fFf8357C2A03C8918637b2FeEa2831b5F",
+      "txHash": "0x217772fffcf73b6203d6009c7f02d1a937d8301024237744e0beb53e0ea8fd45",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -13631,6 +13736,224 @@
               }
             ],
             "numberOfBytes": "192"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "b31e3a3e3f889c84f92fc216776f9c687d4b2e5229caaa7930f77b73eac0737d": {
+      "address": "0x94639Bc4EDDCc8d205435625e80310dF623b7244",
+      "txHash": "0x8de3965b11446738cb6fb6c98039ddaa2d224d03799273f08c1df1244e49c685",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC165Upgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
+          },
+          {
+            "label": "_roles",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "contract": "AccessControlUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "AccessControlUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:259"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "label": "feeEmployer",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_uint256",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:32"
+          },
+          {
+            "label": "feeWorker",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_uint256",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:33"
+          },
+          {
+            "label": "feeTx",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_uint256",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:34"
+          },
+          {
+            "label": "feeReceiver",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_address_payable",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:37"
+          },
+          {
+            "label": "pensionFund",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_address_payable",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:40"
+          },
+          {
+            "label": "referral",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_address_payable",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:43"
+          },
+          {
+            "label": "wusd",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_contract(IERC20Upgradeable)2095",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:46"
+          },
+          {
+            "label": "workquests",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:49"
+          },
+          {
+            "label": "workquestValid",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "WorkQuestFactory",
+            "src": "contracts/WorkQuestFactory.sol:52"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_address_payable": {
+            "label": "address payable",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20Upgradeable)2095": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_array(t_address)dyn_storage)": {
+            "label": "mapping(address => address[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
           },
           "t_uint256": {
             "label": "uint256",

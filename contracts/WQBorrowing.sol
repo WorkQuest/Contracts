@@ -148,7 +148,7 @@ contract WQBorrowing is
     {}
 
     /**
-     * @notice Borrow funds. It take collateral token and give native coin in rate 1000 WUSD / 1500 USD
+     * @notice Borrow funds. It takes collateral token and give native coin in rate 1000 WUSD / 1500 USD
      * @param nonce Number for claim events
      * @param depositor Address of depositor's wallet
      * @param credit Amount of credit

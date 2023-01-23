@@ -38,6 +38,7 @@
     "web3": "^1.7.5"
   },
   "dependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.5",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@openzeppelin/upgrades-core": "^1.9.0",
     "bech32-converting": "^1.0.8",

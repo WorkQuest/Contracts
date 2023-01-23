@@ -144,10 +144,7 @@ contract WQPensionFund is
             emit WalletUpdated(worker, wallet.fee, wallet.unlockDate);
         }
         wallet.amount += amount;
-        wallet.serviceComission +=
-            (amount * feePerMonth * (wallet.unlockDate - block.timestamp)) /
-            MONTH /
-            1e18;
+        wallet.serviceComission += (amount * feePerMonth * (wallet.unlockDate - block.timestamp)) / MONTH / 1e18;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
         emit Received(worker, amount, block.timestamp);
     }
@@ -205,10 +202,7 @@ contract WQPensionFund is
 
     function extendLockTime() external {
         PensionWallet storage wallet = wallets[msg.sender];
-        require(
-            block.timestamp >= wallet.unlockDate,
-            'WQPension: Lock time is not over yet'
-        );
+        require(block.timestamp >= wallet.unlockDate, 'WQPension: Lock time is not over yet');
         wallet.unlockDate = block.timestamp + YEAR;
     }
 
@@ -247,10 +241,7 @@ contract WQPensionFund is
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount, block.timestamp);
         uint256 borrowedTo = block.timestamp + duration * 1 days;
-        return
-            borrowedTo < wallets[depositor].unlockDate
-                ? borrowedTo
-                : wallets[depositor].unlockDate;
+        return borrowedTo < wallets[depositor].unlockDate ? borrowedTo : wallets[depositor].unlockDate;
     }
 
     /**
@@ -266,9 +257,7 @@ contract WQPensionFund is
         uint256 elapsedTime,
         uint256 duration
     ) external override nonReentrant onlyRole(BORROWER_ROLE) {
-        uint256 rewards = (amount * (apys[duration] * elapsedTime)) /
-            YEAR /
-            1e18;
+        uint256 rewards = (amount * (apys[duration] * elapsedTime)) / YEAR / 1e18;
         wallets[depositor].borrowed -= amount;
         wallets[depositor].rewardAllowed += rewards;
         wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
