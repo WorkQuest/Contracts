@@ -332,13 +332,13 @@ contract WQCollateralAuction is
         require(lot.status == LotStatus.Auctioned, 'WQAuction: Lot is not auctioned');
         require(block.timestamp <= lot.endTime, 'WQAuction: Auction time is over');
 
-        uint256 factor = 10**(18 - token.decimals());   // 1000000000000000000
-        uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) / 1e18; // 2,723333333E16
+        uint256 factor = 10**(18 - token.decimals());   
+        uint256 cost = (lot.saleAmount * factor * _getCurrentLotPrice(lot)) / 1e18; 
 
-        uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price; // (969999999999999999 * 1200000000000000000) / 999999999999999999 = 1,164E18 1164000000000000000000
-        if (curRatio >= 1e18) {                          // 0,26
-            lot.ratio = ((lot.amount - lot.saleAmount - getComission(lot.saleAmount)) * factor * lot.price) /     // 1,948453608E54 * 1E36 = 1,948453608E90 
-                ((lot.amount * lot.price * factor) / lot.ratio - cost); //  (2E54 / 1,172766667E18) = 1,70536907E36   final = 1,142540722E54
+        uint256 curRatio = (lot.endPrice * lot.ratio) / lot.price; 
+        if (curRatio >= 1e18) {                          
+            lot.ratio = ((lot.amount - lot.saleAmount - getComission(lot.saleAmount)) * factor * lot.price) /   
+                ((lot.amount * lot.price * factor) / lot.ratio - cost); 
 
             lot.amount -= lot.saleAmount + getComission(lot.saleAmount); // 1,948453608E18 
             router.buyCollateral(msg.sender, index, cost, lot.saleAmount, token.symbol());
