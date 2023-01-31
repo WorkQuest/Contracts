@@ -5,19 +5,19 @@ require('@nomiclabs/hardhat-waffle')
 const { parseEther } = require('ethers/lib/utils')
 const { time } = require('@nomicfoundation/hardhat-network-helpers')
 
-const STABILITY_FEE = parseEther('0.1') 
-const ANNUAL_INTEREST_RATE = parseEther('0.02') 
+const STABILITY_FEE = parseEther('0.1') //10%
+const ANNUAL_INTEREST_RATE = parseEther('0.02') //2%
 const VALID_TIME = 1000
 const SYMBOL = 'ETH'
 const SYMBOL_wETH = 'wETH'
-const ETH_PRICE = parseEther('30') 
+const ETH_PRICE = parseEther('30') // 1 wETH token = 30 WUSD
 const WQT_PRICE = parseEther('0.3')
 const UPPER_ETH_PRICE = parseEther('45')
 const LOWER_ETH_PRICE = parseEther('15')
-const LIQUIDATE_TRESHOLD = parseEther('1.4') 
+const LIQUIDATE_TRESHOLD = parseEther('1.4') // 140%
 const START_PRICE_FACTOR = parseEther('1.2')
-const COLLATERAL_AUCTION_DURATION = '300' 
-const PRICE_INDEX_STEP = parseEther('1') 
+const COLLATERAL_AUCTION_DURATION = '300' // 5 min
+const PRICE_INDEX_STEP = parseEther('1') // 1 WUSD
 const NULL_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ONE_ADDRESS = '0x0000000000000000000000000000000000000001'
 const ONE = '1'

@@ -340,7 +340,7 @@ contract WQCollateralAuction is
             lot.ratio = ((lot.amount - lot.saleAmount - getComission(lot.saleAmount)) * factor * lot.price) /   
                 ((lot.amount * lot.price * factor) / lot.ratio - cost); 
 
-            lot.amount -= lot.saleAmount + getComission(lot.saleAmount); // 1,948453608E18 
+            lot.amount -= lot.saleAmount + getComission(lot.saleAmount);  
             router.buyCollateral(msg.sender, index, cost, lot.saleAmount, token.symbol());
         } else {
             require(reservesEnabled, 'WQAuction: Reserves is not enabled');
@@ -423,7 +423,7 @@ contract WQCollateralAuction is
      * @param amount Collateral amount value
      */
     function getComission(uint256 amount) public view returns (uint256) {
-        return (amount * (feeRewards + feePlatform + feeReserves)) / 1e18; // (amount * 0,13) / 1e18 = 0,26
+        return (amount * (feeRewards + feePlatform + feeReserves)) / 1e18; 
     }
 
     /**
@@ -444,7 +444,7 @@ contract WQCollateralAuction is
 
     function _getCurrentLotPrice(LotInfo storage lot) internal view returns (uint256){
         return lot.endPrice + ((lot.endTime - block.timestamp) * (lot.price - lot.endPrice)) / auctionDuration; 
-        // 969999999999999999 + (240) * (3E16) / 300 = 2,723333333E16
+        
     }  
 
     /** Admin Functions */
