@@ -87,10 +87,7 @@ contract WQLending is
     function deposit(uint256 lockTime, uint256 amount) external nonReentrant {
         require(apys[lockTime] != 0, 'WQLending: lockTime is invalid');
         DepositWallet storage wallet = wallets[msg.sender];
-        require(
-            block.timestamp >= wallet.unlockDate,
-            'WQSavingProduct: already deposited'
-        );
+        require(block.timestamp >= wallet.unlockDate, 'WQSavingProduct: already deposited');
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
         }

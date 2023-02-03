@@ -98,10 +98,7 @@ contract WQSavingProduct is
     function deposit(uint256 lockTime, uint256 amount) external nonReentrant {
         require(apys[lockTime] != 0, 'WQSavingProduct: lockTime is invalid');
         DepositWallet storage wallet = wallets[msg.sender];
-        require(
-            block.timestamp >= wallet.unlockDate,
-            'WQSavingProduct: already deposited'
-        );
+        require(block.timestamp >= wallet.unlockDate, 'WQSavingProduct: already deposited');
         if (wallet.unlockDate == 0) {
             wallet.unlockDate = block.timestamp + lockTime * 1 days;
             wallet.duration = lockTime;
@@ -110,8 +107,7 @@ contract WQSavingProduct is
         wallet.amount += amount;
         wallet.serviceComission +=
             (amount * feePerMonth * (wallet.unlockDate - block.timestamp)) /
-            MONTH /
-            1e18;
+            MONTH / 1e18;
         wusd.safeTransferFrom(msg.sender, address(this), amount);
         emit Received(msg.sender, amount);
     }
@@ -122,23 +118,16 @@ contract WQSavingProduct is
      */
     function withdraw(uint256 amount) external nonReentrant {
         DepositWallet storage wallet = wallets[msg.sender];
-        require(
-            block.timestamp > wallet.unlockDate,
-            'WQSavingProduct: Lock time is not over yet'
-        );
+        require(block.timestamp > wallet.unlockDate, 'WQSavingProduct: Lock time is not over yet');
         require(amount <= wallet.amount, 'WQSavingProduct: Amount is invalid');
         uint256 closeComission = (amount * feeWithdraw) / 1e18;
-        uint256 serviceComission = (amount * wallet.serviceComission) /
-            wallet.amount;
+        uint256 serviceComission = (amount * wallet.serviceComission) / wallet.amount;
         wallet.amount -= amount;
         if (wallet.amount == 0) {
             wallet.unlockDate = 0;
         }
         wallet.serviceComission -= serviceComission;
-        wusd.safeTransfer(
-            msg.sender,
-            amount - closeComission - serviceComission
-        );
+        wusd.safeTransfer(msg.sender, amount - closeComission - serviceComission);
         wusd.safeTransfer(feeReceiver, closeComission + serviceComission);
         emit Withdrew(msg.sender, amount);
     }
@@ -190,18 +179,12 @@ contract WQSavingProduct is
         uint256 amount,
         uint256 duration
     ) external override nonReentrant onlyRole(BORROWER_ROLE) returns (uint256) {
-        require(
-            block.timestamp < wallets[depositor].unlockDate,
-            'WQSavingProduct: Credit unavailable'
-        );
+        require(block.timestamp < wallets[depositor].unlockDate, 'WQSavingProduct: Credit unavailable');
         wallets[depositor].borrowed += amount;
         wusd.safeTransfer(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
         uint256 borrowedTo = block.timestamp + duration * 1 days;
-        return
-            borrowedTo < wallets[depositor].unlockDate
-                ? borrowedTo
-                : wallets[depositor].unlockDate;
+        return borrowedTo < wallets[depositor].unlockDate ? borrowedTo : wallets[depositor].unlockDate;
     }
 
     /**
@@ -218,9 +201,7 @@ contract WQSavingProduct is
         uint256 duration
     ) external override nonReentrant onlyRole(BORROWER_ROLE) {
         require(apys[duration] > 0, 'WQSavingProduct: invalid duration');
-        uint256 rewards = (amount * (apys[duration] * elapsedTime)) /
-            YEAR /
-            1e18;
+        uint256 rewards = (amount * (apys[duration] * elapsedTime)) / YEAR / 1e18;
         wallets[depositor].borrowed -= amount;
         wallets[depositor].rewardAllowed += rewards;
         wusd.safeTransferFrom(msg.sender, address(this), amount + rewards);
