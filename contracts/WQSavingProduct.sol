@@ -68,7 +68,7 @@ contract WQSavingProduct is
         address _wusd,
         address _feeReceiver,
         uint256 _feePerMonth,
-        uint256 _feeWithdraw
+        uint256 _feeWithdraw 
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
