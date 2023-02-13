@@ -18,10 +18,11 @@ const toBN = (num) => {
 const oneDay = 24 * 60 * 60 // 1 day
 const SEVEN_DAYS = 14 * 24 * 60 * 60
 const sixtyDays = 5184000 // 60 * 24 * 60 * 60 // 2592000 == 60days
+const ninetyDays = 7776000 // 90 * 24 * 60 * 60
 const YEAR = 31536000
 const oneK = toWei('1000')
 const SAVING_PRODUCT_FEE_PER_MONTH = toWei('0.024') // 1200000000000000
-const SAVING_PRODUCT_FEE_WITHDRAW = toWei('0.05') // 5000000000000000
+const SAVING_PRODUCT_FEE_WITHDRAW = toWei('0.005') // 5000000000000000000
 const days60 = toWei('0.0531')
 const days90 = toWei('0.0548')
 const days120 = toWei('0.0566')
@@ -49,6 +50,7 @@ describe('Saving Product test', function () {
         )
         await wusd_token.mint(alice.address, oneK)
         await wusd_token.mint(bob.address, oneK)
+        await wusd_token.mint(borrower.address, oneK)
 
         const Saving = await hre.ethers.getContractFactory('WQSavingProduct')
         saving = await upgrades.deployProxy(
@@ -72,6 +74,7 @@ describe('Saving Product test', function () {
 
         await wusd_token.connect(alice).approve(saving.address, oneK)
         await wusd_token.connect(bob).approve(saving.address, oneK)
+        await wusd_token.connect(borrower).approve(saving.address, oneK)
 
         return {
             owner,
@@ -193,7 +196,6 @@ describe('Saving Product test', function () {
                 .div(toBN(walletAmount))
 
             let balanceAfter = await wusd_token.balanceOf(alice.address)
-
             let wallet_info = await saving.wallets(alice.address)
             expect(wallet_info.amount).equal(0)
             expect(wallet_info.rewardAllowed).equal(0)
@@ -206,7 +208,8 @@ describe('Saving Product test', function () {
                             .minus(toBN(serviceComission))
                     )
                     .toString()
-            ).to.eq(toBN(balanceAfter).toString())
+            ).to.eq( toBN( balanceAfter ).toString() )
+            
         })
 
         it('STEP 3: Borrow funds', async function () {
@@ -231,93 +234,184 @@ describe('Saving Product test', function () {
             )
         })
 
-        it.only('STEP 4: Refund loans', async () => {
-            await saving.connect(accounts[1]).deposit(14, parseEther('1'))
+        it('STEP 4: Refund loans', async function () {
+            const {
+                owner,
+                borrower,
+                feeReceiver,
+                alice,
+                bob,
+                saving,
+                wusd_token,
+            } = await loadFixture(deployWithFixture)
+
+            const aliceAmount = toWei('100')
+            await saving.connect(alice).deposit(90, aliceAmount)
             await saving
-                .connect(accounts[2])
-                .borrow(accounts[1].address, parseEther('1'), 7)
-            let current = await getTimestamp()
+                .connect(borrower)
+                .borrow(alice.address, aliceAmount, 60)
+
+            let currentTimeStamp = await getCurrentTimestamp()
             await hre.ethers.provider.send('evm_setNextBlockTimestamp', [
-                current + YEAR,
+                currentTimeStamp + YEAR,
             ])
+
             await saving
-                .connect(accounts[2])
-                .refund(accounts[1].address, parseEther('1'), YEAR, 7)
-            expect(
-                (await saving.wallets(accounts[1].address)).rewardAllowed
-            ).equal(parseEther('0.0531'))
+                .connect(borrower)
+                .refund(alice.address, aliceAmount, YEAR, 60)
+
+            const apy = await saving.apys(60)
+            const rewards = toBN(aliceAmount)
+                .multipliedBy(toBN(apy).multipliedBy(toBN(YEAR)))
+                .div(toBN(YEAR))
+                .div(toBN(1e18))
+
+            expect((await saving.wallets(alice.address)).rewardAllowed).equal(
+                rewards.toString()
+            )
         })
 
-        it('STEP 5: Claim rewards', async () => {
-            await saving.connect(accounts[1]).deposit(14, parseEther('1'))
+        it('STEP 5: Claim rewards', async function () {
+            const {
+                owner,
+                borrower,
+                feeReceiver,
+                alice,
+                bob,
+                saving,
+                wusd_token,
+            } = await loadFixture(deployWithFixture)
+
+            const aliceAmount = toWei('100')
+            await saving.connect(alice).deposit(90, aliceAmount)
             await saving
-                .connect(accounts[2])
-                .borrow(accounts[1].address, parseEther('1'), 7)
-            let current = await getTimestamp()
+                .connect(borrower)
+                .borrow(alice.address, aliceAmount, 60)
+            let current = await getCurrentTimestamp()
             await hre.ethers.provider.send('evm_setNextBlockTimestamp', [
                 current + YEAR,
             ])
             await saving
-                .connect(accounts[2])
-                .refund(accounts[1].address, parseEther('1'), YEAR, 7)
-            let wallet_info = await saving.wallets(accounts[1].address)
-            expect(wallet_info.amount).equal(parseEther('1'))
-            expect(wallet_info.rewardAllowed).equal(parseEther('0.0531'))
-            let balanceBefore = BigInt(
-                await wusd_token.balanceOf(accounts[1].address)
+                .connect(borrower)
+                .refund(alice.address, aliceAmount, YEAR, 60)
+
+            let wallet_info = await saving.wallets(alice.address)
+            const _rewardAllowed = wallet_info.rewardAllowed
+            const _rewardDistributed = wallet_info.rewardDistributed
+            const rewardAllowed = toBN(_rewardAllowed).minus(
+                toBN(_rewardDistributed)
             )
-            await saving.connect(accounts[1]).claim()
-            let balanceAfter = BigInt(
-                await wusd_token.balanceOf(accounts[1].address)
-            )
-            expect(balanceAfter - balanceBefore).equal(parseEther('0.0531'))
+            expect(wallet_info.amount).to.eq(aliceAmount)
+            expect(wallet_info.rewardAllowed).to.eq(rewardAllowed.toString())
+
+            let balanceBefore = await wusd_token.balanceOf(alice.address)
+            await saving.connect(alice).claim()
+            let balanceAfter = await wusd_token.balanceOf(alice.address)
+            expect(
+                toBN(balanceAfter).minus(toBN(balanceBefore)).toString()
+            ).to.eq(toBN(rewardAllowed).toString())
         })
     })
 
-    describe('Saving Product: failed execution', () => {
-        it('STEP 1: Withdraw exceed amount', async () => {
-            await expect(saving.withdraw(parseEther('1'))).revertedWith(
+    describe('Saving Product: failed execution', function () {
+        it('STEP 1: Withdraw exceed amount', async function () {
+            const {
+                owner,
+                borrower,
+                feeReceiver,
+                alice,
+                bob,
+                saving,
+                wusd_token,
+            } = await loadFixture(deployWithFixture)
+
+            const aliceAmount = toWei('100')
+            await expect(saving.withdraw(aliceAmount)).revertedWith(
                 'WQSavingProduct: Amount is invalid'
             )
         })
 
-        it('STEP 2: Withdraw when funds locked', async () => {
-            await saving.connect(accounts[1]).deposit(14, parseEther('1'))
+        it('STEP 2: Withdraw when funds locked', async function () {
+            const {
+                owner,
+                borrower,
+                feeReceiver,
+                alice,
+                bob,
+                saving,
+                wusd_token,
+            } = await loadFixture(deployWithFixture)
+
+            const aliceAmount = toWei('100')
+            await saving.connect(alice).deposit(60, aliceAmount)
             await expect(
-                saving.connect(accounts[1]).withdraw(parseEther('1'))
+                saving.connect(alice).withdraw(parseEther('1'))
             ).revertedWith('WQSavingProduct: Lock time is not over yet')
         })
 
-        it('STEP 3: Borrow exceed amount', async () => {
+        it('STEP 3: Borrow exceed amount', async function () {
+            const {
+                owner,
+                borrower,
+                feeReceiver,
+                alice,
+                bob,
+                saving,
+                wusd_token,
+            } = await loadFixture(deployWithFixture)
+
+            const aliceAmount = toWei('100')
             await expect(
-                saving
-                    .connect(accounts[2])
-                    .borrow(accounts[1].address, parseEther('1'), 7)
-            ).revertedWith('WQSavingProduct: Invalid amount')
+                saving.connect(borrower).borrow(alice.address, aliceAmount, 60)
+            ).revertedWith('WQSavingProduct: Credit unavailable')
         })
 
-        it('STEP 3: Borrow with invalid duration', async () => {
-            await saving.connect(accounts[1]).deposit(14, parseEther('1'))
+        it('STEP 4: Borrow with invalid duration', async function () {
+            const {
+                owner,
+                borrower,
+                feeReceiver,
+                alice,
+                bob,
+                saving,
+                wusd_token,
+            } = await loadFixture(deployWithFixture)
+
+            const aliceAmount = toWei('100')
+            await saving.connect(alice).deposit(60, aliceAmount)
+            let currrent = await getCurrentTimestamp()
+            await hre.ethers.provider.send('evm_setNextBlockTimestamp', [
+                currrent + YEAR + 1,
+            ])
             await expect(
-                saving
-                    .connect(accounts[2])
-                    .borrow(accounts[1].address, parseEther('1'), 15)
-            ).revertedWith('WQSavingProduct: Invalid duration')
+                saving.connect(borrower).borrow(alice.address, aliceAmount, 90)
+            ).revertedWith('WQSavingProduct: Credit unavailable')
         })
 
-        it('STEP 4: Refund with invalid duration', async () => {
-            await saving.connect(accounts[1]).deposit(14, parseEther('1'))
+        it('STEP 5: Refund with invalid duration', async function () {
+            const {
+                owner,
+                borrower,
+                feeReceiver,
+                alice,
+                bob,
+                saving,
+                wusd_token,
+            } = await loadFixture(deployWithFixture)
+
+            const aliceAmount = toWei('100')
+            await saving.connect(alice).deposit(60, aliceAmount)
             await saving
-                .connect(accounts[2])
-                .borrow(accounts[1].address, parseEther('1'), 7)
-            let currrent = await getTimestamp()
+                .connect(borrower)
+                .borrow(alice.address, aliceAmount, 30)
+            let currrent = await getCurrentTimestamp()
             await hre.ethers.provider.send('evm_setNextBlockTimestamp', [
                 currrent + YEAR,
             ])
             await expect(
                 saving
-                    .connect(accounts[2])
-                    .refund(accounts[1].address, parseEther('1'), YEAR, 6)
+                    .connect(borrower)
+                    .refund(alice.address, aliceAmount, YEAR, 6)
             ).revertedWith('WQSavingProduct: invalid duration')
         })
     })

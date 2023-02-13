@@ -136,10 +136,7 @@ contract WQSavingProduct is
      * @notice Claim rewards
      */
     function claim() external nonReentrant {
-        require(
-            block.timestamp >= wallets[msg.sender].unlockDate,
-            'WQSavingProduct: Claim not allowed yet'
-        );
+        require(block.timestamp >= wallets[msg.sender].unlockDate, 'WQSavingProduct: Claim not allowed yet');
         uint256 reward = getRewards(msg.sender);
         wallets[msg.sender].rewardDistributed += reward;
         wusd.safeTransfer(msg.sender, reward);
@@ -174,7 +171,7 @@ contract WQSavingProduct is
      * @param amount Amount of coins
      * @param duration Duration of lock time
      */
-    function borrow(
+    function borrow( 
         address depositor,
         uint256 amount,
         uint256 duration

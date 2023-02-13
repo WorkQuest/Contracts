@@ -88,9 +88,11 @@ describe("Saving Product test", () => {
         it('STEP 2: Withdraw', async () => {
             await saving.connect(accounts[1]).deposit(14, parseEther('1'));
             await hre.ethers.provider.send("evm_setNextBlockTimestamp", [await getTimestamp() + SEVEN_DAYS + 1]);
-            let balanceBefore = BigInt(await wusd_token.balanceOf(accounts[1].address));
+            let balanceBefore = BigInt( await wusd_token.balanceOf( accounts[1].address ) );
+            console.log('balanceBefore', balanceBefore)
             await saving.connect(accounts[1]).withdraw(parseEther('1'));
-            let balanceAfter = BigInt(await wusd_token.balanceOf(accounts[1].address));
+            let balanceAfter = BigInt( await wusd_token.balanceOf( accounts[1].address ) );
+            console.log('balanceAfter', balanceAfter)
             let wallet_info = await saving.wallets(accounts[1].address);
             expect(wallet_info.amount).equal(0);
             expect(wallet_info.rewardAllowed).equal(0);
