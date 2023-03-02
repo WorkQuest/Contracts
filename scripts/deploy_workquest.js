@@ -33,7 +33,7 @@ async function main() {
   if (!process.env.REFERRAL) {
     throw new Error(`Please set your REFERRAL in a .env-${network} file`);
   }
-  if (!process.env.WUSD_TOKEN) {
+  if (!process.env.USDT_TOKEN) {
     throw new Error(`Please set your WUSD_TOKEN in a .env-${network} file`);
   }
   console.log("Deploying...");
@@ -47,7 +47,7 @@ async function main() {
       process.env.WORKQUEST_FEE_RECEIVER,
       process.env.PENSION_FUND,
       process.env.REFERRAL,
-      process.env.WUSD_TOKEN
+      process.env.USDT_TOKEN
     ],
     { initializer: 'initialize' });
   console.log("WorkQuestFactory has been deployed to:", work_quest_factory.address);

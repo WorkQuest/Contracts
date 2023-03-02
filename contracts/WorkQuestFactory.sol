@@ -8,6 +8,8 @@ import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WorkQuest.sol';
+import "hardhat/console.sol";
+
 
 
 contract WorkQuestFactory is
@@ -42,8 +44,8 @@ contract WorkQuestFactory is
     /// @notice address of referral
     address payable public referral;
 
-    /// @notice Address of wusd token
-    IERC20Upgradeable public wusd;
+    /// @notice Address of usdt token
+    IERC20Upgradeable public usdt;
 
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
@@ -70,8 +72,9 @@ contract WorkQuestFactory is
      * @param _feeEmployer Fee of jobs cost
      * @param _feeWorker Fee of jobs cost
      * @param _feeReceiver Address of reciever of fee
-     * @param _pensionFund Address of pension fund contract
+    // @param _pensionFund Address of pension fund contract
      */
+
     function initialize(
         uint256 _feeEmployer,
         uint256 _feeWorker,
@@ -79,7 +82,7 @@ contract WorkQuestFactory is
         address payable _feeReceiver,
         address payable _pensionFund,
         address payable _referral,
-        address _wusd
+        address _usdt
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -94,7 +97,7 @@ contract WorkQuestFactory is
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
         referral = _referral;
-        wusd = IERC20Upgradeable(_wusd);
+        usdt = IERC20Upgradeable(_usdt);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -139,9 +142,9 @@ contract WorkQuestFactory is
         );
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
-        uint256 comission = (cost * feeEmployer) / 1e18;
-        wusd.safeTransferFrom(msg.sender, workquest, cost);
-        wusd.safeTransferFrom(msg.sender, feeReceiver, comission);
+        uint256 comission = (cost * feeEmployer) / 1e6;
+        usdt.safeTransferFrom(msg.sender, workquest, cost);
+        usdt.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp, nonce);
     }
 
@@ -179,11 +182,11 @@ contract WorkQuestFactory is
     }
 
     /**
-     * @notice Set address of WUSD token
-     * @param _wusd  Address of pension fund contract
+     * @notice Set address of USDT token
+     * @param _usdt  Address of pension fund contract
      */
-    function setWusd(address _wusd) external onlyRole(ADMIN_ROLE) {
-        wusd = IERC20Upgradeable(_wusd);
+    function setUsdt(address _usdt) external onlyRole(ADMIN_ROLE) {
+        usdt = IERC20Upgradeable(_usdt);
     }
 
     /**
@@ -201,3 +204,5 @@ contract WorkQuestFactory is
         feeTx = _fee;
     }
 }
+
+// 0x9E78feD4106495311632Cdbf5e034557E0b7a372

@@ -138,30 +138,19 @@ contract WorkQuest {
     function cancelJob() external {
         require((status == JobStatus.Published || status == JobStatus.WaitWorker) && msg.sender == employer, errMsg);
         status = JobStatus.Finished;
-        IERC20(factory.wusd()).safeTransfer(employer, cost);
+        IERC20(factory.usdt()).safeTransfer(employer, cost);
         emit JobCancelled();
     }
 
     function editJob(uint256 _cost) external {
-        require(
-            status == JobStatus.Published && msg.sender == employer,
-            errMsg
-        );
+        require(status == JobStatus.Published && msg.sender == employer, errMsg);
         if (_cost > cost) {
-            uint256 comission = ((_cost - cost) * factory.feeWorker()) / 1e18;
-            IERC20(factory.wusd()).safeTransferFrom(
-                msg.sender,
-                address(this),
-                (_cost - cost)
-            );
-            IERC20(factory.wusd()).safeTransferFrom(
-                msg.sender,
-                factory.feeReceiver(),
-                comission
-            );
+            uint256 comission = ((_cost - cost) * factory.feeWorker()) / 1e6;
+            IERC20(factory.usdt()).safeTransferFrom(msg.sender, address(this), (_cost - cost));
+            IERC20(factory.usdt()).safeTransferFrom(msg.sender, factory.feeReceiver(), comission);
             emit Received(_cost);
         } else if (_cost < cost) {
-            IERC20(factory.wusd()).safeTransfer(employer, cost - _cost);
+            IERC20(factory.usdt()).safeTransfer(employer, cost - _cost);
         }
         cost = _cost;
         emit JobEdited(_cost);
@@ -249,30 +238,30 @@ contract WorkQuest {
     function arbitrationRejectWork() external {
         require(factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration, errMsg);
         status = JobStatus.Finished;
-        uint256 comission = (cost * factory.feeWorker()) / 1e18;
-        IERC20(factory.wusd()).safeTransfer(employer, cost - comission);
-        IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
+        uint256 comission = (cost * factory.feeWorker()) / 1e6;
+        IERC20(factory.usdt()).safeTransfer(employer, cost - comission);
+        IERC20(factory.usdt()).safeTransfer(factory.feeReceiver(), comission);
         payable(msg.sender).sendValue(address(this).balance);
         emit ArbitrationRejectWork(block.timestamp);
     }
 
-    function _transferFunds() internal  {
+    function _transferFunds() internal {
         uint256 newCost = cost;
-        uint256 comission = (newCost * factory.feeWorker()) / 1e18;
-        uint256 pensionContribute = (newCost * WQPensionFundInterface(factory.pensionFund()).getFee(worker)) / 1e18;
+        uint256 comission = (newCost * factory.feeWorker()) / 1e6;
+        uint256 pensionContribute = (newCost * WQPensionFundInterface(factory.pensionFund()).getFee(worker)) / 1e6;
         
-        IERC20(factory.wusd()).safeTransfer(worker, newCost - comission - pensionContribute);
+        IERC20(factory.usdt()).safeTransfer(worker, newCost - comission - pensionContribute);
 
         if (pensionContribute > 0) {
-            if (IERC20(factory.wusd()).allowance(address(this), factory.pensionFund()) > 0) {
-                IERC20(factory.wusd()).safeApprove(factory.pensionFund(), 0);
+            if (IERC20(factory.usdt()).allowance(address(this), factory.pensionFund()) > 0) {
+                IERC20(factory.usdt()).safeApprove(factory.pensionFund(), 0);
             }
-            IERC20(factory.wusd()).safeApprove(factory.pensionFund(), pensionContribute);
+            IERC20(factory.usdt()).safeApprove(factory.pensionFund(), pensionContribute);
             WQPensionFundInterface(factory.pensionFund()).contribute(worker,pensionContribute);
         }
         WQReferralInterface(factory.referral()).calcReferral(worker, newCost);
         WQReferralInterface(factory.referral()).calcReferral(employer, newCost);
-        IERC20(factory.wusd()).safeTransfer(factory.feeReceiver(), comission);
+        IERC20(factory.usdt()).safeTransfer(factory.feeReceiver(), comission);
     }
 }
  

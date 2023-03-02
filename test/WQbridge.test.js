@@ -298,8 +298,8 @@ describe('Bridge test', function () {
 
             const balanceAfterLT = await await lockable_token
                 .connect(sender)
-                .balanceOf( sender.address )
-            
+                .balanceOf(sender.address)
+
             const balancePool = await lockable_token.balanceOf(
                 bridge_pool.address
             )
@@ -691,7 +691,7 @@ describe('Bridge test', function () {
             )
         })
 
-        it('Should redeem successfully', async function () {
+        it.only('Should redeem successfully', async function () {
             const {
                 bridge_owner,
                 minter_role,

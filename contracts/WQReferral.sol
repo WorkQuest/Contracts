@@ -42,7 +42,7 @@ contract WQReferral is
         bool paid;
     }
 
-    /// @notice referral bonus amount in USD
+    /// @notice referral bonus amount in USDT
     uint256 public referralBonus;
     /// @notice address of price oracle
     WQPriceOracleInterface public oracle;
@@ -129,7 +129,7 @@ contract WQReferral is
         Account storage userAccount = referrals[referral];
         if (userAccount.affiliat != address(0) && !userAccount.paid) {
             userAccount.earnedAmount += earnedAmount;
-            if (userAccount.earnedAmount >= earnedThreshold) {
+            if (((userAccount.earnedAmount) * 10**12) >= earnedThreshold) {
                 userAccount.paid = true;
                 referrals[userAccount.affiliat].rewardTotal += referralBonus;
                 emit PaidReferral(referral, userAccount.affiliat, referralBonus);
@@ -140,15 +140,10 @@ contract WQReferral is
     /** @dev function for affiliate reward claiming
      */
     function claim() external nonReentrant {
-        uint256 rewardAmount = referrals[msg.sender].rewardTotal -
-            referrals[msg.sender].rewardPaid;
+        uint256 rewardAmount = referrals[msg.sender].rewardTotal - referrals[msg.sender].rewardPaid;
         require(rewardAmount > 0, 'WQReferral: there is nothing to claim');
-        require(
-            address(this).balance > rewardAmount,
-            'WQReferral: Balance on contract too low'
-        );
-        uint256 bonusAmount = (rewardAmount * 1e18) /
-            oracle.getTokenPriceUSD('WQT');
+        require(address(this).balance > rewardAmount, 'WQReferral: Balance on contract too low');
+        uint256 bonusAmount = (rewardAmount * 1e18) / oracle.getTokenPriceUSD('WQT');
         referrals[msg.sender].rewardPaid = referrals[msg.sender].rewardTotal;
         payable(msg.sender).sendValue(bonusAmount);
         emit RewardClaimed(msg.sender, bonusAmount);

@@ -21,5 +21,5 @@ interface WorkQuestFactoryInterface {
 
     function referral() external view returns (address);
 
-    function wusd() external view returns (address);
+    function usdt() external view returns (address);
 }

@@ -1006,7 +1006,7 @@ describe('Liquidity Mining', function () {
             )
         })
 
-        it.only('should able to unstake()', async function () {
+        it('should able to unstake()', async function () {
             const {
                 START_TIME,
                 owner,

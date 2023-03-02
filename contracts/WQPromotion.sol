@@ -28,7 +28,7 @@ contract WQPromotion is
 
     /// @notice Address of the fee receiver
     WorkQuestFactoryInterface public factory;
-    IERC20Upgradeable public wusd;
+    IERC20Upgradeable public usdt;
     address public feeReceiver;
     mapping(PaidTariff => mapping(uint256 => uint256)) public questTariff;
     mapping(PaidTariff => mapping(uint256 => uint256)) public usersTariff;
@@ -55,7 +55,7 @@ contract WQPromotion is
     function initialize(
         address _feeReceiver,
         address _factory,
-        address _wusd
+        address _usdt
     ) external initializer {
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -66,7 +66,7 @@ contract WQPromotion is
         _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
         feeReceiver = _feeReceiver;
         factory = WorkQuestFactoryInterface(_factory);
-        wusd = IERC20Upgradeable(_wusd);
+        usdt = IERC20Upgradeable(_usdt);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -80,16 +80,9 @@ contract WQPromotion is
         PaidTariff tariff,
         uint256 period
     ) external nonReentrant {
-        require(
-            factory.workquestValid(quest),
-            'WQPromotion: Quest is not WorkQuest contract'
-        );
+        require(factory.workquestValid(quest), 'WQPromotion: Quest is not WorkQuest contract');
         require(questTariff[tariff][period] > 0, 'WQPromotion: Invalid tariff');
-        wusd.safeTransferFrom(
-            msg.sender,
-            feeReceiver,
-            questTariff[tariff][period]
-        );
+        usdt.safeTransferFrom(msg.sender, feeReceiver, questTariff[tariff][period]);
         emit PromotedQuest(
             quest,
             tariff,
@@ -104,7 +97,7 @@ contract WQPromotion is
         nonReentrant
     {
         require(usersTariff[tariff][period] > 0, 'WQPromotion: Invalid tariff');
-        wusd.safeTransferFrom(
+        usdt.safeTransferFrom(
             msg.sender,
             feeReceiver,
             usersTariff[tariff][period]

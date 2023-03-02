@@ -6,6 +6,7 @@ require('hardhat-docgen')
 require('@nomiclabs/hardhat-etherscan')
 require('@openzeppelin/hardhat-upgrades')
 require('./tasks')
+require('./tasks/mint_tokens')
 require( 'dotenv' ).config()
 const BigNumber = require('bignumber.js')
 BigNumber.config({ EXPONENTIAL_AT: 60 })
@@ -74,11 +75,11 @@ module.exports = {
         //   accounts: [PRIVATE_KEY],
         //   chainId: 5,
         // },
-        wqdevnet: {
-            url: 'https://dev-node-fra1.workquest.co/',
-            accounts: { mnemonic: mnemonic },
-            chainId: 20220112,
-        },
+        // wqdevnet: {
+        //     url: 'https://dev-node-fra1.workquest.co/',
+        //     accounts: { mnemonic: mnemonic },
+        //     chainId: 20220112,
+        // },
         wqtestnet: {
             url: 'https://testnet-gate.workquest.co/',
             accounts: { mnemonic: mnemonic },

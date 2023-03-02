@@ -161,19 +161,11 @@ contract WQBridge is
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
         require(token.enabled, 'WorkQuest Bridge: This token not registered or disabled');
-
-        bytes32 message = keccak256(
-            abi.encodePacked(nonce, amount, recipient, chainId, chainTo, symbol)
-        );
+        bytes32 message = keccak256(abi.encodePacked(nonce, amount, recipient, chainId, chainTo, symbol));
         require(swaps[message].state == State.Empty, 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
-
         swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
-        if (token.lockable) {
-            IERC20Upgradeable(token.token).safeTransferFrom(
-                msg.sender,
-                pool,
-                amount
-            );
+        
+        if (token.lockable) {IERC20Upgradeable(token.token).safeTransferFrom(msg.sender, pool, amount);
         } else if (token.native) {
             require(msg.value == amount, 'WorkQuest Bridge: Amount value is not equal to transfered funds');
             pool.sendValue(amount);
@@ -239,27 +231,17 @@ contract WQBridge is
             )
         );
         require(swaps[message].state == State.Empty, 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
-        require(hasRole(
-                VALIDATOR_ROLE,
-                message.toEthSignedMessageHash().recover(v, r, s)
-            ),
+        require(hasRole(VALIDATOR_ROLE, message.toEthSignedMessageHash().recover(v, r, s)),
             'WorkQuest Bridge: Validator address is invalid or signature is faked'
         );
 
         swaps[message] = SwapData({nonce: nonce, state: State.Redeemed});
         if (tokens[symbol].lockable) {
-            WQBridgePool(pool).transfer(
-                recipient,
-                amount,
-                tokens[symbol].token
-            );
+            WQBridgePool(pool).transfer(recipient, amount, tokens[symbol].token);
         } else if (tokens[symbol].native) {
             WQBridgePool(pool).transfer(recipient, amount, address(0));
         } else {
-            WQBridgeTokenInterface(tokens[symbol].token).mint(
-                recipient,
-                amount
-            );
+            WQBridgeTokenInterface(tokens[symbol].token).mint(recipient, amount);
         }
 
         emit SwapRedeemed(
