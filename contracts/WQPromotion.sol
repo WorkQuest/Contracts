@@ -69,20 +69,25 @@ contract WQPromotion is
         usdt = IERC20Upgradeable(_usdt);
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
-        onlyRole(UPGRADER_ROLE)
-    {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
 
     function promoteQuest(
         address quest,
         PaidTariff tariff,
         uint256 period
     ) external nonReentrant {
-        require(factory.workquestValid(quest), 'WQPromotion: Quest is not WorkQuest contract');
+        require(
+            factory.workquestValid(quest),
+            'WQPromotion: Quest is not WorkQuest contract'
+        );
         require(questTariff[tariff][period] > 0, 'WQPromotion: Invalid tariff');
-        usdt.safeTransferFrom(msg.sender, feeReceiver, questTariff[tariff][period]);
+        usdt.safeTransferFrom(
+            msg.sender,
+            feeReceiver,
+            questTariff[tariff][period]
+        );
         emit PromotedQuest(
             quest,
             tariff,
@@ -92,10 +97,10 @@ contract WQPromotion is
         );
     }
 
-    function promoteUser(PaidTariff tariff, uint256 period)
-        external
-        nonReentrant
-    {
+    function promoteUser(
+        PaidTariff tariff,
+        uint256 period
+    ) external nonReentrant {
         require(usersTariff[tariff][period] > 0, 'WQPromotion: Invalid tariff');
         usdt.safeTransferFrom(
             msg.sender,

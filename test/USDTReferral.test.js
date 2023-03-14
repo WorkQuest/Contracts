@@ -180,7 +180,6 @@ describe('WQreferral USDT', function () {
         )[0]
 
         work_quest = await ethers.getContractAt('WorkQuest', work_quest_address)
-        await work_quest.deployed()
 
         return {
             work_quest_owner,
@@ -358,7 +357,7 @@ describe('WQreferral USDT', function () {
         const pensionFee = await pension_fund.getFee(worker.address)
         const comission = toBN(cost)
             .multipliedBy(toBN(WORKER_FEE))
-            .div(toBN(1e6)) 
+            .div(toBN(1e6))
         const pensionContribute = toBN(cost)
             .multipliedBy(toBN(pensionFee))
             .div(toBN(1e6))
@@ -430,8 +429,8 @@ describe('WQreferral USDT', function () {
             referral_contract,
         } = await loadFixture(deployWithFixture)
 
-        const newearnedThreshold = toWei('99')
-        await referral_contract.setEarnedThreshold(newearnedThreshold)
+        const newEarnedThreshold = toWei('99')
+        await referral_contract.setEarnedThreshold(newEarnedThreshold)
         const role = await referral_contract.hasRole(
             await referral_contract.SERVICE_ROLE(),
             service.address
@@ -476,7 +475,6 @@ describe('WQreferral USDT', function () {
         expect(verifyQuest._worker).to.eq(worker.address)
         expect(verifyQuest._factory).to.eq(work_quest_factory.address)
         expect(verifyQuest._status).to.eq(JobStatus.Finished)
-
     })
 
     async function impersonate(account) {

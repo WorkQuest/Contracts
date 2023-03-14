@@ -218,7 +218,7 @@ describe('WorkQuest USDT', function () {
         ).to.equal(feeReceiver.address)
     })
 
-    it.only('Create new job: success', async function () {
+    it('Create new job: success', async function () {
         const {
             employer,
             feeReceiver,
@@ -692,8 +692,8 @@ describe('WorkQuest USDT', function () {
             await work_quest.connect(worker).verificationJob()
             await work_quest
                 .connect(employer)
-                .arbitration( { value: WORKQUEST_FEE } )
-            
+                .arbitration({ value: WORKQUEST_FEE })
+
             const employerBefore = await usdt.balanceOf(employer.address)
             await work_quest.connect(arbiter).arbitrationRejectWork()
 
@@ -701,9 +701,8 @@ describe('WorkQuest USDT', function () {
                 .multipliedBy(toBN(WORKQUEST_FEE))
                 .div(toBN(1e6))
 
-            const amountAfterRejection = toBN(cost)
-                .minus( toBN( comission ) )
-            
+            const amountAfterRejection = toBN(cost).minus(toBN(comission))
+
             const balanceEmployee = toBN(employerBefore).plus(
                 toBN(amountAfterRejection)
             )

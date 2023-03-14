@@ -7,7 +7,9 @@ require('@nomiclabs/hardhat-etherscan')
 require('@openzeppelin/hardhat-upgrades')
 require('./tasks')
 require('./tasks/mint_tokens')
-require( 'dotenv' ).config()
+require('./tasks/get_token_balance')
+require('./tasks/referral_set_factory')
+require('dotenv').config()
 const BigNumber = require('bignumber.js')
 BigNumber.config({ EXPONENTIAL_AT: 60 })
 
@@ -21,16 +23,16 @@ const chainIds = {
     ropsten: 3,
 }
 
+// const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+// const PRIVATE_KEY = process.env.PRIVATE_KEY;
+// const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+ 
 let mnemonic
 if (!process.env.MNEMONIC) {
     throw new Error('Please set your MNEMONIC in a .env file')
 } else {
     mnemonic = process.env.MNEMONIC
 }
-
-// const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
-// const PRIVATE_KEY = process.env.PRIVATE_KEY;
-// const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
 let providerApiKey
 if (!process.env.PROVIDER_API_KEY) {
@@ -47,7 +49,7 @@ if (!process.env.EXPLORER_API_KEY) {
 }
 
 function createNetworkConfig(network) {
-    const url = `https://${network}.infura.io/v3/${providerApiKey}`;
+    const url = `https://${network}.infura.io/v3/${providerApiKey}`
     // const url = `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/eth/${network}`;
     return {
         accounts: { mnemonic: mnemonic },
@@ -120,7 +122,6 @@ module.exports = {
         // },
         goerli: createNetworkConfig('goerli'),
         // mainnet: createNetworkConfig('mainnet')
-        
     },
     paths: {
         artifacts: './artifacts',

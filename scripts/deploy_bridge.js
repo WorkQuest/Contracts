@@ -36,7 +36,7 @@ async function main() {
             process.env.BRIDGE_POOL,
             process.env.BRIDGE_VALIDATOR
         ],
-        { initializer: 'initialize' }
+        { initializer: 'initialize' } 
     );
 
     console.log("WorkQuest Bridge has been deployed to:", bridge.address);

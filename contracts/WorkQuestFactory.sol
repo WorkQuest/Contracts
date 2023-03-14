@@ -8,9 +8,7 @@ import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WorkQuest.sol';
-import "hardhat/console.sol";
-
-
+import 'hardhat/console.sol';
 
 contract WorkQuestFactory is
     Initializable,
@@ -27,8 +25,6 @@ contract WorkQuestFactory is
         uint256 idx;
         bool status;
     }
-
-    
 
     /// @notice Fee amount
     uint256 public feeEmployer;
@@ -72,7 +68,6 @@ contract WorkQuestFactory is
      * @param _feeEmployer Fee of jobs cost
      * @param _feeWorker Fee of jobs cost
      * @param _feeReceiver Address of reciever of fee
-    // @param _pensionFund Address of pension fund contract
      */
 
     function initialize(
@@ -100,11 +95,9 @@ contract WorkQuestFactory is
         usdt = IERC20Upgradeable(_usdt);
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
-        onlyRole(UPGRADER_ROLE)
-    {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
 
     /**
      * @notice Get list of adresses of employers workquests
@@ -145,17 +138,22 @@ contract WorkQuestFactory is
         uint256 comission = (cost * feeEmployer) / 1e6;
         usdt.safeTransferFrom(msg.sender, workquest, cost);
         usdt.safeTransferFrom(msg.sender, feeReceiver, comission);
-        emit WorkQuestCreated(jobHash, msg.sender, workquest, block.timestamp, nonce);
+        emit WorkQuestCreated(
+            jobHash,
+            msg.sender,
+            workquest,
+            block.timestamp,
+            nonce
+        );
     }
 
     /**
      * @notice Set address of fee receiver
      * @param _feeReceiver Address of fee receiver
      */
-    function setFeeReceiver(address payable _feeReceiver)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function setFeeReceiver(
+        address payable _feeReceiver
+    ) external onlyRole(ADMIN_ROLE) {
         feeReceiver = _feeReceiver;
     }
 
@@ -163,10 +161,9 @@ contract WorkQuestFactory is
      * @notice Set address of refferal contract
      * @param _referral  Address of refferal contract
      */
-    function setRefferal(address payable _referral)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function setRefferal(
+        address payable _referral
+    ) external onlyRole(ADMIN_ROLE) {
         referral = _referral;
     }
 
@@ -174,10 +171,9 @@ contract WorkQuestFactory is
      * @notice Set address of pension fund contract
      * @param _pensionFund  Address of pension fund contract
      */
-    function setPensionFund(address payable _pensionFund)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function setPensionFund(
+        address payable _pensionFund
+    ) external onlyRole(ADMIN_ROLE) {
         pensionFund = _pensionFund;
     }
 
@@ -204,5 +200,3 @@ contract WorkQuestFactory is
         feeTx = _fee;
     }
 }
-
-// 0x9E78feD4106495311632Cdbf5e034557E0b7a372

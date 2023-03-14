@@ -136,18 +136,33 @@ contract WorkQuest {
     }
 
     function cancelJob() external {
-        require((status == JobStatus.Published || status == JobStatus.WaitWorker) && msg.sender == employer, errMsg);
+        require(
+            (status == JobStatus.Published || status == JobStatus.WaitWorker) &&
+                msg.sender == employer,
+            errMsg
+        );
         status = JobStatus.Finished;
         IERC20(factory.usdt()).safeTransfer(employer, cost);
         emit JobCancelled();
     }
 
     function editJob(uint256 _cost) external {
-        require(status == JobStatus.Published && msg.sender == employer, errMsg);
+        require(
+            status == JobStatus.Published && msg.sender == employer,
+            errMsg
+        );
         if (_cost > cost) {
             uint256 comission = ((_cost - cost) * factory.feeWorker()) / 1e6;
-            IERC20(factory.usdt()).safeTransferFrom(msg.sender, address(this), (_cost - cost));
-            IERC20(factory.usdt()).safeTransferFrom(msg.sender, factory.feeReceiver(), comission);
+            IERC20(factory.usdt()).safeTransferFrom(
+                msg.sender,
+                address(this),
+                (_cost - cost)
+            );
+            IERC20(factory.usdt()).safeTransferFrom(
+                msg.sender,
+                factory.feeReceiver(),
+                comission
+            );
             emit Received(_cost);
         } else if (_cost < cost) {
             IERC20(factory.usdt()).safeTransfer(employer, cost - _cost);
@@ -161,7 +176,12 @@ contract WorkQuest {
      * @param _worker Address of worker
      */
     function assignJob(address _worker) external {
-        require(msg.sender == employer && (status == JobStatus.Published || status == JobStatus.WaitWorker), errMsg);
+        require(
+            msg.sender == employer &&
+                (status == JobStatus.Published ||
+                    status == JobStatus.WaitWorker),
+            errMsg
+        );
         require(_worker != address(0), 'WorkQuest: Invalid address');
         status = JobStatus.WaitWorker;
         worker = _worker;
@@ -191,7 +211,10 @@ contract WorkQuest {
      * @notice Employer accepted job
      */
     function acceptJobResult() external {
-        require(msg.sender == employer && status == JobStatus.WaitJobVerify, errMsg);
+        require(
+            msg.sender == employer && status == JobStatus.WaitJobVerify,
+            errMsg
+        );
         status = JobStatus.Finished;
         _transferFunds();
         emit JobFinished();
@@ -201,10 +224,20 @@ contract WorkQuest {
      * @notice Employer or worker send job to arbitration
      */
     function arbitration() external payable {
-        require((msg.sender == employer && status == JobStatus.WaitJobVerify) ||
-                (msg.sender == employer && status == JobStatus.InProgress && deadline > 0 ? block.timestamp > deadline : false) ||
-                (msg.sender == worker && status == JobStatus.WaitJobVerify && block.timestamp > timeDone + 1 minutes), errMsg
-);
+        require(
+            (msg.sender == employer && status == JobStatus.WaitJobVerify) ||
+                (
+                    msg.sender == employer &&
+                        status == JobStatus.InProgress &&
+                        deadline > 0
+                        ? block.timestamp > deadline
+                        : false
+                ) ||
+                (msg.sender == worker &&
+                    status == JobStatus.WaitJobVerify &&
+                    block.timestamp > timeDone + 1 minutes),
+            errMsg
+        );
         require(msg.value >= factory.feeTx(), 'WorkQuest: insufficient fee');
         status = JobStatus.Arbitration;
         emit ArbitrationStarted(block.timestamp);
@@ -214,7 +247,11 @@ contract WorkQuest {
      * @notice Arbiter send job to rework
      */
     function arbitrationRework() external {
-        require(factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration, errMsg);
+        require(
+            factory.hasRole(ARBITER_ROLE, msg.sender) &&
+                status == JobStatus.Arbitration,
+            errMsg
+        );
         deadline = block.timestamp + 3 days;
         status = JobStatus.InProgress;
         payable(msg.sender).sendValue(address(this).balance);
@@ -225,7 +262,11 @@ contract WorkQuest {
      * @notice Arbiter accepted job result
      */
     function arbitrationAcceptWork() external {
-        require(factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration, errMsg);
+        require(
+            factory.hasRole(ARBITER_ROLE, msg.sender) &&
+                status == JobStatus.Arbitration,
+            errMsg
+        );
         status = JobStatus.Finished;
         _transferFunds();
         payable(msg.sender).sendValue(address(this).balance);
@@ -236,7 +277,11 @@ contract WorkQuest {
      * @notice Arbiter declined job
      */
     function arbitrationRejectWork() external {
-        require(factory.hasRole(ARBITER_ROLE, msg.sender) && status == JobStatus.Arbitration, errMsg);
+        require(
+            factory.hasRole(ARBITER_ROLE, msg.sender) &&
+                status == JobStatus.Arbitration,
+            errMsg
+        );
         status = JobStatus.Finished;
         uint256 comission = (cost * factory.feeWorker()) / 1e6;
         IERC20(factory.usdt()).safeTransfer(employer, cost - comission);
@@ -248,20 +293,29 @@ contract WorkQuest {
     function _transferFunds() internal {
         uint256 newCost = cost;
         uint256 comission = (newCost * factory.feeWorker()) / 1e6;
-        uint256 pensionContribute = (newCost * WQPensionFundInterface(factory.pensionFund()).getFee(worker)) / 1e6;
-        
-        IERC20(factory.usdt()).safeTransfer(worker, newCost - comission - pensionContribute);
-
+        uint256 pensionContribute = (newCost *
+            WQPensionFundInterface(factory.pensionFund()).getFee(worker)) / 1e6;
+        IERC20(factory.usdt()).safeTransfer(worker, newCost - comission);
         if (pensionContribute > 0) {
-            if (IERC20(factory.usdt()).allowance(address(this), factory.pensionFund()) > 0) {
+            if (
+                IERC20(factory.usdt()).allowance(
+                    address(this),
+                    factory.pensionFund()
+                ) > 0
+            ) {
                 IERC20(factory.usdt()).safeApprove(factory.pensionFund(), 0);
             }
-            IERC20(factory.usdt()).safeApprove(factory.pensionFund(), pensionContribute);
-            WQPensionFundInterface(factory.pensionFund()).contribute(worker,pensionContribute);
+            IERC20(factory.usdt()).safeApprove(
+                factory.pensionFund(),
+                pensionContribute
+            );
+            WQPensionFundInterface(factory.pensionFund()).contribute(
+                worker,
+                pensionContribute
+            );
         }
-        WQReferralInterface(factory.referral()).calcReferral(worker, newCost);
         WQReferralInterface(factory.referral()).calcReferral(employer, newCost);
+        WQReferralInterface(factory.referral()).calcReferral(worker, newCost);
         IERC20(factory.usdt()).safeTransfer(factory.feeReceiver(), comission);
     }
 }
- 
