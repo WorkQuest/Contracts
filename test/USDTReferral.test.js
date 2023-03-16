@@ -15,6 +15,7 @@ const toBN = (num) => {
 
 const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7' //USDT contract
 const USDT_WAHLE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
+const ETH_WAHLE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
 
 const job_hash = web3.utils.keccak256('JOBHASH')
 const cost = Mwei('100')
@@ -92,7 +93,9 @@ describe('WQreferral USDT', function () {
 
         usdt = await ethers.getContractAt('IERC20', USDT)
         await impersonate(USDT_WAHLE)
-        whaleUsdt = await ethers.getSigner(USDT_WAHLE)
+        whaleUsdt = await ethers.getSigner( USDT_WAHLE )
+        await impersonate(ETH_WAHLE)
+        whaleEth = await ethers.getSigner(ETH_WAHLE)
         await usdt.deployed()
         await usdt.connect(whaleUsdt).transfer(employer.address, Mwei('200000'))
 
@@ -475,6 +478,69 @@ describe('WQreferral USDT', function () {
         expect(verifyQuest._worker).to.eq(worker.address)
         expect(verifyQuest._factory).to.eq(work_quest_factory.address)
         expect(verifyQuest._status).to.eq(JobStatus.Finished)
+    })
+
+    it.only('should be able to claim()', async function () {
+        const {
+            work_quest_owner,
+            employer,
+            worker,
+            service,
+            usdt,
+            work_quest,
+            referral_contract,
+        } = await loadFixture(deployWithFixture)
+        await wqt.mint( referral_contract.address, twoK )
+        await whaleEth.sendTransaction({
+            to: referral_contract.address,
+            value: '8842815932975',
+        })
+        const newEarnedThreshold = toWei('99')
+        await referral_contract.setEarnedThreshold(newEarnedThreshold)
+        const role = await referral_contract.hasRole(
+            await referral_contract.SERVICE_ROLE(),
+            service.address
+        )
+        expect(role).to.eq(true)
+
+        const message = web3.utils.soliditySha3(
+            { t: 'address', v: employer.address },
+            { t: 'address', v: [worker.address] }
+        )
+
+        const signature = await web3.eth.sign(message, service.address)
+        const sig = ethers.utils.splitSignature(signature)
+        await referral_contract
+            .connect(employer)
+            .addReferrals(sig.v, sig.r, sig.s, [worker.address])
+        const referralInfo = await referral_contract.referrals(worker.address)
+        expect(referralInfo.affiliat).to.eq(employer.address)
+
+        await work_quest.connect(employer).assignJob(worker.address)
+        await work_quest.connect(worker).acceptJob()
+        await work_quest.connect(worker).verificationJob()
+        await work_quest.connect(employer).acceptJobResult()
+
+        const referralInfoWorker = await referral_contract
+            .connect(worker)
+            .referrals(worker.address)
+        expect(referralInfoWorker.affiliat).to.eq(employer.address)
+        expect(referralInfoWorker.earnedAmount).to.eq(cost)
+        expect(referralInfoWorker.paid).to.eq(true)
+
+        const referralInfoEmployee = await referral_contract
+            .connect(employer)
+            .referrals(employer.address)
+        expect(referralInfoEmployee.rewardTotal).to.eq(twentyWQT.toString())
+        expect(referralInfoEmployee.referredCount).to.eq(1)
+
+        const balance0ETH = await ethers.provider.getBalance(
+            work_quest_owner.address
+        )
+        
+        const tx = await ethers.provider.getBalance(referral_contract.address)
+        console.log("value", tx.toString())
+        await referral_contract.connect(employer).claim()
     })
 
     async function impersonate(account) {

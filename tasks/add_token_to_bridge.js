@@ -23,7 +23,7 @@ task("add_token_to_bridge", "Add token settings to bridge")
         let native = false;
         let token_addr = process.env[`${args.symbol}_TOKEN`];
         let lockable = true;
-        // if (!args.lockable) { lockable = false; }
+        if (!args.lockable) { lockable = false; }
         if (args.symbol == process.env.NATIVE_COIN) {
             native = true;
             token_addr = "0x0000000000000000000000000000000000000000";

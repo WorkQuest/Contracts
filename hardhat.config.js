@@ -8,7 +8,8 @@ require('@openzeppelin/hardhat-upgrades')
 require('./tasks')
 require('./tasks/mint_tokens')
 require('./tasks/get_token_balance')
-require('./tasks/referral_set_factory')
+require( './tasks/referral_set_factory' )
+require('./tasks/token_settings_on_bridge')
 require('dotenv').config()
 const BigNumber = require('bignumber.js')
 BigNumber.config({ EXPONENTIAL_AT: 60 })
@@ -92,13 +93,13 @@ module.exports = {
         //     accounts: { mnemonic: mnemonic },
         //     chainId: 2009,
         // },
-        // bsctestnet: {
-        //     url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
-        //     chainId: 97,
-        //     gas: 'auto',
-        //     gasPrice: 10000000000,
-        //     accounts: { mnemonic: mnemonic },
-        // },
+        bsctestnet: {
+            url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
+            chainId: 97,
+            gas: 'auto',
+            gasPrice: 10000000000,
+            accounts: { mnemonic: mnemonic },
+        },
         // bscmainnet: {
         //     url: `https://bsc-dataseed1.binance.org/`,
         //     chainId: 56,
