@@ -1,8 +1,13 @@
-task( 'mint_tokens', 'Mint tokens to the owner' )
-    .setAction( async function (args, hre) {  
+task('mint_tokens', 'Mint tokens to the owner').setAction(async function (
+    args,
+    hre
+) {
     require('dotenv').config()
+    const Mwei = (value) => ethers.utils.parseUnits(value, 6)
     const [owner] = await web3.eth.getAccounts()
-    const AMOUNT = '1000000'
+    // const AMOUNT = Mwei( '1000000000000' )
+    const AMOUNT = hre.ethers.utils.parseEther('100000')
+    
     console.log('my account address is: ', owner)
     const network = hre.network.name
     const fs = require('fs')
@@ -15,10 +20,13 @@ task( 'mint_tokens', 'Mint tokens to the owner' )
 
     const bridge_token = await hre.ethers.getContractAt(
         'WQBridgeToken',
-        process.env.USDT_TOKEN
+        process.env.BNB_TOKEN
     )
 
-    const mintTx = await bridge_token.mint(owner, AMOUNT)
+    const mintTx = await bridge_token.mint(
+        '0xcC620a762753925FaF4745859b37576f174d9A21',
+        AMOUNT
+    )
     await mintTx.wait()
-    console.log((await bridge_token.balanceOf(owner)).toString())
+    console.log((await bridge_token.balanceOf(owner)).toString()) 
 })

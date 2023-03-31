@@ -24,9 +24,11 @@ const chainIds = {
     ropsten: 3,
 }
 
-// const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
-// const PRIVATE_KEY = process.env.PRIVATE_KEY;
-// const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const BSC_API_KEY = process.env.BSC_API_KEY
+
  
 let mnemonic
 if (!process.env.MNEMONIC) {
@@ -73,11 +75,11 @@ module.exports = {
         dev: {
             url: 'http://127.0.0.1:8545/',
         },
-        // goerli: {
-        //   url: GOERLI_RPC_URL,
-        //   accounts: [PRIVATE_KEY],
-        //   chainId: 5,
-        // },
+        goerli: {
+            url: GOERLI_RPC_URL,
+            accounts: [PRIVATE_KEY],
+            chainId: 5,
+        },
         // wqdevnet: {
         //     url: 'https://dev-node-fra1.workquest.co/',
         //     accounts: { mnemonic: mnemonic },
@@ -121,8 +123,8 @@ module.exports = {
         //     gasPrice: 60000000000,
         //     accounts: { mnemonic: mnemonic },
         // },
-        goerli: createNetworkConfig('goerli'),
-        // mainnet: createNetworkConfig('mainnet')
+        // goerli: createNetworkConfig('goerli'),
+        // mainnet: createNetworkConfig('mainnet'),
     },
     paths: {
         artifacts: './artifacts',
@@ -153,7 +155,7 @@ module.exports = {
         ],
     },
     etherscan: {
-        apiKey: explorerApiKey,
+        apiKey: BSC_API_KEY,
     },
     mocha: {
         timeout: 20000,

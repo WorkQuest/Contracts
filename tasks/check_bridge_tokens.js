@@ -19,7 +19,7 @@ task('check_bridge_tokens', 'Check token settings in bridge').setAction(
             'WQBridge',
             process.env.BRIDGE
         )
-        let token_symbols = ['ETH', 'BNB', 'WQT', 'USDT']
+        let token_symbols = ['ETH', 'BNB', 'WQT', 'USDT', 'USDC']
 
         console.log(
             '                    token                    ',
@@ -37,5 +37,6 @@ task('check_bridge_tokens', 'Check token settings in bridge').setAction(
                 token_info.lockable
             )
         }
+        
     }
 )

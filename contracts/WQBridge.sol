@@ -172,15 +172,15 @@ contract WQBridge is
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
-        // HACK: fix binance tokens decimals
+
         if (
             tokens[symbol].token == tokens['USDT'].token ||
             tokens[symbol].token == tokens['USDC'].token
         ) {
-            if (chainTo == 3) amount *= 10**12;
+            if (chainTo == 3) amount *= 1e12;
             if (chainId == 3) {
                 require(amount >= 1e12, 'WorkQuest Bridge: Invalid amount');
-                amount /= 10**12;
+                amount /= 1e12;
             }
         }
 

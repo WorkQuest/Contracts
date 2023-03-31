@@ -6,9 +6,10 @@ const stringify = require('dotenv-stringify')
 async function main() {
     dotenv.config()
     const [owner] = await web3.eth.getAccounts()
-    console.log('my account address is: ', owner)
-    const AMOUNT = hre.ethers.utils.parseEther('1000000')
-
+    console.log( 'my account address is: ', owner )
+    const Mwei = (value) => ethers.utils.parseUnits(value, 6)
+    const AMOUNT = hre.ethers.utils.parseEther('10000000')
+    // const AMOUNT = Mwei("1000000")
     const network = hre.network.name
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
     for (const k in envConfig) {

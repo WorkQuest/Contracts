@@ -131,7 +131,7 @@ contract WQBridgeStable is
                 chainId,
                 chainTo,
                 userId,
-                symbol
+                symbol 
             )
         );
         require(!swaps[message], 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');

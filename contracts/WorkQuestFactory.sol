@@ -40,6 +40,9 @@ contract WorkQuestFactory is
     /// @notice address of referral
     address payable public referral;
 
+    /// @notice Address of usdc token
+    IERC20Upgradeable public usdc;
+
     /// @notice Address of usdt token
     IERC20Upgradeable public usdt;
 
@@ -77,7 +80,7 @@ contract WorkQuestFactory is
         address payable _feeReceiver,
         address payable _pensionFund,
         address payable _referral,
-        address _usdt
+        address _usdc
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -92,7 +95,7 @@ contract WorkQuestFactory is
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
         referral = _referral;
-        usdt = IERC20Upgradeable(_usdt);
+        usdc = IERC20Upgradeable(_usdc);
     }
 
     function _authorizeUpgrade(
@@ -136,8 +139,8 @@ contract WorkQuestFactory is
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
         uint256 comission = (cost * feeEmployer) / 1e6;
-        usdt.safeTransferFrom(msg.sender, workquest, cost);
-        usdt.safeTransferFrom(msg.sender, feeReceiver, comission);
+        usdc.safeTransferFrom(msg.sender, workquest, cost);
+        usdc.safeTransferFrom(msg.sender, feeReceiver, comission);
         emit WorkQuestCreated(
             jobHash,
             msg.sender,
@@ -178,11 +181,11 @@ contract WorkQuestFactory is
     }
 
     /**
-     * @notice Set address of USDT token
-     * @param _usdt  Address of pension fund contract
+     * @notice Set address of usdc token
+     * @param _usdc  Address of pension fund contract
      */
-    function setUsdt(address _usdt) external onlyRole(ADMIN_ROLE) {
-        usdt = IERC20Upgradeable(_usdt);
+    function setUsdc(address _usdc) external onlyRole(ADMIN_ROLE) {
+        usdc = IERC20Upgradeable(_usdc);
     }
 
     /**
