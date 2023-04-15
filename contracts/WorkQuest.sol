@@ -27,6 +27,7 @@ contract WorkQuest {
         Arbitration,
         Finished
     }
+    
 
     /// @notice Address of quest factory
     WorkQuestFactoryInterface public immutable factory;
@@ -46,6 +47,8 @@ contract WorkQuest {
     uint256 public deadline;
     /// @notice Done timestamp of job
     uint256 public timeDone;
+    /// @notice Ticker
+    string public symbol;
 
     /// @notice Event emitted when job created
     event WorkQuestCreated(bytes32 jobHash);
@@ -95,11 +98,13 @@ contract WorkQuest {
     constructor(
         bytes32 _jobHash,
         uint256 _cost,
+        string memory _symbol,
         uint256 _deadline,
         address _employer
     ) {
         jobHash = _jobHash;
         cost = _cost;
+        symbol = _symbol;
         deadline = _deadline;
         employer = _employer;
         factory = WorkQuestFactoryInterface(msg.sender);
@@ -117,6 +122,7 @@ contract WorkQuest {
         returns (
             bytes32 _jobHash,
             uint256 _cost,
+            string memory _symbol,
             address _employer,
             address _worker,
             address _factory,
@@ -127,6 +133,7 @@ contract WorkQuest {
         return (
             jobHash,
             cost,
+            symbol,
             employer,
             worker,
             address(factory),

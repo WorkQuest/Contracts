@@ -16,9 +16,9 @@ task('get_token_balance', 'Get token balance').setAction(async function (
         process.env[k] = envConfig[k]
     }
 
-    const referral = await hre.ethers.getContractAt(
-        'WQReferral',
-        process.env.REFERRAL
+    const usdt = await hre.ethers.getContractAt(
+        'WQBridgeToken',
+        process.env.USDT_TOKEN
     )
 
     // const usdt = await ethers.getContractAt(
@@ -26,8 +26,8 @@ task('get_token_balance', 'Get token balance').setAction(async function (
     //     process.env.USDT_TOKEN
     // )
 
-    const poolBalance = await hre.ethers.provider.getBalance(referral.address)
-    console.log('balance is: ', poolBalance.toString())
+    const usdtDecimals = await usdt.decimals()
+    console.log('usdtDecimals is: ', usdtDecimals.toString())
 
     // const balanceUSDT = await hre.bridgePool.balanceOf(usdt.address)
     // console.log('USDT balance is: ', balanceUSDT.toString())

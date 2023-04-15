@@ -25,21 +25,29 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         //     process.env.BRIDGE_POOL
         // )
         // console.log(pool.address)
-        
+
         // await pool.grantRole(await pool.DEFAULT_ADMIN_ROLE(), args.user);
         // await pool.grantRole(await pool.ADMIN_ROLE(), args.user);
         // await pool.grantRole( await pool.UPGRADER_ROLE(), args.user );
         // await pool.grantRole(await pool.BRIDGE_ROLE(), args.user)
-        
-        // if (!process.env.BRIDGE) {
-        //     throw new Error(`Please set your BRIDGE in a .env-${network} file`);
-        // }
-        // console.log("Bridge");
-        // const bridge = await ethers.getContractAt("WQBridge", process.env.BRIDGE);
+
+        if (!process.env.BRIDGE) {
+            throw new Error(`Please set your BRIDGE in a .env-${network} file`)
+        }
+        console.log('Bridge')
+        const bridge = await ethers.getContractAt(
+            'WQBridge',
+            process.env.BRIDGE
+        )
         // await bridge.grantRole(await bridge.DEFAULT_ADMIN_ROLE(), args.user);
-        // await bridge.grantRole(await bridge.ADMIN_ROLE(), args.user);
+        // await bridge.revokeRole(await bridge.ADMIN_ROLE(), args.user)
         // await bridge.grantRole(await bridge.UPGRADER_ROLE(), args.user);
-        
+        // await bridge.grantRole(await bridge.ADMIN_ROLE(), args.user)
+        const roleMint = await bridge.hasRole(
+            await bridge.ADMIN_ROLE(),
+            args.user
+        )
+        console.log('roleMint', roleMint)
 
         // if (!process.env.WQT_TOKEN) {
         //     throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
@@ -63,22 +71,32 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // if (!process.env.BNB_TOKEN) {
         //     throw new Error(`Please set your BNB_TOKEN in a .env-${network} file`);
         // }
-        console.log("BNB Token");
-        const wbnb = await ethers.getContractAt("WQBridgeToken", process.env.BNB_TOKEN);
+        // console.log("BNB Token");
+        // const wbnb = await ethers.getContractAt("WQBridgeToken", process.env.BNB_TOKEN);
         // await wbnb.grantRole(await wbnb.DEFAULT_ADMIN_ROLE(), args.user);
         // await wbnb.grantRole(await wbnb.ADMIN_ROLE(), args.user);
         // await wbnb.grantRole( await wbnb.UPGRADER_ROLE(), args.user );
-        await wbnb.grantRole(await wbnb.BURNER_ROLE(), args.user)
+        // await wbnb.grantRole(await wbnb.BURNER_ROLE(), args.user)
 
         // if (!process.env.USDT_TOKEN) {
-        //     throw new Error(`Please set your USDT_TOKEN in a .env-${network} file`);
+        //     throw new Error(
+        //         `Please set your USDT_TOKEN in a .env-${network} file`
+        //     )
         // }
-        // console.log("USDT Token");
-        // const usdt = await ethers.getContractAt("WQBridgeToken", process.env.USDT_TOKEN);
+        // console.log('USDT Token')
+        // const usdt = await ethers.getContractAt(
+        //     'WQBridgeToken',
+        //     process.env.USDT_TOKEN
+        // )
         // await usdt.grantRole(await usdt.DEFAULT_ADMIN_ROLE(), args.user);
         // await usdt.grantRole(await usdt.ADMIN_ROLE(), args.user);
         // await usdt.grantRole(await usdt.UPGRADER_ROLE(), args.user);
         // await usdt.grantRole(await usdt.MINTER_ROLE(), args.user)
+        // await usdt.grantRole(await usdt.BURNER_ROLE(), args.user)
+        // const roleMint = await usdt.hasRole(await usdt.MINTER_ROLE(), args.user)
+        // const roleBurn = await usdt.hasRole(await usdt.BURNER_ROLE(), args.user)
+        // console.log('roleMint', roleMint)
+        // console.log('roleBurn', roleBurn)
 
         // if (!process.env.USDC_TOKEN) {
         //     throw new Error(`Please set your USDC_TOKEN in a .env-${network} file`);

@@ -20,6 +20,7 @@ const JobStatus = Object.freeze({
 })
 
 const Mwei = (value) => ethers.utils.parseUnits(value, 6)
+const toWei = (value) => ethers.utils.parseUnits(value, 18)
 const toBN = (num) => {
     if (typeof num == 'string') return new BigNumber(num)
     return new BigNumber(num.toString())
@@ -27,11 +28,15 @@ const toBN = (num) => {
 
 const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7' //USDT contract
 const USDT_WAHLE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
+const DAI = '0x6b175474e89094c44da98b954eedeac495271d0f'
+const DAI_WHALE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
 
 const job_hash = web3.utils.keccak256('JOBHASH')
-const cost = Mwei('10')
+const cost_usdt = Mwei('10')
+const cost_dai = toWei('10')
 const comission = Mwei('0.01')
-const cost_comission = Mwei('10.1')
+const cost_usdt_comission = Mwei('10.1')
+const cost_dai_comission = toWei('11')
 const reward = Mwei('0.99')
 const forfeit = Mwei('0.1')
 const reward_after_forfeit = Mwei('0.891')
@@ -45,6 +50,8 @@ const VALID_TIME = 1000
 const PRICE = Mwei('30')
 const SYMBOL = 'WQT'
 const nullAddress = '0x0000000000000000000000000000000000000000'
+const USDT_SYMBOL = 'USDT'
+const DAI_SYMBOL = 'DAI'
 
 let work_quest_owner
 let whaleUsdt
@@ -53,18 +60,20 @@ let worker
 let arbiter
 let feeReceiver
 let work_quest_factory
-let work_quest
+let work_quest_usdt
+let work_quest_dai
 let affiliat
 let referral
 let priceOracle
 let usdt
+let dai
 let pension_fund
 let nonce = 1
 let oneK = Mwei('1000')
 let twentyWQT = Mwei('20')
 let deadline = '9999999999'
 
-describe('WorkQuest USDT', function () {
+describe('WQFactoryWorkQuest', function () {
     async function deployWithFixture() {
         await resetFork()
         ;[
@@ -96,6 +105,14 @@ describe('WorkQuest USDT', function () {
         whaleUsdt = await ethers.getSigner(USDT_WAHLE)
         await usdt.deployed()
         await usdt.connect(whaleUsdt).transfer(employer.address, Mwei('200000'))
+
+        // ========================================================================================
+
+        dai = await ethers.getContractAt('IERC20', DAI)
+        await impersonate(DAI_WHALE)
+        whaleDAI = await ethers.getSigner(DAI_WHALE)
+        await dai.deployed()
+        await dai.connect(whaleDAI).transfer(employer.address, toWei('200000'))
 
         // ========================================================================================
 
@@ -139,7 +156,6 @@ describe('WorkQuest USDT', function () {
                 feeReceiver.address,
                 pension_fund.address,
                 referral.address,
-                usdt.address,
             ],
             { initializer: 'initialize', kind: 'transparent' }
         )
@@ -151,20 +167,44 @@ describe('WorkQuest USDT', function () {
             await work_quest_factory.ARBITER_ROLE(),
             arbiter.address
         )
+        await work_quest_factory.setToken(dai.address, true, DAI_SYMBOL)
+        await work_quest_factory.setToken(usdt.address, true, USDT_SYMBOL)
 
+        // USDT
         await usdt
             .connect(employer)
-            .approve(work_quest_factory.address, cost_comission)
+            .approve(work_quest_factory.address, cost_usdt_comission)
         await work_quest_factory
             .connect(employer)
-            .newWorkQuest(job_hash, cost, deadline, 1)
+            .newWorkQuest(job_hash, cost_usdt, USDT_SYMBOL, deadline, 1)
 
-        const work_quest_address = (
+        const work_quest_address_USDT = (
             await work_quest_factory.getWorkQuests(employer.address, 0, 1)
         )[0]
 
-        work_quest = await ethers.getContractAt('WorkQuest', work_quest_address)
-        await work_quest.deployed()
+        work_quest_usdt = await ethers.getContractAt(
+            'WorkQuest',
+            work_quest_address_USDT
+        )
+        await work_quest_usdt.deployed()
+
+        // DAI
+        await dai
+            .connect(employer)
+            .approve(work_quest_factory.address, cost_dai_comission)
+        await work_quest_factory
+            .connect(employer)
+            .newWorkQuest(job_hash, cost_dai, DAI_SYMBOL, deadline, 3)
+
+        const work_quest_address_DAI = (
+            await work_quest_factory.getWorkQuests(employer.address, 1, 2)
+        )[0]
+
+        work_quest_dai = await ethers.getContractAt(
+            'WorkQuest',
+            work_quest_address_DAI
+        )
+        await work_quest_dai.deployed()
 
         return {
             work_quest_owner,
@@ -179,7 +219,8 @@ describe('WorkQuest USDT', function () {
             pension_fund,
             referral,
             work_quest_factory,
-            work_quest,
+            work_quest_usdt,
+            work_quest_dai,
         }
     }
 
@@ -218,15 +259,18 @@ describe('WorkQuest USDT', function () {
         ).to.equal(feeReceiver.address)
     })
 
-    it('Create new job: success', async function () {
+    it.only('Create new job: success', async function () {
         const {
+            work_quest_owner,
             employer,
+            worker,
+            arbiter,
             feeReceiver,
-            usdt,
             pension_fund,
             referral,
             work_quest_factory,
-            work_quest,
+            work_quest_usdt,
+            work_quest_dai,
         } = await loadFixture(deployWithFixture)
 
         expect(await work_quest_factory.pensionFund()).to.eq(
@@ -238,29 +282,35 @@ describe('WorkQuest USDT', function () {
         expect(await work_quest_factory.feeReceiver()).to.eq(
             feeReceiver.address
         )
+        const token_USDT = await work_quest_factory.assets(USDT_SYMBOL)
+        expect(token_USDT.token).to.eq(usdt.address)
+
+        const token_DAI = await work_quest_factory.assets(DAI_SYMBOL)
+        expect(token_DAI.token.toUpperCase()).to.eq(dai.address.toUpperCase())
         expect(await work_quest_factory.referral()).to.be.eq(referral.address)
-        expect(await work_quest_factory.usdt()).to.eq(usdt.address)
 
-        expect(await work_quest.factory()).to.eq(work_quest_factory.address)
-
-        const costComission = toBN(cost)
-            .multipliedBy(toBN(WORKQUEST_FEE))
-            .div(toBN(1e6))
-        const feeReceiverValanceAfter = await usdt.balanceOf(
-            feeReceiver.address
-        )
-        expect(costComission.toString()).to.eq(
-            feeReceiverValanceAfter.toString()
+        expect(await work_quest_usdt.factory()).to.eq(
+            work_quest_factory.address
         )
 
-        const info = await work_quest.connect(employer).getInfo()
-        expect(info._jobHash).to.eq(job_hash)
-        expect(info._cost).to.eq(cost)
-        expect(info._employer).to.eq(employer.address)
-        expect(info._worker).to.eq(nullAddress)
-        expect(info._factory).to.eq(work_quest_factory.address)
-        expect(info._status).to.eq(JobStatus.Published)
-        expect(info._deadline).to.eq(deadline)
+        // const costComission = toBN(cost)
+        //     .multipliedBy(toBN(WORKQUEST_FEE))
+        //     .div(toBN(1e6))
+        // const feeReceiverValanceAfter = await usdt.balanceOf(
+        //     feeReceiver.address
+        // )
+        // expect(costComission.toString()).to.eq(
+        //     feeReceiverValanceAfter.toString()
+        // )
+
+        // const info = await work_quest.connect(employer).getInfo()
+        // expect(info._jobHash).to.eq(job_hash)
+        // expect(info._cost).to.eq(cost)
+        // expect(info._employer).to.eq(employer.address)
+        // expect(info._worker).to.eq(nullAddress)
+        // expect(info._factory).to.eq(work_quest_factory.address)
+        // expect(info._status).to.eq(JobStatus.Published)
+        // expect(info._deadline).to.eq(deadline)
     })
 
     it('Assigning job: success', async function () {

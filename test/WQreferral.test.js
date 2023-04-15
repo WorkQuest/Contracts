@@ -1,29 +1,35 @@
 const { expect } = require('chai')
 const { ethers, web3 } = require('hardhat')
 require('@nomiclabs/hardhat-waffle')
-const { parseEther, commify } = require('ethers/lib/utils')
+const { parseEther } = require('ethers/lib/utils')
 const BigNumber = require('bignumber.js')
 BigNumber.config({ EXPONENTIAL_AT: 60 })
-
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers')
 
+const Mwei = (value) => ethers.utils.parseUnits(value, 6)
+const toWei = (value) => ethers.utils.parseUnits(value, 18)
+const toBN = (num) => {
+    if (typeof num == 'string') return new BigNumber(num)
+    return new BigNumber(num.toString())
+}
+
+const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7' //USDT contract
+const USDT_WAHLE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
+const ETH_WAHLE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
+
 const job_hash = web3.utils.keccak256('JOBHASH')
-const cost = parseEther('100')
-const comission = parseEther('0.01')
-const cost_comission = parseEther('102')
-const reward = parseEther('0.99')
-const forfeit = parseEther('0.1')
-const reward_after_forfeit = parseEther('0.891')
-const acces_denied_err = 'WorkQuest: Access denied or invalid status'
-const EMPLOYER_FEE = parseEther('0.012')
-const WORKER_FEE = parseEther('0.01')
-const TX_FEE = parseEther('0.011')
+const cost = Mwei('100')
+const comission = Mwei('0.01')
+const cost_comission = Mwei('102')
+const EMPLOYER_FEE = Mwei('0.012')
+const WORKER_FEE = Mwei('0.01')
+const TX_FEE = Mwei('0.011')
 const PENSION_LOCK_TIME = 60
-const PENSION_DEFAULT_FEE = parseEther('0.01')
-const PENSION_FEE_PER_MONTH = parseEther('0.0012')
-const PENSION_FEE_WITHDRAW = parseEther('0.005')
+const PENSION_DEFAULT_FEE = Mwei('0.01')
+const PENSION_FEE_PER_MONTH = Mwei('0.0012')
+const PENSION_FEE_WITHDRAW = Mwei('0.005')
 const VALID_TIME = 1000
-const PRICE = parseEther('30')
+const PRICE = Mwei('30')
 const SYMBOL = 'WQT'
 const nullAddress = '0x0000000000000000000000000000000000000000'
 
@@ -37,6 +43,9 @@ const JobStatus = Object.freeze({
     Finished: 6,
 })
 
+let whaleUsdt
+let usdt
+let wqt
 let deadline = '9999999999'
 let nonce = 1
 let work_quest_owner
@@ -50,19 +59,14 @@ let work_quest
 let affiliat
 let referral_contract
 let priceOracle
-let wusd_stablecoin
 let pension_fund
-let oneK = parseEther('1000')
-const twentyWQT = parseEther('20')
+let oneK = toWei('1000')
+let twoK = toWei('2000')
+const twentyWQT = toWei('20')
 
-const toWei = (value) => utils.parseUnits(value, 18)
-const toBN = (num) => {
-    if (typeof num == 'string') return new BigNumber(num)
-    return new BigNumber(num.toString())
-}
-
-describe('WQreferral', function () {
+describe('WQreferral USDT', function () {
     async function deployWithFixture() {
+        await resetFork()
         ;[
             work_quest_owner,
             employer,
@@ -87,31 +91,33 @@ describe('WQreferral', function () {
 
         // ========================================================================================
 
+        usdt = await ethers.getContractAt('IERC20', USDT)
+        await impersonate(USDT_WAHLE)
+        whaleUsdt = await ethers.getSigner( USDT_WAHLE )
+        await impersonate(ETH_WAHLE)
+        whaleEth = await ethers.getSigner(ETH_WAHLE)
+        await usdt.deployed()
+        await usdt.connect(whaleUsdt).transfer(employer.address, Mwei('200000'))
+
+        // ========================================================================================
+
         const BridgeToken = await ethers.getContractFactory('WQBridgeToken')
-        wusd_stablecoin = await upgrades.deployProxy(
+        wqt = await upgrades.deployProxy(
             BridgeToken,
-            ['WUSD stablecoin', 'WUSD', 18],
+            ['WQT stablecoin', 'WQT', 18],
             { kind: 'transparent' }
         )
 
-        await wusd_stablecoin.deployed()
-        await wusd_stablecoin.grantRole(
-            await wusd_stablecoin.MINTER_ROLE(),
-            work_quest_owner.address
-        )
-        await wusd_stablecoin.mint(employer.address, oneK)
+        await wqt.deployed()
+        await wqt.grantRole(await wqt.MINTER_ROLE(), work_quest_owner.address)
+        await wqt.mint(employer.address, twoK)
 
         // ========================================================================================
 
         const WQReferralContract = await ethers.getContractFactory('WQReferral')
         referral_contract = await upgrades.deployProxy(
             WQReferralContract,
-            [
-                priceOracle.address,
-                service.address,
-                twentyWQT,
-                parseEther('1000'),
-            ],
+            [priceOracle.address, service.address, twentyWQT, oneK],
             { kind: 'transparent' }
         )
 
@@ -129,7 +135,7 @@ describe('WQreferral', function () {
             [
                 PENSION_LOCK_TIME,
                 PENSION_DEFAULT_FEE,
-                wusd_stablecoin.address,
+                usdt.address,
                 feeReceiver.address,
                 PENSION_FEE_PER_MONTH,
                 PENSION_FEE_WITHDRAW,
@@ -152,7 +158,7 @@ describe('WQreferral', function () {
                 feeReceiver.address,
                 pension_fund.address,
                 referral_contract.address,
-                wusd_stablecoin.address,
+                usdt.address,
             ],
             { initializer: 'initialize', kind: 'transparent' }
         )
@@ -165,7 +171,7 @@ describe('WQreferral', function () {
             arbiter.address
         )
 
-        await wusd_stablecoin
+        await usdt
             .connect(employer)
             .approve(work_quest_factory.address, cost_comission)
 
@@ -177,7 +183,6 @@ describe('WQreferral', function () {
         )[0]
 
         work_quest = await ethers.getContractAt('WorkQuest', work_quest_address)
-        await work_quest.deployed()
 
         return {
             work_quest_owner,
@@ -188,23 +193,20 @@ describe('WQreferral', function () {
             affiliat,
             service,
             priceOracle,
-            wusd_stablecoin,
+            usdt,
             work_quest,
             referral_contract,
+            pension_fund,
         }
     }
 
     it('add referral', async function () {
         const {
-            work_quest_owner,
             employer,
             worker,
-            arbiter,
-            feeReceiver,
             service,
             priceOracle,
-            wusd_stablecoin,
-            work_quest,
+            usdt,
             referral_contract,
         } = await loadFixture(deployWithFixture)
 
@@ -238,43 +240,29 @@ describe('WQreferral', function () {
             affiliat,
             service,
             priceOracle,
-            wusd_stablecoin,
+            usdt,
             work_quest,
             referral_contract,
         } = await loadFixture(deployWithFixture)
 
         const info = await work_quest.connect(employer).getInfo()
-        expect(info[5]).to.eq(JobStatus.Published)
+        expect(info._status).to.eq(JobStatus.Published)
 
         const workquest_valid = await work_quest_factory.workquestValid(
             work_quest.address
         )
         expect(workquest_valid).to.eq(true)
 
-        const balanceWQ = await wusd_stablecoin.balanceOf(work_quest.address)
+        const balanceWQ = await usdt.balanceOf(work_quest.address)
         expect(balanceWQ.toString()).to.eq(cost.toString())
 
-        const comission = (cost * EMPLOYER_FEE) / 1e18
-        const feeReceiverBalance = await wusd_stablecoin.balanceOf(
-            feeReceiver.address
-        )
+        const comission = (cost * EMPLOYER_FEE) / 1e6
+        const feeReceiverBalance = await usdt.balanceOf(feeReceiver.address)
         expect(feeReceiverBalance.toString()).to.eq(comission.toString())
     })
 
     it('should be status Published: success', async function () {
-        const {
-            work_quest_owner,
-            employer,
-            worker,
-            arbiter,
-            feeReceiver,
-            affiliat,
-            service,
-            priceOracle,
-            wusd_stablecoin,
-            work_quest,
-            referral_contract,
-        } = await loadFixture(deployWithFixture)
+        const { employer, work_quest } = await loadFixture(deployWithFixture)
 
         const info = await work_quest.connect(employer).getInfo()
         expect(info._jobHash).to.eq(job_hash)
@@ -287,19 +275,9 @@ describe('WQreferral', function () {
     })
 
     it('assigning to WorkQuest: success', async function () {
-        const {
-            work_quest_owner,
-            employer,
-            worker,
-            arbiter,
-            feeReceiver,
-            affiliat,
-            service,
-            priceOracle,
-            wusd_stablecoin,
-            work_quest,
-            referral_contract,
-        } = await loadFixture(deployWithFixture)
+        const { employer, worker, work_quest } = await loadFixture(
+            deployWithFixture
+        )
 
         await work_quest.connect(employer).assignJob(worker.address)
         const info = await work_quest.connect(employer).getInfo()
@@ -313,19 +291,9 @@ describe('WQreferral', function () {
     })
 
     it('should be able to acceptJob WorkQuest: success', async function () {
-        const {
-            work_quest_owner,
-            employer,
-            worker,
-            arbiter,
-            feeReceiver,
-            affiliat,
-            service,
-            priceOracle,
-            wusd_stablecoin,
-            work_quest,
-            referral_contract,
-        } = await loadFixture(deployWithFixture)
+        const { employer, worker, work_quest } = await loadFixture(
+            deployWithFixture
+        )
 
         await work_quest.connect(employer).assignJob(worker.address)
         await work_quest.connect(worker).acceptJob()
@@ -379,60 +347,37 @@ describe('WQreferral', function () {
             wusd_stablecoin,
             work_quest,
             referral_contract,
+            pension_fund,
         } = await loadFixture(deployWithFixture)
 
-        const comission_transferFunds = (cost * WORKER_FEE) / 1e18 // 1000000000000000000
-        const feeReceiverBalanceBefore = await wusd_stablecoin.balanceOf(
-            feeReceiver.address
-        ) // 1200000000000000000
-
-        const info = await await work_quest.connect(employer).getInfo()
-        expect(info._jobHash).to.eq(job_hash)
-        expect(info._cost).to.eq(cost)
-        expect(info._employer).to.eq(employer.address)
-        expect(info._worker).to.eq(nullAddress)
-        expect(info._factory).to.eq(work_quest_factory.address)
-        expect(info._status).to.eq(JobStatus.Published)
+        const balanceWorkerBefore = await usdt.balanceOf(worker.address)
 
         await work_quest.connect(employer).assignJob(worker.address)
         await work_quest.connect(worker).acceptJob()
         await work_quest.connect(worker).verificationJob()
         await work_quest.connect(employer).acceptJobResult()
 
-        const verifyQuest = await await work_quest.connect(employer).getInfo()
-        expect(verifyQuest._jobHash).to.eq(job_hash)
-        expect(verifyQuest._cost).to.eq(cost)
-        expect(verifyQuest._employer).to.eq(employer.address)
-        expect(verifyQuest._worker).to.eq(worker.address)
-        expect(verifyQuest._factory).to.eq(work_quest_factory.address)
-        expect(verifyQuest._status).to.eq(JobStatus.Finished)
-
-        const workerBalanceAfter = await wusd_stablecoin
-            .connect(worker)
-            .balanceOf(worker.address)
-        expect(workerBalanceAfter.toString()).to.eq(
-            (cost - comission_transferFunds).toString()
-        )
-
-        const feeReceiverBalanceAfter = await wusd_stablecoin.balanceOf(
-            feeReceiver.address
-        )
-        expect(feeReceiverBalanceAfter - feeReceiverBalanceBefore).to.eq(
-            comission_transferFunds
-        )
-        const pensionContribute = (cost * PENSION_DEFAULT_FEE) / 1e18 // 1
+        const pensionFee = await pension_fund.getFee(worker.address)
+        const comission = toBN(cost)
+            .multipliedBy(toBN(WORKER_FEE))
+            .div(toBN(1e6))
+        const pensionContribute = toBN(cost)
+            .multipliedBy(toBN(pensionFee))
+            .div(toBN(1e6))
+        const newCost = toBN(cost)
+            .minus(toBN(comission))
+            .minus(toBN(pensionContribute))
+        const newBalance = toBN(balanceWorkerBefore).plus(toBN(newCost))
+        const balanceWorkerAfter = await usdt.balanceOf(worker.address)
+        expect(balanceWorkerAfter.toString()).to.eq(newBalance.toString())
     })
 
     it('calculate referral', async function () {
         const {
-            work_quest_owner,
             employer,
             worker,
-            arbiter,
-            feeReceiver,
             service,
-            priceOracle,
-            wusd_stablecoin,
+            usdt,
             work_quest,
             referral_contract,
         } = await loadFixture(deployWithFixture)
@@ -459,7 +404,7 @@ describe('WQreferral', function () {
         await work_quest.connect(employer).assignJob(worker.address)
         await work_quest.connect(worker).acceptJob()
         await work_quest.connect(worker).verificationJob()
-        await work_quest.connect(employeparr).acceptJobResult()
+        await work_quest.connect(employer).acceptJobResult()
 
         const referralInfoWorker = await referral_contract
             .connect(worker)
@@ -475,6 +420,149 @@ describe('WQreferral', function () {
         expect(verifyQuest._factory).to.eq(work_quest_factory.address)
         expect(verifyQuest._status).to.eq(JobStatus.Finished)
     })
+
+    it('calculate referral: referralBonus', async function () {
+        const {
+            work_quest_owner,
+            employer,
+            worker,
+            service,
+            usdt,
+            work_quest,
+            referral_contract,
+        } = await loadFixture(deployWithFixture)
+
+        const newEarnedThreshold = toWei('99')
+        await referral_contract.setEarnedThreshold(newEarnedThreshold)
+        const role = await referral_contract.hasRole(
+            await referral_contract.SERVICE_ROLE(),
+            service.address
+        )
+        expect(role).to.eq(true)
+
+        const message = web3.utils.soliditySha3(
+            { t: 'address', v: employer.address },
+            { t: 'address', v: [worker.address] }
+        )
+
+        const signature = await web3.eth.sign(message, service.address)
+        const sig = ethers.utils.splitSignature(signature)
+        await referral_contract
+            .connect(employer)
+            .addReferrals(sig.v, sig.r, sig.s, [worker.address])
+        const referralInfo = await referral_contract.referrals(worker.address)
+        expect(referralInfo.affiliat).to.eq(employer.address)
+
+        await work_quest.connect(employer).assignJob(worker.address)
+        await work_quest.connect(worker).acceptJob()
+        await work_quest.connect(worker).verificationJob()
+        await work_quest.connect(employer).acceptJobResult()
+
+        const referralInfoWorker = await referral_contract
+            .connect(worker)
+            .referrals(worker.address)
+        expect(referralInfoWorker.affiliat).to.eq(employer.address)
+        expect(referralInfoWorker.earnedAmount).to.eq(cost)
+        expect(referralInfoWorker.paid).to.eq(true)
+
+        const referralInfoEmployee = await referral_contract
+            .connect(employer)
+            .referrals(employer.address)
+        expect(referralInfoEmployee.rewardTotal).to.eq(twentyWQT.toString())
+        expect(referralInfoEmployee.referredCount).to.eq(1)
+
+        const verifyQuest = await await work_quest.connect(employer).getInfo()
+        expect(verifyQuest._jobHash).to.eq(job_hash)
+        expect(verifyQuest._cost).to.eq(cost)
+        expect(verifyQuest._employer).to.eq(employer.address)
+        expect(verifyQuest._worker).to.eq(worker.address)
+        expect(verifyQuest._factory).to.eq(work_quest_factory.address)
+        expect(verifyQuest._status).to.eq(JobStatus.Finished)
+    })
+
+    it.only('should be able to claim()', async function () {
+        const {
+            work_quest_owner,
+            employer,
+            worker,
+            service,
+            usdt,
+            work_quest,
+            referral_contract,
+        } = await loadFixture(deployWithFixture)
+        await wqt.mint( referral_contract.address, twoK )
+        await whaleEth.sendTransaction({
+            to: referral_contract.address,
+            value: '8842815932975',
+        })
+        const newEarnedThreshold = toWei('99')
+        await referral_contract.setEarnedThreshold(newEarnedThreshold)
+        const role = await referral_contract.hasRole(
+            await referral_contract.SERVICE_ROLE(),
+            service.address
+        )
+        expect(role).to.eq(true)
+
+        const message = web3.utils.soliditySha3(
+            { t: 'address', v: employer.address },
+            { t: 'address', v: [worker.address] }
+        )
+
+        const signature = await web3.eth.sign(message, service.address)
+        const sig = ethers.utils.splitSignature(signature)
+        await referral_contract
+            .connect(employer)
+            .addReferrals(sig.v, sig.r, sig.s, [worker.address])
+        const referralInfo = await referral_contract.referrals(worker.address)
+        expect(referralInfo.affiliat).to.eq(employer.address)
+
+        await work_quest.connect(employer).assignJob(worker.address)
+        await work_quest.connect(worker).acceptJob()
+        await work_quest.connect(worker).verificationJob()
+        await work_quest.connect(employer).acceptJobResult()
+
+        const referralInfoWorker = await referral_contract
+            .connect(worker)
+            .referrals(worker.address)
+        expect(referralInfoWorker.affiliat).to.eq(employer.address)
+        expect(referralInfoWorker.earnedAmount).to.eq(cost)
+        expect(referralInfoWorker.paid).to.eq(true)
+
+        const referralInfoEmployee = await referral_contract
+            .connect(employer)
+            .referrals(employer.address)
+        expect(referralInfoEmployee.rewardTotal).to.eq(twentyWQT.toString())
+        expect(referralInfoEmployee.referredCount).to.eq(1)
+
+        const balance0ETH = await ethers.provider.getBalance(
+            work_quest_owner.address
+        )
+        
+        const tx = await ethers.provider.getBalance(referral_contract.address)
+        console.log("value", tx.toString())
+        await referral_contract.connect(employer).claim()
+    })
+
+    async function impersonate(account) {
+        await hre.network.provider.request({
+            method: 'hardhat_impersonateAccount',
+            params: [account],
+        })
+    }
+
+    async function resetFork() {
+        await hre.network.provider.request({
+            method: 'hardhat_reset',
+            params: [
+                {
+                    forking: {
+                        jsonRpcUrl: `https://mainnet.infura.io/v3/1d1afdfaea454548a5fed4a5030eca65`,
+                        blockNumber: 15048152,
+                    },
+                },
+            ],
+        })
+    }
 
     async function oracleSetPrice(price, symbol) {
         nonce += 1

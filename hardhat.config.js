@@ -72,9 +72,9 @@ module.exports = {
                 // interval: 5000
             },
         },
-        dev: {
-            url: 'http://127.0.0.1:8545/',
-        },
+        // dev: {
+        //     url: 'http://127.0.0.1:8545/',
+        // },
         goerli: {
             url: GOERLI_RPC_URL,
             accounts: [PRIVATE_KEY],
@@ -90,11 +90,11 @@ module.exports = {
             accounts: { mnemonic: mnemonic },
             chainId: 1991,
         },
-        // wqmainnet: {
-        //     url: 'https://mainnet-gate.workquest.co/',
-        //     accounts: { mnemonic: mnemonic },
-        //     chainId: 2009,
-        // },
+        wqmainnet: {
+            url: 'https://mainnet-gate.workquest.co/',
+            accounts: { mnemonic: mnemonic },
+            chainId: 2009,
+        },
         bsctestnet: {
             url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
             chainId: 97,
@@ -102,13 +102,13 @@ module.exports = {
             gasPrice: 10000000000,
             accounts: { mnemonic: mnemonic },
         },
-        // bscmainnet: {
-        //     url: `https://bsc-dataseed1.binance.org/`,
-        //     chainId: 56,
-        //     gas: 'auto',
-        //     gasPrice: 5000000000,
-        //     accounts: { mnemonic: mnemonic },
-        // },
+        bscmainnet: {
+            url: `https://bsc-dataseed1.binance.org/`,
+            chainId: 56,
+            gas: 'auto',
+            gasPrice: 5000000000,
+            accounts: { mnemonic: mnemonic },
+        },
         // mumbai: {
         //     url: `https://rpc-mumbai.maticvigil.com/`,
         //     chainId: 80001,

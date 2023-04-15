@@ -8,7 +8,6 @@ import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import './WorkQuest.sol';
-import 'hardhat/console.sol';
 
 contract WorkQuestFactory is
     Initializable,
@@ -26,6 +25,11 @@ contract WorkQuestFactory is
         bool status;
     }
 
+    struct TokenSettings {
+        IERC20Upgradeable token;
+        bool enabled;
+    }
+
     /// @notice Fee amount
     uint256 public feeEmployer;
     uint256 public feeWorker;
@@ -40,17 +44,14 @@ contract WorkQuestFactory is
     /// @notice address of referral
     address payable public referral;
 
-    /// @notice Address of usdc token
-    IERC20Upgradeable public usdc;
-
-    /// @notice Address of usdt token
-    IERC20Upgradeable public usdt;
-
     /// @notice Mapping of employer address to list of workquest addresses
     mapping(address => address[]) public workquests;
 
     /// @notice Mapping for checking contract existing
     mapping(address => bool) public workquestValid;
+
+    /// @notice Settings of tokens
+    mapping(string => TokenSettings) public assets;
 
     /**
      * @notice Event emited when new workquest contract created
@@ -79,8 +80,7 @@ contract WorkQuestFactory is
         uint256 _feeTx,
         address payable _feeReceiver,
         address payable _pensionFund,
-        address payable _referral,
-        address _usdc
+        address payable _referral
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -95,7 +95,6 @@ contract WorkQuestFactory is
         feeReceiver = _feeReceiver;
         pensionFund = _pensionFund;
         referral = _referral;
-        usdc = IERC20Upgradeable(_usdc);
     }
 
     function _authorizeUpgrade(
@@ -130,17 +129,36 @@ contract WorkQuestFactory is
     function newWorkQuest(
         bytes32 jobHash,
         uint256 cost,
+        string memory symbol,
         uint256 deadline,
         uint256 nonce
     ) external {
         address workquest = address(
-            new WorkQuest(jobHash, cost, deadline, msg.sender)
+            new WorkQuest(jobHash, cost, symbol, deadline, msg.sender)
         );
         workquests[msg.sender].push(workquest);
         workquestValid[workquest] = true;
-        uint256 comission = (cost * feeEmployer) / 1e6;
-        usdc.safeTransferFrom(msg.sender, workquest, cost);
-        usdc.safeTransferFrom(msg.sender, feeReceiver, comission);
+        uint256 comission;
+        if (
+            assets[symbol].token == assets['USDT'].token ||
+            assets[symbol].token == assets['USDC'].token
+        ) {
+            comission = (cost * feeEmployer) / 1e6;
+            assets[symbol].token.safeTransferFrom(msg.sender, workquest, cost);
+            assets[symbol].token.safeTransferFrom(
+                msg.sender,
+                feeReceiver,
+                comission
+            );
+        } else {
+            comission = (cost * feeEmployer) / 1e18;
+            assets[symbol].token.safeTransferFrom(msg.sender, workquest, cost);
+            assets[symbol].token.safeTransferFrom(
+                msg.sender,
+                feeReceiver,
+                comission
+            );
+        }
         emit WorkQuestCreated(
             jobHash,
             msg.sender,
@@ -181,14 +199,6 @@ contract WorkQuestFactory is
     }
 
     /**
-     * @notice Set address of usdc token
-     * @param _usdc  Address of pension fund contract
-     */
-    function setUsdc(address _usdc) external onlyRole(ADMIN_ROLE) {
-        usdc = IERC20Upgradeable(_usdc);
-    }
-
-    /**
      * @notice Set fee value for employer
      */
     function setFeeEmployer(uint256 _fee) external onlyRole(ADMIN_ROLE) {
@@ -201,5 +211,17 @@ contract WorkQuestFactory is
 
     function setFeeTx(uint256 _fee) external onlyRole(ADMIN_ROLE) {
         feeTx = _fee;
+    }
+
+    function setToken(
+        address _token,
+        bool _enabled,
+        string memory _symbol
+    ) public onlyRole(ADMIN_ROLE) {
+        require(
+            bytes(_symbol).length > 0,
+            'WorkQuest Factory: Symbol length must be greater than 0'
+        );
+        assets[_symbol] = TokenSettings(IERC20Upgradeable(_token), _enabled);
     }
 }

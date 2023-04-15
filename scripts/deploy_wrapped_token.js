@@ -57,12 +57,12 @@ async function main() {
     envConfig[`${process.env.BRIDGE_TOKEN_SYMBOL}_TOKEN`] = bridge_token.address
     fs.writeFileSync(`.env-${network}`, stringify(envConfig))
 
-    const minter_role = await bridge_token.MINTER_ROLE()
-    const tx = await bridge_token.grantRole(minter_role, owner)
-    await tx.wait()
-    const mintTx = await bridge_token.mint( owner, AMOUNT )
-    await mintTx.wait()
-    console.log((await bridge_token.balanceOf(owner)).toString())
+    // const minter_role = await bridge_token.MINTER_ROLE()
+    // const tx = await bridge_token.grantRole(minter_role, owner)
+    // await tx.wait()
+    // const mintTx = await bridge_token.mint( owner, AMOUNT )
+    // await mintTx.wait()
+    // console.log((await bridge_token.balanceOf(owner)).toString())
 }
 
 main()
