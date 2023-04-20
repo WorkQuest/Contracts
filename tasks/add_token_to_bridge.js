@@ -19,7 +19,9 @@ task("add_token_to_bridge", "Add token settings to bridge")
             throw new Error(`Please set your NATIVE_COIN in a .env-${network} file`);
         }
 
-        const bridge = await hre.ethers.getContractAt("WQBridge", process.env.BRIDGE);
+        const bridge = await hre.ethers.getContractAt( "WQBridge", process.env.BRIDGE );
+        // await bridge.pause()
+        // console.log('tx: ', await bridge.paused())
         let native = false;
         let token_addr = process.env[`${args.symbol}_TOKEN`];
         let lockable = false

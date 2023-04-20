@@ -66,10 +66,16 @@ function createNetworkConfig(network) {
 module.exports = {
     defaultNetwork: 'dev',
     networks: {
+        // hardhat: {
+        //     mining: {
+        //         auto: true,
+        //         // interval: 5000
+        //     },
+        // },
         hardhat: {
-            mining: {
-                auto: true,
-                // interval: 5000
+            forking: {
+                url: `https://mainnet.infura.io/v3/1d1afdfaea454548a5fed4a5030eca65`,
+                blockNumber: 15048152,
             },
         },
         // dev: {

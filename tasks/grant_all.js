@@ -31,33 +31,41 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // await pool.grantRole( await pool.UPGRADER_ROLE(), args.user );
         // await pool.grantRole(await pool.BRIDGE_ROLE(), args.user)
 
-        if (!process.env.BRIDGE) {
-            throw new Error(`Please set your BRIDGE in a .env-${network} file`)
-        }
-        console.log('Bridge')
-        const bridge = await ethers.getContractAt(
-            'WQBridge',
-            process.env.BRIDGE
-        )
+        // if (!process.env.BRIDGE) {
+        //     throw new Error(`Please set your BRIDGE in a .env-${network} file`)
+        // }
+        // console.log('Bridge')
+        // const bridge = await ethers.getContractAt(
+        //     'WQBridge',
+        //     process.env.BRIDGE
+        // )
         // await bridge.grantRole(await bridge.DEFAULT_ADMIN_ROLE(), args.user);
         // await bridge.revokeRole(await bridge.ADMIN_ROLE(), args.user)
         // await bridge.grantRole(await bridge.UPGRADER_ROLE(), args.user);
         // await bridge.grantRole(await bridge.ADMIN_ROLE(), args.user)
-        const roleMint = await bridge.hasRole(
-            await bridge.ADMIN_ROLE(),
-            args.user
-        )
-        console.log('roleMint', roleMint)
+        // const roleMint = await bridge.hasRole(
+        //     await bridge.ADMIN_ROLE(),
+        //     args.user
+        // )
+        // console.log('roleMint', roleMint)
 
-        // if (!process.env.WQT_TOKEN) {
-        //     throw new Error(`Please set your WQT_TOKEN in a .env-${network} file`);
-        // }
-        // console.log("WQT Token");
-        // const wqt = await ethers.getContractAt("WQBridgeToken", process.env.WQT_TOKEN);
+        if (!process.env.WQT_TOKEN) {
+            throw new Error(
+                `Please set your WQT_TOKEN in a .env-${network} file`
+            )
+        }
+        console.log('WQT Token')
+        const wqt = await ethers.getContractAt(
+            'WQBridgeToken',
+            process.env.WQT_TOKEN
+        )
         // await wqt.grantRole(await wqt.DEFAULT_ADMIN_ROLE(), args.user)
         // await wqt.grantRole(await wqt.ADMIN_ROLE(), args.user)
         // await wqt.grantRole(await wqt.UPGRADER_ROLE(), args.user)
         // await wqt.grantRole(await wqt.BURNER_ROLE(), args.user)
+        // await wqt.grantRole(await wqt.PAUSER_ROLE(), args.user)
+        // await wqt.grantRole(await wqt.MINTER_ROLE(), args.user)
+        // await wqt.revokeRole(await wqt.UPGRADER_ROLE(), args.user)
 
         // if (!process.env.ETH_TOKEN) {
         //     throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);

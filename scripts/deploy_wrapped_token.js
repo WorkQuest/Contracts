@@ -43,8 +43,8 @@ async function main() {
         ],
         {
             initializer: 'initialize',
-            gasPrice: '100',
-            gasLimit: '50000000',
+            // gasPrice: '100',
+            // gasLimit: '30000000',
             kind: 'uups',
         }
     )
@@ -63,6 +63,22 @@ async function main() {
     // const mintTx = await bridge_token.mint( owner, AMOUNT )
     // await mintTx.wait()
     // console.log((await bridge_token.balanceOf(owner)).toString())
+
+    const verify = async (bridge_token /*args*/) => {
+        console.log('Verifying contract...')
+        try {
+            await run('verify:verify', {
+                address: bridge_token,
+                /*constructorArguments: args*/
+            })
+        } catch (e) {
+            if (e.message.toLowerCase().includes('already verified')) {
+                console.log('Already Verified!')
+            } else {
+                console.log(e)
+            }
+        }
+    }
 }
 
 main()
