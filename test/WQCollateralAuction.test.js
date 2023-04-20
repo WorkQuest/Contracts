@@ -5,19 +5,19 @@ require('@nomiclabs/hardhat-waffle')
 const { parseEther } = require('ethers/lib/utils')
 const { time } = require('@nomicfoundation/hardhat-network-helpers')
 
-const STABILITY_FEE = parseEther('0.1') 
-const ANNUAL_INTEREST_RATE = parseEther('0.02') 
+const STABILITY_FEE = parseEther('0.1') //10%
+const ANNUAL_INTEREST_RATE = parseEther('0.02') //2%
 const VALID_TIME = 1000
 const SYMBOL = 'ETH'
 const SYMBOL_wETH = 'wETH'
-const ETH_PRICE = parseEther('30') 
+const ETH_PRICE = parseEther('30') // 1 wETH token = 30 WUSD
 const WQT_PRICE = parseEther('0.3')
 const UPPER_ETH_PRICE = parseEther('45')
 const LOWER_ETH_PRICE = parseEther('15')
-const LIQUIDATE_TRESHOLD = parseEther('1.4') 
+const LIQUIDATE_TRESHOLD = parseEther('1.4') // 140%
 const START_PRICE_FACTOR = parseEther('1.2')
-const COLLATERAL_AUCTION_DURATION = '300' 
-const PRICE_INDEX_STEP = parseEther('1') 
+const COLLATERAL_AUCTION_DURATION = '300' // 5 min
+const PRICE_INDEX_STEP = parseEther('1') // 1 WUSD
 const NULL_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ONE_ADDRESS = '0x0000000000000000000000000000000000000001'
 const ONE = '1'
@@ -178,10 +178,10 @@ describe('Collateral auction test', function () {
         const collateralRatio = parseEther('1.5')
 
         await weth.connect(alice).approve(router.address, parseEther('3'))
-        await oracleSetPrice(ETH_PRICE, SYMBOL_wETH) 
+        await oracleSetPrice(ETH_PRICE, SYMBOL_wETH) // 30
         await router
             .connect(alice)
-            .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) 
+            .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) // WUSD = collateralAmount * price(ETH_PRICE30) / collateralRatio = 20 (20000000000000000000)
 
         const lotIndex = (
             await router.getUserLots(alice.address, 0, 1, SYMBOL_wETH)
@@ -203,9 +203,9 @@ describe('Collateral auction test', function () {
         await oracleSetPrice(ETH_PRICE, SYMBOL_wETH)
         await router
             .connect(alice)
-            .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) 
+            .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) // 20
 
-        await oracleSetPrice(UPPER_ETH_PRICE, SYMBOL_wETH) 
+        await oracleSetPrice(UPPER_ETH_PRICE, SYMBOL_wETH) // 45
         await router.connect(alice).claimExtraDebt(0, SYMBOL_wETH)
 
         const lotIndex = (
@@ -287,7 +287,7 @@ describe('Collateral auction test', function () {
         const balanUserWUSD = await wusd_token.balanceOf(alice.address)
         expect(balanUserWUSD.toString()).to.eq(
             ((collateralAmount * ETH_PRICE) / collateralRatio).toString()
-        ) 
+        ) // WUSD = collateralAmount * price / collateralRatio = 20
 
         await wusd_token
             .connect(alice)
@@ -337,7 +337,7 @@ describe('Collateral auction test', function () {
             await weth.connect(alice).approve(router.address, collateralAmount)
             await router
                 .connect(alice)
-                .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) 
+                .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) // WUSD = collateralAmount * price / collateralRatio
 
             const aliceWethBalanceAfter = await weth
                 .connect(alice)
@@ -350,7 +350,7 @@ describe('Collateral auction test', function () {
             await oracleSetPrice(oraclePrice, SYMBOL_wETH)
             await wusd_token
                 .connect(alice)
-                .approve(router.address, parseEther('20')) 
+                .approve(router.address, parseEther('20')) // WUSD stablecoin
             await router.connect(alice).disposeDebt(0, SYMBOL_wETH)
 
             const lotIndex = (
@@ -382,7 +382,7 @@ describe('Collateral auction test', function () {
             await weth.connect(alice).approve(router.address, collateralAmount)
             await router
                 .connect(alice)
-                .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) 
+                .produceWUSD(collateralAmount, collateralRatio, SYMBOL_wETH) // WUSD = collateralAmount * price / collateralRatio
 
             const oraclePrice = parseEther('0.969999999999999999')
             await oracleSetPrice(oraclePrice, SYMBOL_wETH)

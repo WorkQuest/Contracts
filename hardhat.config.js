@@ -6,7 +6,11 @@ require('hardhat-docgen')
 require('@nomiclabs/hardhat-etherscan')
 require('@openzeppelin/hardhat-upgrades')
 require('./tasks')
-require( 'dotenv' ).config()
+require('./tasks/mint_tokens')
+require('./tasks/get_token_balance')
+require( './tasks/referral_set_factory' )
+require('./tasks/token_settings_on_bridge')
+require('dotenv').config()
 const BigNumber = require('bignumber.js')
 BigNumber.config({ EXPONENTIAL_AT: 60 })
 
@@ -20,16 +24,18 @@ const chainIds = {
     ropsten: 3,
 }
 
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const BSC_API_KEY = process.env.BSC_API_KEY
+
+ 
 let mnemonic
 if (!process.env.MNEMONIC) {
     throw new Error('Please set your MNEMONIC in a .env file')
 } else {
     mnemonic = process.env.MNEMONIC
 }
-
-// const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
-// const PRIVATE_KEY = process.env.PRIVATE_KEY;
-// const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
 let providerApiKey
 if (!process.env.PROVIDER_API_KEY) {
@@ -46,7 +52,7 @@ if (!process.env.EXPLORER_API_KEY) {
 }
 
 function createNetworkConfig(network) {
-    const url = `https://${network}.infura.io/v3/${providerApiKey}`;
+    const url = `https://${network}.infura.io/v3/${providerApiKey}`
     // const url = `https://speedy-nodes-nyc.moralis.io/${providerApiKey}/eth/${network}`;
     return {
         accounts: { mnemonic: mnemonic },
@@ -60,49 +66,55 @@ function createNetworkConfig(network) {
 module.exports = {
     defaultNetwork: 'dev',
     networks: {
+        // hardhat: {
+        //     mining: {
+        //         auto: true,
+        //         // interval: 5000
+        //     },
+        // },
         hardhat: {
-            mining: {
-                auto: true,
-                // interval: 5000
+            forking: {
+                url: `https://mainnet.infura.io/v3/1d1afdfaea454548a5fed4a5030eca65`,
+                blockNumber: 15048152,
             },
         },
-        dev: {
-            url: 'http://127.0.0.1:8545/',
-        },
-        // goerli: {
-        //   url: GOERLI_RPC_URL,
-        //   accounts: [PRIVATE_KEY],
-        //   chainId: 5,
+        // dev: {
+        //     url: 'http://127.0.0.1:8545/',
         // },
-        wqdevnet: {
-            url: 'https://dev-node-fra1.workquest.co/',
-            accounts: { mnemonic: mnemonic },
-            chainId: 20220112,
+        goerli: {
+            url: GOERLI_RPC_URL,
+            accounts: [PRIVATE_KEY],
+            chainId: 5,
         },
+        // wqdevnet: {
+        //     url: 'https://dev-node-fra1.workquest.co/',
+        //     accounts: { mnemonic: mnemonic },
+        //     chainId: 20220112,
+        // },
         wqtestnet: {
             url: 'https://testnet-gate.workquest.co/',
             accounts: { mnemonic: mnemonic },
             chainId: 1991,
         },
-        // wqmainnet: {
-        //     url: 'https://mainnet-gate.workquest.co/',
-        //     accounts: { mnemonic: mnemonic },
-        //     chainId: 2009,
-        // },
-        // bsctestnet: {
-        //     url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
-        //     chainId: 97,
-        //     gas: 'auto',
-        //     gasPrice: 10000000000,
-        //     accounts: { mnemonic: mnemonic },
-        // },
-        // bscmainnet: {
-        //     url: `https://bsc-dataseed1.binance.org/`,
-        //     chainId: 56,
-        //     gas: 'auto',
-        //     gasPrice: 5000000000,
-        //     accounts: { mnemonic: mnemonic },
-        // },
+        wqmainnet: {
+            url: 'https://mainnet-gate.workquest.co/',
+            accounts: { mnemonic: mnemonic },
+            chainId: 2009,
+        },
+        bsctestnet: {
+            url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
+            chainId: 97,
+            gas: 'auto',
+            gasPrice: 10000000000,
+            accounts: { mnemonic: mnemonic },
+        },
+        bscmainnet: {
+            url: `https://bsc-dataseed1.binance.org/`,
+            chainId: 56,
+            gas: 'auto',
+            gasPrice: 5000000000,
+            accounts: { mnemonic: mnemonic },
+        },
         // mumbai: {
         //     url: `https://rpc-mumbai.maticvigil.com/`,
         //     chainId: 80001,
@@ -117,9 +129,8 @@ module.exports = {
         //     gasPrice: 60000000000,
         //     accounts: { mnemonic: mnemonic },
         // },
-        goerli: createNetworkConfig('goerli'),
-        // mainnet: createNetworkConfig('mainnet')
-        
+        // goerli: createNetworkConfig('goerli'),
+        // mainnet: createNetworkConfig('mainnet'),
     },
     paths: {
         artifacts: './artifacts',
@@ -150,7 +161,7 @@ module.exports = {
         ],
     },
     etherscan: {
-        apiKey: explorerApiKey,
+        apiKey: BSC_API_KEY,
     },
     mocha: {
         timeout: 20000,

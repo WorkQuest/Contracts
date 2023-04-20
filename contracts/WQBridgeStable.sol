@@ -82,10 +82,10 @@ contract WQBridgeStable is
     /** @notice Bridge constructor
      * @param _chainId 1 - WorkQuest, 2 - Ethereum, 3 - Binance Smart Chain
      */
-    function initialize(uint256 _chainId, address payable _pool)
-        external
-        initializer
-    {
+    function initialize(
+        uint256 _chainId,
+        address payable _pool
+    ) external initializer {
         __AccessControl_init();
         __Pausable_init();
         __UUPSUpgradeable_init();
@@ -98,11 +98,9 @@ contract WQBridgeStable is
         pool = _pool;
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
-        onlyRole(UPGRADER_ROLE)
-    {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
 
     /**
      * @dev Creates new swap. Emits a {SwapInitialized} event.
@@ -133,7 +131,7 @@ contract WQBridgeStable is
                 chainId,
                 chainTo,
                 userId,
-                symbol
+                symbol 
             )
         );
         require(!swaps[message], 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
@@ -143,6 +141,7 @@ contract WQBridgeStable is
             pool,
             amount
         );
+
         emit SwapInitialized(
             block.timestamp,
             recipient,
@@ -160,10 +159,7 @@ contract WQBridgeStable is
      * @param _chainId Id of chain
      * @param enabled True - enabled, false - disabled direction
      */
-    function updateChain(uint256 _chainId, bool enabled)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function updateChain(uint256 _chainId, bool enabled) external onlyRole(ADMIN_ROLE) {
         chains[_chainId] = enabled;
     }
 
@@ -180,7 +176,7 @@ contract WQBridgeStable is
      * @notice Update token settings
      * @param token Address of token. Ignored in swap and redeem when native is true.
      * @param enabled True - enabled, false - disabled
-     * @param factor The token factor to 18 decimals
+     * @param factor The token factor to 18 decimals  1000000000000
      * @param minAmount Minimum amount of tokens
      * @param maxAmount Maximum amount of tokens
      * @param symbol Symbol of token
@@ -193,10 +189,7 @@ contract WQBridgeStable is
         uint256 maxAmount,
         string memory symbol
     ) public onlyRole(ADMIN_ROLE) {
-        require(
-            bytes(symbol).length > 0,
-            'WorkQuest Bridge: Symbol length must be greater than 0'
-        );
+        require(bytes(symbol).length > 0, 'WorkQuest Bridge: Symbol length must be greater than 0');
         tokens[symbol] = TokenSettings({
             minAmount: minAmount,
             maxAmount: maxAmount,

@@ -137,11 +137,9 @@ contract WQBridge is
         pool = _pool;
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
-        onlyRole(UPGRADER_ROLE)
-    {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
 
     /**
      * @dev Creates new swap. Emits a {SwapInitialized} event.
@@ -160,14 +158,19 @@ contract WQBridge is
     ) external payable whenNotPaused {
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
-        require(token.enabled, 'WorkQuest Bridge: This token not registered or disabled');
-
+        require(
+            token.enabled,
+            'WorkQuest Bridge: This token not registered or disabled'
+        );
         bytes32 message = keccak256(
             abi.encodePacked(nonce, amount, recipient, chainId, chainTo, symbol)
         );
-        require(swaps[message].state == State.Empty, 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
-
+        require(
+            swaps[message].state == State.Empty,
+            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
+        );
         swaps[message] = SwapData({nonce: nonce, state: State.Initialized});
+
         if (token.lockable) {
             IERC20Upgradeable(token.token).safeTransferFrom(
                 msg.sender,
@@ -175,20 +178,23 @@ contract WQBridge is
                 amount
             );
         } else if (token.native) {
-            require(msg.value == amount, 'WorkQuest Bridge: Amount value is not equal to transfered funds');
+            require(
+                msg.value == amount,
+                'WorkQuest Bridge: Amount value is not equal to transfered funds'
+            );
             pool.sendValue(amount);
         } else {
             WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
         }
-        // HACK: fix binance tokens decimals
+
         if (
             tokens[symbol].token == tokens['USDT'].token ||
             tokens[symbol].token == tokens['USDC'].token
         ) {
-            if (chainTo == 3) amount *= 10**12;
+            if (chainTo == 3) amount *= 1e12;
             if (chainId == 3) {
                 require(amount >= 1e12, 'WorkQuest Bridge: Invalid amount');
-                amount /= 10**12;
+                amount /= 1e12;
             }
         }
 
@@ -225,8 +231,14 @@ contract WQBridge is
         bytes32 s,
         string memory symbol
     ) external whenNotPaused {
-        require(chains[chainFrom], 'WorkQuest Bridge: chainFrom ID is not allowed');
-        require(tokens[symbol].enabled,'WorkQuest Bridge: This token not registered or disabled');
+        require(
+            chains[chainFrom],
+            'WorkQuest Bridge: chainFrom ID is not allowed'
+        );
+        require(
+            tokens[symbol].enabled,
+            'WorkQuest Bridge: This token not registered or disabled'
+        );
 
         bytes32 message = keccak256(
             abi.encodePacked(
@@ -238,8 +250,12 @@ contract WQBridge is
                 symbol
             )
         );
-        require(swaps[message].state == State.Empty, 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
-        require(hasRole(
+        require(
+            swaps[message].state == State.Empty,
+            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
+        );
+        require(
+            hasRole(
                 VALIDATOR_ROLE,
                 message.toEthSignedMessageHash().recover(v, r, s)
             ),
@@ -287,10 +303,10 @@ contract WQBridge is
      * @param _chainId Id of chain
      * @param enabled True - enabled, false - disabled direction
      */
-    function updateChain(uint256 _chainId, bool enabled)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function updateChain(
+        uint256 _chainId,
+        bool enabled
+    ) external onlyRole(ADMIN_ROLE) {
         chains[_chainId] = enabled;
     }
 
@@ -317,7 +333,10 @@ contract WQBridge is
         bool lockable,
         string memory symbol
     ) public onlyRole(ADMIN_ROLE) {
-        require(bytes(symbol).length > 0, 'WorkQuest Bridge: Symbol length must be greater than 0');
+        require(
+            bytes(symbol).length > 0,
+            'WorkQuest Bridge: Symbol length must be greater than 0'
+        );
         tokens[symbol] = TokenSettings({
             token: token,
             enabled: enabled,

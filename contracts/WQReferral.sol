@@ -10,7 +10,6 @@ import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.
 import './stablecoin/WQPriceOracleInterface.sol';
 import './WorkQuestFactory.sol';
 
-
 contract WQReferral is
     Initializable,
     AccessControlUpgradeable,
@@ -42,7 +41,7 @@ contract WQReferral is
         bool paid;
     }
 
-    /// @notice referral bonus amount in USD
+    /// @notice referral bonus amount in USDT
     uint256 public referralBonus;
     /// @notice address of price oracle
     WQPriceOracleInterface public oracle;
@@ -83,11 +82,9 @@ contract WQReferral is
         earnedThreshold = _earnedThreshold;
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
-        onlyRole(UPGRADER_ROLE)
-    {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
 
     receive() external payable {
         emit Received(msg.value);
@@ -102,15 +99,29 @@ contract WQReferral is
         bytes32 s,
         address[] calldata referral
     ) external {
-        require(hasRole(SERVICE_ROLE,
-                keccak256(abi.encodePacked(msg.sender, referral)).toEthSignedMessageHash().recover(v, r, s)),
+        require(
+            hasRole(
+                SERVICE_ROLE,
+                keccak256(abi.encodePacked(msg.sender, referral))
+                    .toEthSignedMessageHash()
+                    .recover(v, r, s)
+            ),
             'WQReferal: validator is not a service'
         );
 
         for (uint256 i = 0; i < referral.length; i++) {
-            require(referral[i] != address(0), 'WQReferral: affiliate cannot be zero address');
-            require(referral[i] != msg.sender, 'WQReferral: affiliate cannot be sender address');
-            require(referrals[referral[i]].affiliat == address(0), 'WQReferral: Address is already registered');
+            require(
+                referral[i] != address(0),
+                'WQReferral: affiliate cannot be zero address'
+            );
+            require(
+                referral[i] != msg.sender,
+                'WQReferral: affiliate cannot be sender address'
+            );
+            require(
+                referrals[referral[i]].affiliat == address(0),
+                'WQReferral: Address is already registered'
+            );
             referrals[referral[i]].affiliat = msg.sender;
             referrals[msg.sender].referredCount++;
             emit RegisteredAffiliat(referral[i], msg.sender);
@@ -120,19 +131,26 @@ contract WQReferral is
     /**
      * @dev calculate referal reward for affiliate at end of quest
      */
-    function calcReferral(address referral, uint256 earnedAmount)
-        external
-        nonReentrant
-    {
-        require(factory.workquestValid(msg.sender), 'WQReferal: Sender is not WorkQuest contract');
+    function calcReferral(
+        address referral,
+        uint256 earnedAmount
+    ) external nonReentrant {
+        require(
+            factory.workquestValid(msg.sender),
+            'WQReferal: Sender is not WorkQuest contract'
+        );
 
         Account storage userAccount = referrals[referral];
         if (userAccount.affiliat != address(0) && !userAccount.paid) {
             userAccount.earnedAmount += earnedAmount;
-            if (userAccount.earnedAmount >= earnedThreshold) {
+            if (((userAccount.earnedAmount) * 1e12) >= earnedThreshold) {
                 userAccount.paid = true;
                 referrals[userAccount.affiliat].rewardTotal += referralBonus;
-                emit PaidReferral(referral, userAccount.affiliat, referralBonus);
+                emit PaidReferral(
+                    referral,
+                    userAccount.affiliat,
+                    referralBonus
+                );
             }
         }
     }
@@ -183,10 +201,9 @@ contract WQReferral is
      * @dev Set reward value for each referral
      * @param _referralBonus Referral bonus value
      */
-    function setReferralBonus(uint256 _referralBonus)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function setReferralBonus(
+        uint256 _referralBonus
+    ) external onlyRole(ADMIN_ROLE) {
         referralBonus = _referralBonus;
     }
 
@@ -194,10 +211,9 @@ contract WQReferral is
      * @dev Set threshold of earned funds, when rewards payed
      * @param _earnedThreshold Threshold value
      */
-    function setEarnedThreshold(uint256 _earnedThreshold)
-        external
-        onlyRole(ADMIN_ROLE)
-    {
+    function setEarnedThreshold(
+        uint256 _earnedThreshold
+    ) external onlyRole(ADMIN_ROLE) {
         earnedThreshold = _earnedThreshold;
     }
 

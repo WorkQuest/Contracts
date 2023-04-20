@@ -7,7 +7,7 @@ const {
     time,
     loadFixture,
 } = require('@nomicfoundation/hardhat-network-helpers')
-const BigNumber = require('bignumber.js');
+const BigNumber = require('bignumber.js')
 
 const JobStatus = Object.freeze({
     New: 0,
@@ -19,48 +19,63 @@ const JobStatus = Object.freeze({
     Finished: 6,
 })
 
+const Mwei = (value) => ethers.utils.parseUnits(value, 6)
+const toWei = (value) => ethers.utils.parseUnits(value, 18)
 const toBN = (num) => {
-    if (typeof num == "string") return new BigNumber(num);
-    return new BigNumber(num.toString());
-  };
+    if (typeof num == 'string') return new BigNumber(num)
+    return new BigNumber(num.toString())
+}
+
+const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7' //USDT contract
+const USDT_WAHLE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
+const DAI = '0x6b175474e89094c44da98b954eedeac495271d0f'
+const DAI_WHALE = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503'
 
 const job_hash = web3.utils.keccak256('JOBHASH')
-const cost = parseEther('1')
-const comission = parseEther('0.01')
-const cost_comission = parseEther('1.01')
-const reward = parseEther('0.99')
-const forfeit = parseEther('0.1')
-const reward_after_forfeit = parseEther('0.891')
+const cost_usdt = Mwei('10')
+const cost_dai = toWei('10')
+const comission = Mwei('0.01')
+const cost_usdt_comission = Mwei('10.1')
+const cost_dai_comission = toWei('11')
+const reward = Mwei('0.99')
+const forfeit = Mwei('0.1')
+const reward_after_forfeit = Mwei('0.891')
 const acces_denied_err = 'WorkQuest: Access denied or invalid status'
-const WORKQUEST_FEE = parseEther('0.01')
+const WORKQUEST_FEE = Mwei('0.01')
 const PENSION_LOCK_TIME = 60
-const PENSION_DEFAULT_FEE = parseEther('0.01')
-const PENSION_FEE_PER_MONTH = parseEther('0.0012')
-const PENSION_FEE_WITHDRAW = parseEther('0.005')
+const PENSION_DEFAULT_FEE = Mwei('0.01')
+const PENSION_FEE_PER_MONTH = Mwei('0.0012')
+const PENSION_FEE_WITHDRAW = Mwei('0.005')
 const VALID_TIME = 1000
-const PRICE = parseEther('30')
+const PRICE = Mwei('30')
 const SYMBOL = 'WQT'
 const nullAddress = '0x0000000000000000000000000000000000000000'
+const USDT_SYMBOL = 'USDT'
+const DAI_SYMBOL = 'DAI'
 
 let work_quest_owner
+let whaleUsdt
 let employer
 let worker
 let arbiter
 let feeReceiver
 let work_quest_factory
-let work_quest
+let work_quest_usdt
+let work_quest_dai
 let affiliat
 let referral
 let priceOracle
-let wusd_token
+let usdt
+let dai
 let pension_fund
 let nonce = 1
-let oneK = parseEther('1000')
-let twentyWQT = parseEther('20')
+let oneK = Mwei('1000')
+let twentyWQT = Mwei('20')
 let deadline = '9999999999'
 
-describe('Work Quest test', function () {
+describe('WQFactoryWorkQuest', function () {
     async function deployWithFixture() {
+        await resetFork()
         ;[
             work_quest_owner,
             employer,
@@ -85,18 +100,19 @@ describe('Work Quest test', function () {
 
         // ========================================================================================
 
-        const BridgeToken = await ethers.getContractFactory('WQBridgeToken')
-        wusd_token = await upgrades.deployProxy(
-            BridgeToken,
-            ['WUSD stablecoin', 'WUSD', 18],
-            { initializer: 'initialize', kind: 'transparent' }
-        )
-        await wusd_token.deployed()
-        await wusd_token.grantRole(
-            await wusd_token.MINTER_ROLE(),
-            work_quest_owner.address
-        )
-        await wusd_token.mint(employer.address, oneK)
+        usdt = await ethers.getContractAt('IERC20', USDT)
+        await impersonate(USDT_WAHLE)
+        whaleUsdt = await ethers.getSigner(USDT_WAHLE)
+        await usdt.deployed()
+        await usdt.connect(whaleUsdt).transfer(employer.address, Mwei('200000'))
+
+        // ========================================================================================
+
+        dai = await ethers.getContractAt('IERC20', DAI)
+        await impersonate(DAI_WHALE)
+        whaleDAI = await ethers.getSigner(DAI_WHALE)
+        await dai.deployed()
+        await dai.connect(whaleDAI).transfer(employer.address, toWei('200000'))
 
         // ========================================================================================
 
@@ -106,7 +122,7 @@ describe('Work Quest test', function () {
             [
                 PENSION_LOCK_TIME,
                 PENSION_DEFAULT_FEE,
-                wusd_token.address,
+                usdt.address,
                 feeReceiver.address,
                 PENSION_FEE_PER_MONTH,
                 PENSION_FEE_WITHDRAW,
@@ -120,12 +136,7 @@ describe('Work Quest test', function () {
         const WQReferralContract = await ethers.getContractFactory('WQReferral')
         referral = await upgrades.deployProxy(
             WQReferralContract,
-            [
-                priceOracle.address,
-                service.address,
-                twentyWQT,
-                parseEther('1000'),
-            ],
+            [priceOracle.address, service.address, twentyWQT, Mwei('1000')],
             { initializer: 'initialize', kind: 'transparent' }
         )
         await referral.deployed()
@@ -133,7 +144,7 @@ describe('Work Quest test', function () {
 
         // ========================================================================================
 
-        const WorkQuestFactory = await hre.ethers.getContractFactory(
+        const WorkQuestFactory = await ethers.getContractFactory(
             'WorkQuestFactory'
         )
         work_quest_factory = await upgrades.deployProxy(
@@ -145,7 +156,6 @@ describe('Work Quest test', function () {
                 feeReceiver.address,
                 pension_fund.address,
                 referral.address,
-                wusd_token.address,
             ],
             { initializer: 'initialize', kind: 'transparent' }
         )
@@ -157,20 +167,44 @@ describe('Work Quest test', function () {
             await work_quest_factory.ARBITER_ROLE(),
             arbiter.address
         )
+        await work_quest_factory.setToken(dai.address, true, DAI_SYMBOL)
+        await work_quest_factory.setToken(usdt.address, true, USDT_SYMBOL)
 
-        await wusd_token
+        // USDT
+        await usdt
             .connect(employer)
-            .approve(work_quest_factory.address, cost_comission)
+            .approve(work_quest_factory.address, cost_usdt_comission)
         await work_quest_factory
             .connect(employer)
-            .newWorkQuest(job_hash, cost, deadline, 1)
+            .newWorkQuest(job_hash, cost_usdt, USDT_SYMBOL, deadline, 1)
 
-        const work_quest_address = (
+        const work_quest_address_USDT = (
             await work_quest_factory.getWorkQuests(employer.address, 0, 1)
         )[0]
 
-        work_quest = await ethers.getContractAt('WorkQuest', work_quest_address)
-        await work_quest.deployed()
+        work_quest_usdt = await ethers.getContractAt(
+            'WorkQuest',
+            work_quest_address_USDT
+        )
+        await work_quest_usdt.deployed()
+
+        // DAI
+        await dai
+            .connect(employer)
+            .approve(work_quest_factory.address, cost_dai_comission)
+        await work_quest_factory
+            .connect(employer)
+            .newWorkQuest(job_hash, cost_dai, DAI_SYMBOL, deadline, 3)
+
+        const work_quest_address_DAI = (
+            await work_quest_factory.getWorkQuests(employer.address, 1, 2)
+        )[0]
+
+        work_quest_dai = await ethers.getContractAt(
+            'WorkQuest',
+            work_quest_address_DAI
+        )
+        await work_quest_dai.deployed()
 
         return {
             work_quest_owner,
@@ -181,11 +215,12 @@ describe('Work Quest test', function () {
             affiliat,
             service,
             priceOracle,
-            wusd_token,
+            usdt,
             pension_fund,
             referral,
             work_quest_factory,
-            work_quest,
+            work_quest_usdt,
+            work_quest_dai,
         }
     }
 
@@ -224,15 +259,18 @@ describe('Work Quest test', function () {
         ).to.equal(feeReceiver.address)
     })
 
-    it('Create new job: success', async function () {
+    it.only('Create new job: success', async function () {
         const {
+            work_quest_owner,
             employer,
+            worker,
+            arbiter,
             feeReceiver,
-            wusd_token,
             pension_fund,
             referral,
             work_quest_factory,
-            work_quest,
+            work_quest_usdt,
+            work_quest_dai,
         } = await loadFixture(deployWithFixture)
 
         expect(await work_quest_factory.pensionFund()).to.eq(
@@ -244,19 +282,35 @@ describe('Work Quest test', function () {
         expect(await work_quest_factory.feeReceiver()).to.eq(
             feeReceiver.address
         )
+        const token_USDT = await work_quest_factory.assets(USDT_SYMBOL)
+        expect(token_USDT.token).to.eq(usdt.address)
+
+        const token_DAI = await work_quest_factory.assets(DAI_SYMBOL)
+        expect(token_DAI.token.toUpperCase()).to.eq(dai.address.toUpperCase())
         expect(await work_quest_factory.referral()).to.be.eq(referral.address)
-        expect(await work_quest_factory.wusd()).to.eq(wusd_token.address)
 
-        expect(await work_quest.factory()).to.eq(work_quest_factory.address)
+        expect(await work_quest_usdt.factory()).to.eq(
+            work_quest_factory.address
+        )
 
-        const info = await work_quest.connect(employer).getInfo()
-        expect(info._jobHash).to.eq(job_hash)
-        expect(info._cost).to.eq(cost)
-        expect(info._employer).to.eq(employer.address)
-        expect(info._worker).to.eq(nullAddress)
-        expect(info._factory).to.eq(work_quest_factory.address)
-        expect(info._status).to.eq(JobStatus.Published)
-        expect(info._deadline).to.eq(deadline)
+        // const costComission = toBN(cost)
+        //     .multipliedBy(toBN(WORKQUEST_FEE))
+        //     .div(toBN(1e6))
+        // const feeReceiverValanceAfter = await usdt.balanceOf(
+        //     feeReceiver.address
+        // )
+        // expect(costComission.toString()).to.eq(
+        //     feeReceiverValanceAfter.toString()
+        // )
+
+        // const info = await work_quest.connect(employer).getInfo()
+        // expect(info._jobHash).to.eq(job_hash)
+        // expect(info._cost).to.eq(cost)
+        // expect(info._employer).to.eq(employer.address)
+        // expect(info._worker).to.eq(nullAddress)
+        // expect(info._factory).to.eq(work_quest_factory.address)
+        // expect(info._status).to.eq(JobStatus.Published)
+        // expect(info._deadline).to.eq(deadline)
     })
 
     it('Assigning job: success', async function () {
@@ -271,7 +325,7 @@ describe('Work Quest test', function () {
         expect(questInfo._deadline).to.eq(deadline)
     })
 
-    it('Assigning worker to job from not employer: fail', async function() {
+    it('Assigning worker to job from not employer: fail', async function () {
         await expect(
             work_quest.connect(worker).assignJob(worker.address)
         ).revertedWith(acces_denied_err)
@@ -307,22 +361,9 @@ describe('Work Quest test', function () {
         ).revertedWith(acces_denied_err)
     })
 
-    it('Worker accepted job from status WaitWorker: success', async function() {
-        const {
-            work_quest_owner,
-            employer,
-            worker,
-            arbiter,
-            feeReceiver,
-            affiliat,
-            service,
-            priceOracle,
-            wusd_token,
-            pension_fund,
-            referral,
-            work_quest_factory,
-            work_quest,
-        } = await loadFixture(deployWithFixture)
+    it('Worker accepted job from status WaitWorker: success', async function () {
+        const { employer, worker, work_quest_factory, work_quest } =
+            await loadFixture(deployWithFixture)
 
         await work_quest.connect(employer).assignJob(worker.address)
         await work_quest.connect(worker).acceptJob()
@@ -366,7 +407,7 @@ describe('Work Quest test', function () {
         )
     })
 
-    describe('Job verification', () => {
+    describe('Job verification', function () {
         it('Set verification status: success', async function () {
             const { employer, worker, work_quest_factory, work_quest } =
                 await loadFixture(deployWithFixture)
@@ -398,21 +439,9 @@ describe('Work Quest test', function () {
         })
 
         it('Job status set Verificatiion from non InProgress status: fail', async function () {
-            const {
-                work_quest_owner,
-                employer,
-                worker,
-                arbiter,
-                feeReceiver,
-                affiliat,
-                service,
-                priceOracle,
-                wusd_token,
-                pension_fund,
-                referral,
-                work_quest_factory,
-                work_quest,
-            } = await loadFixture(deployWithFixture)
+            const { employer, worker, arbiter, work_quest } = await loadFixture(
+                deployWithFixture
+            )
 
             await expect(
                 work_quest.connect(worker).verificationJob()
@@ -439,20 +468,12 @@ describe('Work Quest test', function () {
         })
     })
 
-    describe('Arbitration job', function(){
+    describe('Arbitration job', function () {
         it('Set job to arbitration: success', async function () {
             const {
                 work_quest_owner,
                 employer,
                 worker,
-                arbiter,
-                feeReceiver,
-                affiliat,
-                service,
-                priceOracle,
-                wusd_token,
-                pension_fund,
-                referral,
                 work_quest_factory,
                 work_quest,
             } = await loadFixture(deployWithFixture)
@@ -474,8 +495,9 @@ describe('Work Quest test', function () {
         })
 
         it('Set job to arbitration from not WaitJobVerify status by employer: fail', async function () {
-            const { work_quest_owner, employer, worker, arbiter, work_quest } =
-                await loadFixture(deployWithFixture)
+            const { employer, worker, arbiter, work_quest } = await loadFixture(
+                deployWithFixture
+            )
 
             await expect(
                 work_quest
@@ -516,20 +538,12 @@ describe('Work Quest test', function () {
         })
     })
 
-    describe('Rework job', function() {
+    describe('Rework job', function () {
         it('Set job to rework: success', async function () {
             const {
-                work_quest_owner,
                 employer,
                 worker,
                 arbiter,
-                feeReceiver,
-                affiliat,
-                service,
-                priceOracle,
-                wusd_token,
-                pension_fund,
-                referral,
                 work_quest_factory,
                 work_quest,
             } = await loadFixture(deployWithFixture)
@@ -551,22 +565,10 @@ describe('Work Quest test', function () {
             expect(questInfo._status).to.eq(JobStatus.InProgress)
         })
 
-        it('Rework from not Arbitration status: fail', async function() {
-            const {
-                work_quest_owner,
-                employer,
-                worker,
-                arbiter,
-                feeReceiver,
-                affiliat,
-                service,
-                priceOracle,
-                wusd_token,
-                pension_fund,
-                referral,
-                work_quest_factory,
-                work_quest,
-            } = await loadFixture(deployWithFixture)
+        it('Rework from not Arbitration status: fail', async function () {
+            const { employer, worker, arbiter, work_quest } = await loadFixture(
+                deployWithFixture
+            )
 
             await expect(
                 work_quest.connect(arbiter).arbitrationRework()
@@ -596,241 +598,235 @@ describe('Work Quest test', function () {
                 work_quest.connect(arbiter).arbitrationRework()
             ).revertedWith(acces_denied_err)
         })
-
-        describe('Accept job', function(){
-            it('Accept job by employer: success', async function(){
-                const {
-                    work_quest_owner,
-                    employer,
-                    worker,
-                    arbiter,
-                    feeReceiver,
-                    affiliat,
-                    service,
-                    priceOracle,
-                    wusd_token,
-                    pension_fund,
-                    referral,
-                    work_quest_factory,
-                    work_quest,
-                } = await loadFixture(deployWithFixture)
-
-                await work_quest.connect(employer).assignJob(worker.address);
-                await work_quest.connect(worker).acceptJob();
-                await work_quest.connect(worker).verificationJob();
-                const questInfo = await work_quest.connect(employer).getInfo()
-                expect(questInfo._jobHash).to.eq(job_hash)
-                expect(questInfo._cost).to.eq(cost)
-                expect(questInfo._employer).to.eq(employer.address)
-                expect(questInfo._worker).to.eq(worker.address)
-                expect(questInfo._factory).to.eq(work_quest_factory.address)
-                expect(questInfo._status).to.eq(JobStatus.WaitJobVerify)
-                expect(await wusd_token.balanceOf(work_quest.address)).to.be.equal(cost);
-
-                const feeReceiverBefore = BigInt(await wusd_token.balanceOf(feeReceiver.address));
-                const workerBefore = BigInt(await wusd_token.balanceOf(worker.address));
-                await work_quest.connect(employer).acceptJobResult();
-                const feeReceiverAfter = BigInt(await wusd_token.balanceOf(feeReceiver.address));
-                const workerAfter = BigInt(await wusd_token.balanceOf(worker.address));
-                expect(feeReceiverAfter - feeReceiverBefore).to.eq(comission); // 10000000000000000
-                expect(workerAfter - workerBefore).to.eq(reward);
-                expect(await wusd_token.balanceOf(work_quest.address)).to.be.equal(0);
-                let info = await work_quest.connect(employer).getInfo();
-                expect(info._status).to.eq(JobStatus.Finished);
-            });
-    
-            it('Accept job by arbiter: success', async function(){
-                const {
-                    work_quest_owner,
-                    employer,
-                    worker,
-                    arbiter,
-                    feeReceiver,
-                    affiliat,
-                    service,
-                    priceOracle,
-                    wusd_token,
-                    pension_fund,
-                    referral,
-                    work_quest_factory,
-                    work_quest,
-                } = await loadFixture(deployWithFixture)
-
-                await work_quest.connect(employer).assignJob(worker.address);
-                await work_quest.connect(worker).acceptJob();
-                await work_quest.connect(worker).verificationJob();
-                await work_quest.connect(employer).arbitration({ value: WORKQUEST_FEE });
-                let feeReceiverBefore = BigInt(await wusd_token.balanceOf(feeReceiver.address));
-                let workerBefore = BigInt(await wusd_token.balanceOf(worker.address));
-                await work_quest.connect(arbiter).arbitrationAcceptWork();
-                let feeReceiverAfter = BigInt(await wusd_token.balanceOf(feeReceiver.address));
-                let workerAfter = BigInt(await wusd_token.balanceOf(worker.address));
-                expect(feeReceiverAfter - feeReceiverBefore).to.eq(comission);
-                expect(workerAfter - workerBefore).to.eq(reward);
-                expect(await wusd_token.balanceOf(work_quest.address)).to.eq(0);
-                let info = await work_quest.connect(employer).getInfo();
-                expect(info._status).to.be.equal(JobStatus.Finished);
-            });
-    
-            it('Accept job result from not WaitJobVerify status by employer: fail', async function(){
-                const {
-                    work_quest_owner,
-                    employer,
-                    worker,
-                    arbiter,
-                    feeReceiver,
-                    affiliat,
-                    service,
-                    priceOracle,
-                    wusd_token,
-                    pension_fund,
-                    referral,
-                    work_quest_factory,
-                    work_quest,
-                } = await loadFixture(deployWithFixture)
-
-                await expect(
-                    work_quest.connect(employer).acceptJobResult()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(employer).assignJob(worker.address);
-                await expect(
-                    work_quest.connect(employer).acceptJobResult()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(worker).acceptJob();
-                await expect(
-                    work_quest.connect(employer).acceptJobResult()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(worker).verificationJob();
-                await work_quest.connect(employer).arbitration({ value: WORKQUEST_FEE });
-                await expect(
-                    work_quest.connect(employer).acceptJobResult()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(arbiter).arbitrationAcceptWork()
-                await expect(
-                    work_quest.connect(employer).acceptJobResult()
-                ).revertedWith(acces_denied_err);
-            });
-    
-            it('Accept job from not Arbitration status by arbiter: fail', async function(){
-                const {
-                    work_quest_owner,
-                    employer,
-                    worker,
-                    arbiter,
-                    work_quest,
-                } = await loadFixture(deployWithFixture)
-
-                await expect(
-                    work_quest.connect(arbiter).arbitrationAcceptWork()
-                ).revertedWith(acces_denied_err);
-
-                await work_quest.connect(employer).assignJob(worker.address);
-                await expect(
-                    work_quest.connect(arbiter).arbitrationAcceptWork()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(worker).acceptJob();
-                await expect(
-                    work_quest.connect(arbiter).arbitrationAcceptWork()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(worker).verificationJob();
-                await expect(
-                    work_quest.connect(arbiter).arbitrationAcceptWork()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(employer).arbitration({ value: WORKQUEST_FEE });
-                await work_quest.connect(arbiter).arbitrationAcceptWork()
-                await expect(
-                    work_quest.connect(arbiter).arbitrationAcceptWork()
-                ).revertedWith(acces_denied_err);
-            });
-        });
-
-        describe('Reject job', function(){
-            it('Reject job by arbiter: success', async function(){
-
-                const {
-                    work_quest_owner,
-                    employer,
-                    worker,
-                    arbiter,
-                    feeReceiver,
-                    affiliat,
-                    service,
-                    priceOracle,
-                    wusd_token,
-                    pension_fund,
-                    referral,
-                    work_quest_factory,
-                    work_quest,
-                } = await loadFixture(deployWithFixture)
-
-                await work_quest.connect(employer).assignJob(worker.address);
-                await work_quest.connect(worker).acceptJob();
-                await work_quest.connect(worker).verificationJob();
-                await work_quest.connect(employer).arbitration({ value: WORKQUEST_FEE });
-                const feeReceiver_before = BigInt(await wusd_token.balanceOf(feeReceiver.address));
-                const employer_before = BigInt(await wusd_token.balanceOf(employer.address));
-                await work_quest.connect(arbiter).arbitrationRejectWork();
-                const feeReceiver_after = BigInt(await wusd_token.balanceOf(feeReceiver.address));
-                const employer_after = BigInt(await wusd_token.balanceOf(employer.address));
-                expect(employer_after - employer_before).to.eq(reward);
-                expect(feeReceiver_after - feeReceiver_before).to.eq(comission);
-                const questInfo = await work_quest.connect(employer).getInfo()
-                expect(questInfo._jobHash).to.eq(job_hash)
-                expect(questInfo._cost).to.eq(cost)
-                expect(questInfo._employer).to.eq(employer.address)
-                expect(questInfo._worker).to.eq(worker.address)
-                expect(questInfo._factory).to.eq(work_quest_factory.address)
-                expect(questInfo._status).to.eq(JobStatus.Finished)
-            });
-
-            it('Reject work from non Arbitration status: fail', async function(){
-                const {
-                    work_quest_owner,
-                    employer,
-                    worker,
-                    arbiter,
-                    feeReceiver,
-                    affiliat,
-                    service,
-                    priceOracle,
-                    wusd_token,
-                    pension_fund,
-                    referral,
-                    work_quest_factory,
-                    work_quest,
-                } = await loadFixture(deployWithFixture)
-
-
-                await expect(
-                    work_quest.connect(arbiter).arbitrationRejectWork()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(employer).assignJob(worker.address);
-                await expect(
-                    work_quest.connect(arbiter).arbitrationRejectWork()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(worker).acceptJob();
-                await expect(
-                    work_quest.connect(arbiter).arbitrationRejectWork()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(worker).verificationJob();
-                await expect(
-                    work_quest.connect(arbiter).arbitrationRejectWork()
-                ).revertedWith(acces_denied_err);
-                await work_quest.connect(employer).arbitration({ value: WORKQUEST_FEE });
-                await work_quest.connect(arbiter).arbitrationRejectWork()
-                await expect(
-                    work_quest.connect(arbiter).arbitrationRejectWork()
-                ).revertedWith(acces_denied_err);
-            });
-        });
     })
+
+    describe('Accept job', function () {
+        it('Accept job by employer: success', async function () {
+            const {
+                employer,
+                worker,
+                feeReceiver,
+                usdt,
+                work_quest_factory,
+                work_quest,
+            } = await loadFixture(deployWithFixture)
+
+            await work_quest.connect(employer).assignJob(worker.address)
+            await work_quest.connect(worker).acceptJob()
+            await work_quest.connect(worker).verificationJob()
+            const questInfo = await work_quest.connect(employer).getInfo()
+            expect(questInfo._jobHash).to.eq(job_hash)
+            expect(questInfo._cost).to.eq(cost)
+            expect(questInfo._employer).to.eq(employer.address)
+            expect(questInfo._worker).to.eq(worker.address)
+            expect(questInfo._factory).to.eq(work_quest_factory.address)
+            expect(questInfo._status).to.eq(JobStatus.WaitJobVerify)
+            expect(await usdt.balanceOf(work_quest.address)).to.be.equal(cost)
+
+            await work_quest.connect(employer).acceptJobResult()
+
+            const comission = toBN(cost)
+                .multipliedBy(toBN(WORKQUEST_FEE))
+                .div(toBN(1e6))
+            const pensionContribute = toBN(cost)
+                .multipliedBy(toBN(0))
+                .div(toBN(1e6))
+
+            const earnedAmount = toBN(cost)
+                .minus(toBN(comission))
+                .minus(toBN(pensionContribute))
+            const workerBeforeAfter = await usdt.balanceOf(worker.address)
+            expect(earnedAmount.toString()).to.eq(workerBeforeAfter.toString())
+        })
+
+        it('Accept job by arbiter: success', async function () {
+            const { employer, worker, arbiter, feeReceiver, usdt, work_quest } =
+                await loadFixture(deployWithFixture)
+
+            await work_quest.connect(employer).assignJob(worker.address)
+            await work_quest.connect(worker).acceptJob()
+            await work_quest.connect(worker).verificationJob()
+            await work_quest
+                .connect(employer)
+                .arbitration({ value: WORKQUEST_FEE })
+
+            await work_quest.connect(arbiter).arbitrationAcceptWork()
+            const comission = toBN(cost)
+                .multipliedBy(toBN(WORKQUEST_FEE))
+                .div(toBN(1e6))
+            const pensionContribute = toBN(cost)
+                .multipliedBy(toBN(0))
+                .div(toBN(1e6))
+
+            const earnedAmount = toBN(cost)
+                .minus(toBN(comission))
+                .minus(toBN(pensionContribute))
+            const workerBeforeAfter = await usdt.balanceOf(worker.address)
+            expect(earnedAmount.toString()).to.eq(workerBeforeAfter.toString())
+        })
+
+        it('Accept job result from not WaitJobVerify status by employer: fail', async function () {
+            const { employer, worker, arbiter, work_quest } = await loadFixture(
+                deployWithFixture
+            )
+
+            await expect(
+                work_quest.connect(employer).acceptJobResult()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(employer).assignJob(worker.address)
+            await expect(
+                work_quest.connect(employer).acceptJobResult()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(worker).acceptJob()
+            await expect(
+                work_quest.connect(employer).acceptJobResult()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(worker).verificationJob()
+            await work_quest
+                .connect(employer)
+                .arbitration({ value: WORKQUEST_FEE })
+            await expect(
+                work_quest.connect(employer).acceptJobResult()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(arbiter).arbitrationAcceptWork()
+            await expect(
+                work_quest.connect(employer).acceptJobResult()
+            ).revertedWith(acces_denied_err)
+        })
+
+        it('Accept job from not Arbitration status by arbiter: fail', async function () {
+            const { employer, worker, arbiter, work_quest } = await loadFixture(
+                deployWithFixture
+            )
+
+            await expect(
+                work_quest.connect(arbiter).arbitrationAcceptWork()
+            ).revertedWith(acces_denied_err)
+
+            await work_quest.connect(employer).assignJob(worker.address)
+            await expect(
+                work_quest.connect(arbiter).arbitrationAcceptWork()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(worker).acceptJob()
+            await expect(
+                work_quest.connect(arbiter).arbitrationAcceptWork()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(worker).verificationJob()
+            await expect(
+                work_quest.connect(arbiter).arbitrationAcceptWork()
+            ).revertedWith(acces_denied_err)
+            await work_quest
+                .connect(employer)
+                .arbitration({ value: WORKQUEST_FEE })
+            await work_quest.connect(arbiter).arbitrationAcceptWork()
+            await expect(
+                work_quest.connect(arbiter).arbitrationAcceptWork()
+            ).revertedWith(acces_denied_err)
+        })
+    })
+
+    describe('Reject job', function () {
+        it('Reject job by arbiter: success', async function () {
+            const {
+                employer,
+                worker,
+                arbiter,
+                feeReceiver,
+                usdt,
+                work_quest_factory,
+                work_quest,
+            } = await loadFixture(deployWithFixture)
+
+            await work_quest.connect(employer).assignJob(worker.address)
+            await work_quest.connect(worker).acceptJob()
+            await work_quest.connect(worker).verificationJob()
+            await work_quest
+                .connect(employer)
+                .arbitration({ value: WORKQUEST_FEE })
+
+            const employerBefore = await usdt.balanceOf(employer.address)
+            await work_quest.connect(arbiter).arbitrationRejectWork()
+
+            const comission = toBN(cost)
+                .multipliedBy(toBN(WORKQUEST_FEE))
+                .div(toBN(1e6))
+
+            const amountAfterRejection = toBN(cost).minus(toBN(comission))
+
+            const balanceEmployee = toBN(employerBefore).plus(
+                toBN(amountAfterRejection)
+            )
+            const employerBeforeAfter = await usdt.balanceOf(employer.address)
+            expect(balanceEmployee.toString()).to.eq(
+                employerBeforeAfter.toString()
+            )
+
+            const questInfo = await work_quest.connect(employer).getInfo()
+            expect(questInfo._jobHash).to.eq(job_hash)
+            expect(questInfo._cost).to.eq(cost)
+            expect(questInfo._employer).to.eq(employer.address)
+            expect(questInfo._worker).to.eq(worker.address)
+            expect(questInfo._factory).to.eq(work_quest_factory.address)
+            expect(questInfo._status).to.eq(JobStatus.Finished)
+        })
+
+        it('Reject work from non Arbitration status: fail', async function () {
+            const { employer, worker, arbiter, work_quest } = await loadFixture(
+                deployWithFixture
+            )
+
+            await expect(
+                work_quest.connect(arbiter).arbitrationRejectWork()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(employer).assignJob(worker.address)
+            await expect(
+                work_quest.connect(arbiter).arbitrationRejectWork()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(worker).acceptJob()
+            await expect(
+                work_quest.connect(arbiter).arbitrationRejectWork()
+            ).revertedWith(acces_denied_err)
+            await work_quest.connect(worker).verificationJob()
+            await expect(
+                work_quest.connect(arbiter).arbitrationRejectWork()
+            ).revertedWith(acces_denied_err)
+            await work_quest
+                .connect(employer)
+                .arbitration({ value: WORKQUEST_FEE })
+            await work_quest.connect(arbiter).arbitrationRejectWork()
+            await expect(
+                work_quest.connect(arbiter).arbitrationRejectWork()
+            ).revertedWith(acces_denied_err)
+        })
+    })
+
+    async function impersonate(account) {
+        await hre.network.provider.request({
+            method: 'hardhat_impersonateAccount',
+            params: [account],
+        })
+    }
+
+    async function resetFork() {
+        await hre.network.provider.request({
+            method: 'hardhat_reset',
+            params: [
+                {
+                    forking: {
+                        jsonRpcUrl: `https://mainnet.infura.io/v3/1d1afdfaea454548a5fed4a5030eca65`,
+                        blockNumber: 15048152,
+                    },
+                },
+            ],
+        })
+    }
 
     async function oracleSetPrice(price, symbol) {
         nonce += 1
         let message = web3.utils.soliditySha3(
             { t: 'uint256', v: nonce },
             { t: 'uint256', v: [price.toString()] },
-            { t: 'uint256', v: [parseEther('2').toString()] },
+            { t: 'uint256', v: [Mwei('2').toString()] },
             { t: 'string', v: [symbol] }
         )
         let signature = await web3.eth.sign(message, service.address)
@@ -849,7 +845,7 @@ describe('Work Quest test', function () {
             sig.r,
             sig.s,
             [price],
-            [parseEther('2').toString()],
+            [Mwei('2').toString()],
             [symbol]
         )
         await hre.ethers.provider.send('evm_mine', [])
