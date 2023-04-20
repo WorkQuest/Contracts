@@ -9,7 +9,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
-import './WQBridgeTokenInterface.sol';
+import './IWorkQuestToken.sol';
 import './WQBridgePool.sol';
 
 contract WQBridge is
@@ -184,7 +184,7 @@ contract WQBridge is
             );
             pool.sendValue(amount);
         } else {
-            WQBridgeTokenInterface(token.token).burn(msg.sender, amount);
+            IWorkQuestToken(token.token).burn(msg.sender, amount);
         }
 
         if (
@@ -272,10 +272,7 @@ contract WQBridge is
         } else if (tokens[symbol].native) {
             WQBridgePool(pool).transfer(recipient, amount, address(0));
         } else {
-            WQBridgeTokenInterface(tokens[symbol].token).mint(
-                recipient,
-                amount
-            );
+            IWorkQuestToken(tokens[symbol].token).mint(recipient, amount);
         }
 
         emit SwapRedeemed(

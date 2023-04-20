@@ -480,7 +480,7 @@ describe('WQreferral USDT', function () {
         expect(verifyQuest._status).to.eq(JobStatus.Finished)
     })
 
-    it.only('should be able to claim()', async function () {
+    it('should be able to claim()', async function () {
         const {
             work_quest_owner,
             employer,
