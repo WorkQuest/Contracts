@@ -9,7 +9,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
-import './WQBridgeTokenInterface.sol';
+import './IWorkQuestToken.sol';
 
 contract WQBridgeStable is
     Initializable,
@@ -121,8 +121,14 @@ contract WQBridgeStable is
         require(chainTo != chainId, 'WorkQuest Bridge: Invalid chainTo id');
         require(chains[chainTo], 'WorkQuest Bridge: ChainTo ID is not allowed');
         TokenSettings storage token = tokens[symbol];
-        require(token.enabled, 'WorkQuest Bridge: This token not registered or disabled');
-        require(amount >= token.minAmount && amount <= token.maxAmount, 'WorkQuest Bridge: Invalid amount');
+        require(
+            token.enabled,
+            'WorkQuest Bridge: This token not registered or disabled'
+        );
+        require(
+            amount >= token.minAmount && amount <= token.maxAmount,
+            'WorkQuest Bridge: Invalid amount'
+        );
         bytes32 message = keccak256(
             abi.encodePacked(
                 nonce,
@@ -131,10 +137,13 @@ contract WQBridgeStable is
                 chainId,
                 chainTo,
                 userId,
-                symbol 
+                symbol
             )
         );
-        require(!swaps[message], 'WorkQuest Bridge: Swap is not empty state or duplicate transaction');
+        require(
+            !swaps[message],
+            'WorkQuest Bridge: Swap is not empty state or duplicate transaction'
+        );
         swaps[message] = true;
         IERC20Upgradeable(token.token).safeTransferFrom(
             msg.sender,
@@ -159,7 +168,10 @@ contract WQBridgeStable is
      * @param _chainId Id of chain
      * @param enabled True - enabled, false - disabled direction
      */
-    function updateChain(uint256 _chainId, bool enabled) external onlyRole(ADMIN_ROLE) {
+    function updateChain(
+        uint256 _chainId,
+        bool enabled
+    ) external onlyRole(ADMIN_ROLE) {
         chains[_chainId] = enabled;
     }
 
@@ -189,7 +201,10 @@ contract WQBridgeStable is
         uint256 maxAmount,
         string memory symbol
     ) public onlyRole(ADMIN_ROLE) {
-        require(bytes(symbol).length > 0, 'WorkQuest Bridge: Symbol length must be greater than 0');
+        require(
+            bytes(symbol).length > 0,
+            'WorkQuest Bridge: Symbol length must be greater than 0'
+        );
         tokens[symbol] = TokenSettings({
             minAmount: minAmount,
             maxAmount: maxAmount,

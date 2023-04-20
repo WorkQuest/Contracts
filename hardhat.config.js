@@ -8,7 +8,7 @@ require('@openzeppelin/hardhat-upgrades')
 require('./tasks')
 require('./tasks/mint_tokens')
 require('./tasks/get_token_balance')
-require( './tasks/referral_set_factory' )
+require('./tasks/referral_set_factory')
 require('./tasks/token_settings_on_bridge')
 require('dotenv').config()
 const BigNumber = require('bignumber.js')
@@ -24,12 +24,11 @@ const chainIds = {
     ropsten: 3,
 }
 
-const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL
+const PRIVATE_KEY = process.env.PRIVATE_KEY
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 const BSC_API_KEY = process.env.BSC_API_KEY
 
- 
 let mnemonic
 if (!process.env.MNEMONIC) {
     throw new Error('Please set your MNEMONIC in a .env file')
@@ -78,9 +77,9 @@ module.exports = {
                 blockNumber: 15048152,
             },
         },
-        // dev: {
-        //     url: 'http://127.0.0.1:8545/',
-        // },
+        dev: {
+            url: 'http://127.0.0.1:8545/',
+        },
         goerli: {
             url: GOERLI_RPC_URL,
             accounts: [PRIVATE_KEY],

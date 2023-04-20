@@ -259,7 +259,7 @@ describe('WQFactoryWorkQuest', function () {
         ).to.equal(feeReceiver.address)
     })
 
-    it.only('Create new job: success', async function () {
+    it('Create new job: success', async function () {
         const {
             work_quest_owner,
             employer,
