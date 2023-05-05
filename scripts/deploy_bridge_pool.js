@@ -16,7 +16,10 @@ async function main() {
 
     const Pool = await hre.ethers.getContractFactory("WQBridgePool");
     console.log("Deploying...");
-    const pool = await upgrades.deployProxy(Pool, [], { initializer: 'initialize' });
+    const pool = await upgrades.deployProxy(Pool, [], {
+        initializer: 'initialize',
+        kind: 'uups',
+    })
     await pool.deployed();
     console.log("Bridge pool has been deployed to:", pool.address);
     envConfig["BRIDGE_POOL"] = pool.address;

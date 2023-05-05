@@ -29,7 +29,7 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // await pool.grantRole(await pool.DEFAULT_ADMIN_ROLE(), args.user);
         // await pool.grantRole(await pool.ADMIN_ROLE(), args.user);
         // await pool.grantRole( await pool.UPGRADER_ROLE(), args.user );
-        // await pool.grantRole(await pool.BRIDGE_ROLE(), args.user)
+        // await pool.grantRole( await pool.BRIDGE_ROLE(), args.user )
 
         // if (!process.env.BRIDGE) {
         //     throw new Error(`Please set your BRIDGE in a .env-${network} file`)
@@ -40,14 +40,11 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         //     process.env.BRIDGE
         // )
         // await bridge.grantRole(await bridge.DEFAULT_ADMIN_ROLE(), args.user);
-        // await bridge.revokeRole(await bridge.ADMIN_ROLE(), args.user)
-        // await bridge.grantRole(await bridge.UPGRADER_ROLE(), args.user);
         // await bridge.grantRole(await bridge.ADMIN_ROLE(), args.user)
-        // const roleMint = await bridge.hasRole(
-        //     await bridge.ADMIN_ROLE(),
-        //     args.user
-        // )
-        // console.log('roleMint', roleMint)
+        // await bridge.grantRole( await bridge.UPGRADER_ROLE(), args.user );
+        // await bridge.grantRole(await bridge.VALIDATOR_ROLE(), args.user)
+        //
+        // console.log('admin', roleMint)
 
         if (!process.env.WQT_TOKEN) {
             throw new Error(
@@ -56,16 +53,20 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         }
         console.log('WQT Token')
         const wqt = await ethers.getContractAt(
-            'WQBridgeToken',
+            'WorkQuestTokenV2',
             process.env.WQT_TOKEN
         )
+
+        // await wqt.unpause()
         // await wqt.grantRole(await wqt.DEFAULT_ADMIN_ROLE(), args.user)
         // await wqt.grantRole(await wqt.ADMIN_ROLE(), args.user)
         // await wqt.grantRole(await wqt.UPGRADER_ROLE(), args.user)
         // await wqt.grantRole(await wqt.BURNER_ROLE(), args.user)
         // await wqt.grantRole(await wqt.PAUSER_ROLE(), args.user)
         // await wqt.grantRole(await wqt.MINTER_ROLE(), args.user)
-        // await wqt.revokeRole(await wqt.UPGRADER_ROLE(), args.user)
+        // await wqt.revokeRole( await wqt.UPGRADER_ROLE(), args.user )
+        // const roleMint = await wqt.hasRole( await wqt.UPGRADER_ROLE(), args.user )
+        // console.log(roleMint)
 
         // if (!process.env.ETH_TOKEN) {
         //     throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
@@ -93,12 +94,12 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // }
         // console.log('USDT Token')
         // const usdt = await ethers.getContractAt(
-        //     'WQBridgeToken',
+        //     'WorkQuestToken',
         //     process.env.USDT_TOKEN
         // )
-        // await usdt.grantRole(await usdt.DEFAULT_ADMIN_ROLE(), args.user);
-        // await usdt.grantRole(await usdt.ADMIN_ROLE(), args.user);
-        // await usdt.grantRole(await usdt.UPGRADER_ROLE(), args.user);
+        // await usdt.grantRole(await usdt.DEFAULT_ADMIN_ROLE(), args.user)
+        // await usdt.grantRole(await usdt.ADMIN_ROLE(), args.user)
+        // await usdt.grantRole(await usdt.UPGRADER_ROLE(), args.user)
         // await usdt.grantRole(await usdt.MINTER_ROLE(), args.user)
         // await usdt.grantRole(await usdt.BURNER_ROLE(), args.user)
         // const roleMint = await usdt.hasRole(await usdt.MINTER_ROLE(), args.user)
@@ -107,13 +108,20 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // console.log('roleBurn', roleBurn)
 
         // if (!process.env.USDC_TOKEN) {
-        //     throw new Error(`Please set your USDC_TOKEN in a .env-${network} file`);
+        //     throw new Error(
+        //         `Please set your USDC_TOKEN in a .env-${network} file`
+        //     )
         // }
-        // console.log("USDC Token");
-        // const usdc = await ethers.getContractAt("WQBridgeToken", process.env.USDC_TOKEN);
-        // await usdc.grantRole(await usdc.DEFAULT_ADMIN_ROLE(), args.user);
-        // await usdc.grantRole(await usdc.ADMIN_ROLE(), args.user);
-        // await usdc.grantRole(await usdc.UPGRADER_ROLE(), args.user);
+        // console.log('USDC Token')
+        // const usdc = await ethers.getContractAt(
+        //     'WorkQuestToken',
+        //     process.env.USDC_TOKEN
+        // )
+        // await usdc.grantRole(await usdc.DEFAULT_ADMIN_ROLE(), args.user)
+        // await usdc.grantRole(await usdc.ADMIN_ROLE(), args.user)
+        // await usdc.grantRole(await usdc.UPGRADER_ROLE(), args.user)
+        // await usdc.grantRole(await usdc.MINTER_ROLE(), args.user)
+        // await usdc.grantRole(await usdc.BURNER_ROLE(), args.user)
 
         // if (!process.env.PRICE_ORACLE) {
         //     throw new Error(`Please set your PRICE_ORACLE in a .env-${network} file`);
