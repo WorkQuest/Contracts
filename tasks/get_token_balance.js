@@ -17,15 +17,15 @@ task('get_token_balance', 'Get token balance').setAction(async function (
     }
 
     const wqt = await hre.ethers.getContractAt(
-        'WQBridgeToken',
-        process.env.WQT_TOKEN // 0xe89508d74579a06a65b907c91f697cf4f8d9fac7 OLD WQT
+        'WorkQuestToken',
+        '0xe89508d74579a06a65b907c91f697cf4f8d9fac7' // 0xe89508d74579a06a65b907c91f697cf4f8d9fac7 OLD WQT
     )
     
     // await wqt.pause()
     // console.log('tx: ', await wqt.paused())
 
     const tx = await wqt.addBlockList(
-        '0x237d28e65f26b1a7c7821e63d3c1d9249f325929'
+        '0x3ea2de549ae9dcb7992f91227e8d6629a22c3b40'
     )
     // await wqt.addBlockList('0xb7cfc0ea9425ea703b9fdc72a6edd4b25c18fad3')
     // await wqt.addBlockList('0x55f92097553c09e1c29811d27b929b8a4f3e3257')

@@ -6,7 +6,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract WorkQuestToken is
+contract WorkQuestTokenV2 is
     Initializable,
     ERC20PausableUpgradeable,
     AccessControlUpgradeable,
@@ -29,29 +29,29 @@ contract WorkQuestToken is
     event AddedWhiteList(address user);
     event RemovedWhiteList(address user);
 
-    // @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    // // @custom:oz-upgrades-unsafe-allow constructor
+    // constructor() initializer {}
 
-    function initialize(
-        string memory name,
-        string memory symbol,
-        uint8 decimals_
-    ) external initializer {
-        __ERC20_init(name, symbol);
-        __ERC20Pausable_init();
-        __AccessControl_init();
-        __UUPSUpgradeable_init();
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(ADMIN_ROLE, msg.sender);
-        _setupRole(UPGRADER_ROLE, msg.sender);
-        _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(PAUSER_ROLE, ADMIN_ROLE);
+    // function initialize(
+    //     string memory name,
+    //     string memory symbol,
+    //     uint8 decimals_
+    // ) external initializer {
+    //     __ERC20_init(name, symbol);
+    //     __ERC20Pausable_init();
+    //     __AccessControl_init();
+    //     __UUPSUpgradeable_init();
+    //     _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    //     _setupRole(ADMIN_ROLE, msg.sender);
+    //     _setupRole(UPGRADER_ROLE, msg.sender);
+    //     _setRoleAdmin(UPGRADER_ROLE, ADMIN_ROLE);
+    //     _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
+    //     _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
+    //     _setRoleAdmin(PAUSER_ROLE, ADMIN_ROLE);
 
-        owner = msg.sender;
-        _decimals = decimals_;
-    }
+    //     owner = msg.sender;
+    //     _decimals = decimals_;
+    // }
 
     function _authorizeUpgrade(address newImplementation)
         internal
@@ -96,61 +96,61 @@ contract WorkQuestToken is
         _burn(from, amount);
     }
 
-    /**
-     * @dev Pause token
-     */
-    function pause() external onlyRole(PAUSER_ROLE) {
-        super._pause();
-    }
+    // /**
+    //  * @dev Pause token
+    //  */
+    // function pause() external onlyRole(PAUSER_ROLE) {
+    //     super._pause();
+    // }
 
-    /**
-     * @dev Pause token
-     */
-    function unpause() external onlyRole(PAUSER_ROLE) {
-        super._unpause();
-    }
+    // /**
+    //  * @dev Pause token
+    //  */
+    // function unpause() external onlyRole(PAUSER_ROLE) {
+    //     super._unpause();
+    // }
 
-    /**
-     * @dev Add user address to blocklist
-     *
-     * Requirements
-     *
-     * - `user` address of user.
-     */
-    function addBlockList(address user) external onlyRole(ADMIN_ROLE) {
-        isBlockListed[user] = true;
-        emit AddedBlockList(user);
-    }
+    // /**
+    //  * @dev Add user address to blocklist
+    //  *
+    //  * Requirements
+    //  *
+    //  * - `user` address of user.
+    //  */
+    // function addBlockList(address user) external onlyRole(ADMIN_ROLE) {
+    //     isBlockListed[user] = true;
+    //     emit AddedBlockList(user);
+    // }
 
-    /**
-     * @notice Remove user address from blocklist
-     * @param user address of user.
-     */
-    function removeBlockList(address user) external onlyRole(ADMIN_ROLE) {
-        isBlockListed[user] = false;
-        emit RemovedBlockList(user);
-    }
+    // /**
+    //  * @notice Remove user address from blocklist
+    //  * @param user address of user.
+    //  */
+    // function removeBlockList(address user) external onlyRole(ADMIN_ROLE) {
+    //     isBlockListed[user] = false;
+    //     emit RemovedBlockList(user);
+    // }
 
-    /**
-     * @dev Add user address to whitelist
-     *
-     * Requirements
-     *
-     * - `user` address of user.
-     */
-    function addWhiteList(address user) external onlyRole(ADMIN_ROLE) {
-        isWhiteListed[user] = true;
-        emit AddedWhiteList(user);
-    }
+    // /**
+    //  * @dev Add user address to whitelist
+    //  *
+    //  * Requirements
+    //  *
+    //  * - `user` address of user.
+    //  */
+    // function addWhiteList(address user) external onlyRole(ADMIN_ROLE) {
+    //     isWhiteListed[user] = true;
+    //     emit AddedWhiteList(user);
+    // }
 
-    /**
-     * @notice Remove user address from whitelist
-     * @param user address of user.
-     */
-    function removeWhiteList(address user) external onlyRole(ADMIN_ROLE) {
-        isWhiteListed[user] = false;
-        emit RemovedWhiteList(user);
-    }
+    // /**
+    //  * @notice Remove user address from whitelist
+    //  * @param user address of user.
+    //  */
+    // function removeWhiteList(address user) external onlyRole(ADMIN_ROLE) {
+    //     isWhiteListed[user] = false;
+    //     emit RemovedWhiteList(user);
+    // }
 
     /**
      * @notice Check blocklist when token minted, burned or transfered

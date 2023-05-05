@@ -42,7 +42,8 @@
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@openzeppelin/upgrades-core": "^1.9.0",
     "bech32-converting": "^1.0.8",
-    "coverage": "^0.4.1"
+    "coverage": "^0.4.1",
+    "csv-writer": "^1.6.0"
   },
   "main": "hardhat.config.js",
   "directories": {

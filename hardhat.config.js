@@ -65,21 +65,21 @@ function createNetworkConfig(network) {
 module.exports = {
     defaultNetwork: 'dev',
     networks: {
-        // hardhat: {
-        //     mining: {
-        //         auto: true,
-        //         // interval: 5000
-        //     },
-        // },
         hardhat: {
-            forking: {
-                url: `https://mainnet.infura.io/v3/1d1afdfaea454548a5fed4a5030eca65`,
-                blockNumber: 15048152,
+            mining: {
+                auto: true,
+                // interval: 5000
             },
         },
-        dev: {
-            url: 'http://127.0.0.1:8545/',
-        },
+        // hardhat: {
+        //     forking: {
+        //         url: `https://mainnet.infura.io/v3/1d1afdfaea454548a5fed4a5030eca65`,
+        //         blockNumber: 15048152,
+        //     },
+        // },
+        // dev: {
+        //     url: 'http://127.0.0.1:8545/',
+        // },
         goerli: {
             url: GOERLI_RPC_URL,
             accounts: [PRIVATE_KEY],
@@ -163,7 +163,7 @@ module.exports = {
         apiKey: BSC_API_KEY,
     },
     mocha: {
-        timeout: 20000,
+        timeout: 30000,
     },
     docgen: {
         path: './doc',
