@@ -63,7 +63,7 @@ describe('Borrowing test', function () {
 
         // ========================================================================================
 
-        const BridgeToken = await ethers.getContractFactory('WQBridgeToken')
+        const BridgeToken = await ethers.getContractFactory('WorkQuestToken')
         eth_token = await upgrades.deployProxy(
             BridgeToken,
             ['ETH WQ wrapped', SYMBOL_ETH, 18],

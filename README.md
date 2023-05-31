@@ -89,9 +89,77 @@ This contracts requires a deployed router, price oracle and collateral tokens (E
 * Run `npx hardhat run scripts/deploy_collateral_auction.js --network` _yourNetwork_ to deploy collateral auction contracts
 * Run `npx hardhat config_router --network` _yourNetwork_ to config router and token credentials
 
+
+
 ### Liquidity Mining
 * We have Listing on Uniswap & Pancakeswap
 * Uniswap ETH/WQT
 * UNIv2 for Ether
 * CakeLp for Pancekeswap
 ** Staking formula APY динамический по формуле: Apy = (DailyReward * RewardTokenPrice)/(TotalStaked * StakeTokenPrice) * 100% 
+
+
+
+### STAKING NFT 
+
+This project is a generic (N)FT smart contract that allows staking of ERC721 
+tokens.
+
+## Basics
+
+The main contract resides in [Staking.sol](contracts/Staking.sol).
+
+## Staking
+
+Staking NFTs is possible via several means.
+
+### ERC721
+
+The [ERC721 Standard](@openzeppelin/contracts/token/ERC721/ERC721.sol) has 2 methods for
+transferring NFTs:
+
+* `transferFrom`: This method does not inform the receiver that they have received an NFT and is
+  therefor __not suitable__ for staking
+* `safeTransferFrom`: This method performs an additional check that if the receiver is a smart
+  contract, it __must__ implement the
+  [IERC721Receiver](@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol) interface.
+  The staking contract implements this interface.
+
+
+### Mixed stake
+
+In several scenarios users might want to stake multiple NFTs at once, and from multiple collections.
+This is not possible with either of the previously described ways, so the smart contract offers a
+custom `stake` method. For the method to work the user needs to approve the staking smart contract
+for all collections though. This is a bit annoying in the beginning, but for Dungeon Master it's a
+one time operation.
+
+## Staking validation
+
+It should not be possible to stake arbitrary NFTs. To ensure that a so called
+[staking validator](contracts/IStakeValidator.sol) is used in the staking smart contract to
+validate each staking operation.
+
+### Signature staking validation
+
+The currently only available option for staking validation is the
+[signature staking validator](contracts/SignatureStakeValidator.sol). It uses the arbitrary
+`bytes data` argument to all staking operations to expect a signature that was created in our
+backend and verifies it.
+
+The validation works as follows:
+
+1. Extract the timestamp the signature was created for and the signature itself from the 97 bytes
+   array (32 bytes for timestamp, 65 for the signature)
+2. Verify the timestamp is not older than one hour
+3. Recreate the hash that was signed from the staking data by keccak256 hashing the following data:
+   1. ERC721 single stake: packed encode of `[time, tokenContract, tokenId]`
+   2. ERC1155 single stake: packed encode of `[time, tokenContract, tokenId, amount]`
+   3. ERC1155 batch stake: ABI encode of `[time, tokenContract, tokenIds, amounts]`
+   4. Mixed stake: ABI encode of `[time, tokenContracts, tokenIds, amounts]`
+      Here `tokenIds` and `amounts` are _nested_ arrays. For ERC721 tokens the `amount` "inner"
+      array must be empty.
+   From this hash and the signature the signing address is then extracted using `ecrecover` and
+   verified.
+
+Only stakes that pass validation are recorded.

@@ -21,7 +21,7 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // }
         // console.log('Bridge Pool')
         // const pool = await ethers.getContractAt(
-        //     'WQBridgePool',
+        //     'WorkQuestToken',
         //     process.env.BRIDGE_POOL
         // )
         // console.log(pool.address)
@@ -29,7 +29,8 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // await pool.grantRole(await pool.DEFAULT_ADMIN_ROLE(), args.user);
         // await pool.grantRole(await pool.ADMIN_ROLE(), args.user);
         // await pool.grantRole( await pool.UPGRADER_ROLE(), args.user );
-        // await pool.grantRole( await pool.BRIDGE_ROLE(), args.user )
+        // await pool.grantRole(await pool.BRIDGE_ROLE(), args.user)
+        // console.log(await pool.hasRole(await pool.BRIDGE_ROLE(), args.user))
 
         // if (!process.env.BRIDGE) {
         //     throw new Error(`Please set your BRIDGE in a .env-${network} file`)
@@ -46,18 +47,17 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         //
         // console.log('admin', roleMint)
 
-        if (!process.env.WQT_TOKEN) {
-            throw new Error(
-                `Please set your WQT_TOKEN in a .env-${network} file`
-            )
-        }
-        console.log('WQT Token')
-        const wqt = await ethers.getContractAt(
-            'WorkQuestTokenV2',
-            process.env.WQT_TOKEN
-        )
+        // if (!process.env.WQT_TOKEN) {
+        //     throw new Error(
+        //         `Please set your WQT_TOKEN in a .env-${network} file`
+        //     )
+        // }
+        // console.log('WQT Token')
+        // const wqt = await ethers.getContractAt(
+        //     'WorkQuestToken',
+        //     process.env.WQT_TOKEN
+        // )
 
-        // await wqt.unpause()
         // await wqt.grantRole(await wqt.DEFAULT_ADMIN_ROLE(), args.user)
         // await wqt.grantRole(await wqt.ADMIN_ROLE(), args.user)
         // await wqt.grantRole(await wqt.UPGRADER_ROLE(), args.user)
@@ -65,27 +65,40 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // await wqt.grantRole(await wqt.PAUSER_ROLE(), args.user)
         // await wqt.grantRole(await wqt.MINTER_ROLE(), args.user)
         // await wqt.revokeRole( await wqt.UPGRADER_ROLE(), args.user )
-        // const roleMint = await wqt.hasRole( await wqt.UPGRADER_ROLE(), args.user )
+        // const roleMint = await wqt.hasRole(await wqt.ADMIN_ROLE(), args.user)
         // console.log(roleMint)
 
         // if (!process.env.ETH_TOKEN) {
-        //     throw new Error(`Please set your ETH_TOKEN in a .env-${network} file`);
+        //     throw new Error(
+        //         `Please set your ETH_TOKEN in a .env-${network} file`
+        //     )
         // }
-        // console.log("ETH Token");
-        // const weth = await ethers.getContractAt("WQBridgeToken", process.env.ETH_TOKEN);
-        // await weth.grantRole(await weth.DEFAULT_ADMIN_ROLE(), args.user);
-        // await weth.grantRole(await weth.ADMIN_ROLE(), args.user);
-        // await weth.grantRole(await weth.UPGRADER_ROLE(), args.user);
+        // console.log('ETH Token')
+        // const weth = await ethers.getContractAt(
+        //     'WorkQuestToken',
+        //     process.env.ETH_TOKEN
+        // )
+        // await weth.grantRole(await weth.DEFAULT_ADMIN_ROLE(), args.user)
+        // await weth.grantRole(await weth.ADMIN_ROLE(), args.user)
+        // await weth.grantRole(await weth.UPGRADER_ROLE(), args.user)
+        // await weth.grantRole(await weth.BURNER_ROLE(), args.user)
+        // await weth.grantRole(await weth.MINTER_ROLE(), args.user)
 
         // if (!process.env.BNB_TOKEN) {
-        //     throw new Error(`Please set your BNB_TOKEN in a .env-${network} file`);
+        //     throw new Error(
+        //         `Please set your BNB_TOKEN in a .env-${network} file`
+        //     )
         // }
-        // console.log("BNB Token");
-        // const wbnb = await ethers.getContractAt("WQBridgeToken", process.env.BNB_TOKEN);
-        // await wbnb.grantRole(await wbnb.DEFAULT_ADMIN_ROLE(), args.user);
-        // await wbnb.grantRole(await wbnb.ADMIN_ROLE(), args.user);
-        // await wbnb.grantRole( await wbnb.UPGRADER_ROLE(), args.user );
+        // console.log('BNB Token')
+        // const wbnb = await ethers.getContractAt(
+        //     'WorkQuestToken',
+        //     process.env.BNB_TOKEN
+        // )
+        // await wbnb.grantRole(await wbnb.DEFAULT_ADMIN_ROLE(), args.user)
+        // await wbnb.grantRole(await wbnb.ADMIN_ROLE(), args.user)
+        // await wbnb.grantRole(await wbnb.UPGRADER_ROLE(), args.user)
         // await wbnb.grantRole(await wbnb.BURNER_ROLE(), args.user)
+        // await wbnb.grantRole(await wbnb.MINTER_ROLE(), args.user)
 
         // if (!process.env.USDT_TOKEN) {
         //     throw new Error(

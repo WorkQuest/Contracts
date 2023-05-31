@@ -30,7 +30,7 @@ contract WorkQuestToken is
     event RemovedWhiteList(address user);
 
     // @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    // constructor() initializer {}
 
     function initialize(
         string memory name,

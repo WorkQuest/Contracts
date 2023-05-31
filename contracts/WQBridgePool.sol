@@ -53,7 +53,7 @@ contract WQBridgePool is
 
     function transfer(
         address payable recipient,
-        uint256 amount,
+        uint256 amount, 
         address token
     ) external onlyRole(BRIDGE_ROLE) whenNotPaused {
         require(isBlockListed[recipient] == false, 'WQBridgePool: Recipient address is blocklisted');

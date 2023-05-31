@@ -3,11 +3,12 @@ task('mint_tokens', 'Mint tokens to the owner').setAction(async function (
     hre
 ) {
     require('dotenv').config()
+    const toWei = (value) => ethers.utils.parseUnits(value, 18)
     const Mwei = (value) => ethers.utils.parseUnits(value, 6)
     const [owner] = await web3.eth.getAccounts()
-    // const AMOUNT = Mwei( '1000000000000' )
-    const AMOUNT = hre.ethers.utils.parseEther('100000000')
-    
+    // const AMOUNT = Mwei('1000000000000')
+    const AMOUNT = toWei('100000000')
+
     console.log('my account address is: ', owner)
     const network = hre.network.name
     const fs = require('fs')
@@ -19,11 +20,20 @@ task('mint_tokens', 'Mint tokens to the owner').setAction(async function (
     }
 
     const bridge_token = await hre.ethers.getContractAt(
-        'WQBridgeToken',
-        process.env.WQT_TOKEN
+        'WorkQuestToken',
+        process.env.BNB_TOKEN
     )
 
-    const mintTx = await bridge_token.mint(owner, AMOUNT)
+    const mintTx = await bridge_token.mint(
+        '0x9206FCDbA921162c16de4Df9732d3adD256F23e3',
+        AMOUNT
+    )
     await mintTx.wait()
-    console.log((await bridge_token.balanceOf(owner)).toString()) 
+    console.log(
+        (
+            await bridge_token.balanceOf(
+                '0x9206FCDbA921162c16de4Df9732d3adD256F23e3'
+            )
+        ).toString()
+    )
 })
