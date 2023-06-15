@@ -8,8 +8,8 @@ async function main() {
     const [owner] = await web3.eth.getAccounts()
     console.log('my account address is: ', owner)
     // const Mwei = (value) => ethers.utils.parseUnits(value, 6)
-    const toWei = (value) => ethers.utils.parseUnits(value, 18)
-    const AMOUNT = toWei('10000000')
+    // const toWei = (value) => ethers.utils.parseUnits(value, 18)
+    // const AMOUNT = toWei('3000')
     // const AMOUNT = Mwei("1000000")
     const network = hre.network.name
     const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))
@@ -32,28 +32,28 @@ async function main() {
         )
     }
 
-    const BridgeToken = await hre.ethers.getContractFactory('WorkQuestToken')
+    // const BridgeToken = await hre.ethers.getContractFactory('WorkQuestToken')
 
-    console.log('Deploying...')
-    const bridge_token = await upgrades.deployProxy(
-        BridgeToken,
-        [
-            process.env.BRIDGE_TOKEN_NAME,
-            process.env.BRIDGE_TOKEN_SYMBOL,
-            process.env.BRIDGE_TOKEN_DECIMALS,
-        ],
-        {
-            initializer: 'initialize',
-            gasPrice: '100',
-            gasLimit: '30000000',
-            kind: 'uups',
-        }
-    )
-    await bridge_token.deployed()
-    console.log(
-        `${process.env.BRIDGE_TOKEN_NAME} has been deployed to:`,
-        bridge_token.address
-    )
+    // console.log('Deploying...')
+    // const bridge_token = await upgrades.deployProxy(
+    //     BridgeToken,
+    //     [
+    //         process.env.BRIDGE_TOKEN_NAME,
+    //         process.env.BRIDGE_TOKEN_SYMBOL,
+    //         process.env.BRIDGE_TOKEN_DECIMALS,
+    //     ],
+    //     {
+    //         initializer: 'initialize',
+    //         // gasPrice: '100',
+    //         // gasLimit: '30000000',
+    //         kind: 'uups',
+    //     }
+    // )
+    // await bridge_token.deployed()
+    // console.log(
+    //     `${process.env.BRIDGE_TOKEN_NAME} has been deployed to:`,
+    //     bridge_token.address
+    // )
 
     envConfig[`${process.env.BRIDGE_TOKEN_SYMBOL}_TOKEN`] = bridge_token.address
     fs.writeFileSync(`.env-${network}`, stringify(envConfig))

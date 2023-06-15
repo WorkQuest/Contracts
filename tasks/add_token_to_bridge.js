@@ -34,7 +34,7 @@ task('add_token_to_bridge', 'Add token settings to bridge')
         if (args.symbol == process.env.NATIVE_COIN) {
             native = true
             token_addr = '0x0000000000000000000000000000000000000000'
-            lockable = false
+            lockable = true
         }
         if (!token_addr) {
             throw new Error(

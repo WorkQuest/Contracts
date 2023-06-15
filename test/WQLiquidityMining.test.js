@@ -34,7 +34,7 @@ describe('Liquidity Mining', function () {
 
         // ========================================= wusd stablecoin ===============================================
 
-        const BridgeToken = await ethers.getContractFactory('WQBridgeToken')
+        const BridgeToken = await ethers.getContractFactory('WorkQuestToken')
         wqt_stablecoin = await upgrades.deployProxy(
             BridgeToken,
             ['WUSD stablecoin', 'WUSD', 18],
@@ -49,7 +49,7 @@ describe('Liquidity Mining', function () {
 
         // ========================================= UNI V2 ========================================================
 
-        const UNIV2 = await ethers.getContractFactory('WQBridgeToken')
+        const UNIV2 = await ethers.getContractFactory('WorkQuestToken')
         uniV2 = await upgrades.deployProxy(UNIV2, ['UNI-V2', 'UNIv2', 18], {
             kind: 'transparent',
         })

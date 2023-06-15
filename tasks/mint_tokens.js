@@ -6,8 +6,8 @@ task('mint_tokens', 'Mint tokens to the owner').setAction(async function (
     const toWei = (value) => ethers.utils.parseUnits(value, 18)
     const Mwei = (value) => ethers.utils.parseUnits(value, 6)
     const [owner] = await web3.eth.getAccounts()
-    // const AMOUNT = Mwei('1000000000000')
-    const AMOUNT = toWei('100000000')
+    // const AMOUNT = Mwei('100000000')
+    const AMOUNT = toWei('80000')
 
     console.log('my account address is: ', owner)
     const network = hre.network.name
@@ -21,7 +21,7 @@ task('mint_tokens', 'Mint tokens to the owner').setAction(async function (
 
     const bridge_token = await hre.ethers.getContractAt(
         'WorkQuestToken',
-        process.env.BNB_TOKEN
+        process.env.USDT_TOKEN
     )
 
     const mintTx = await bridge_token.mint(

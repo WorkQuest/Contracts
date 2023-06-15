@@ -7,7 +7,6 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import "hardhat/console.sol";
 
 contract WQLiquidityMining is
     Initializable,
@@ -62,6 +61,7 @@ contract WQLiquidityMining is
     uint256 public producedTime;
     uint256 public totalStaked;
     uint256 public totalDistributed;
+    uint256 public minStakingAmount;
 
     bool public stakingPaused;
     bool public unstakingPaused;
@@ -110,15 +110,27 @@ contract WQLiquidityMining is
      */
     function stake(uint256 _amount) external nonReentrant {
         require(!stakingPaused, 'WQLiquidityMining: Staking is paused');
-        require(block.timestamp > startTime, 'WQLiquidityMining: Staking time has not come yet');
+        require(
+            block.timestamp > startTime,
+            'WQLiquidityMining: Staking time has not come yet'
+        );
+        require(
+            _amount >= minStakingAmount,
+            'Staking: staking amount is less then required'
+        );
         Staker storage staker = stakes[msg.sender];
+
         if (totalStaked > 0) {
             update();
         }
-        staker.rewardDebt += (_amount * tokensPerStake) / 1e20;
-        totalStaked += _amount;
-        staker.amount += _amount;
+        staker.rewardDebt =
+            staker.rewardDebt +
+            (_amount * tokensPerStake) /
+            1e20;
+        totalStaked = totalStaked + _amount;
+        staker.amount = staker.amount + _amount;
         stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
+
         emit Staked(_amount, block.timestamp, msg.sender);
     }
 
@@ -133,12 +145,19 @@ contract WQLiquidityMining is
     function unstake(uint256 _amount) external nonReentrant {
         require(!unstakingPaused, 'WQLiquidityMining: Unstaking is paused');
         Staker storage staker = stakes[msg.sender];
-        require(staker.amount >= _amount,'WQLiquidityMining: Not enough tokens to unstake'
-);
+        require(
+            staker.amount >= _amount,
+            'WQLiquidityMining: Not enough tokens to unstake'
+        );
+
         update();
-        staker.rewardAllowed += (_amount * tokensPerStake) / 1e20;
-        staker.amount -= _amount;
-        totalStaked -= _amount;
+
+        staker.rewardAllowed =
+            staker.rewardAllowed +
+            (_amount * tokensPerStake) /
+            1e20;
+        staker.amount = staker.amount - _amount;
+        totalStaked = totalStaked - _amount;
         stakeToken.safeTransfer(msg.sender, _amount);
         emit Unstaked(_amount, block.timestamp, msg.sender);
     }
@@ -154,8 +173,8 @@ contract WQLiquidityMining is
         uint256 reward = calcReward(msg.sender, tokensPerStake);
         require(reward > 0, 'WQLiquidityMining: Nothing to claim');
         Staker storage staker = stakes[msg.sender];
-        staker.distributed += reward;
-        totalDistributed += reward;
+        staker.distributed = staker.distributed + reward;
+        totalDistributed = totalDistributed + reward;
 
         rewardToken.safeTransfer(msg.sender, reward);
         emit Claimed(reward, block.timestamp, msg.sender);
@@ -201,7 +220,10 @@ contract WQLiquidityMining is
      *
      */
     function produced() private view returns (uint256) {
-        return allProduced + (rewardTotal * (block.timestamp - producedTime)) / distributionTime;
+        return
+            allProduced +
+            (rewardTotal * (block.timestamp - producedTime)) /
+            distributionTime;
     }
 
     function update() public {
@@ -214,6 +236,15 @@ contract WQLiquidityMining is
             }
             rewardProduced = rewardProducedAtNow;
         }
+    }
+
+    /**
+     * @dev Adds reward tokens to the contract
+     * @param _amount Specifies the amount of tokens to be transferred to the contract
+     */
+    function addReward(uint256 _amount) external {
+        require(hasRole(ADMIN_ROLE, msg.sender));
+        rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
     }
 
     /**
@@ -249,41 +280,11 @@ contract WQLiquidityMining is
     }
 
     /**
-     * @dev Update distribution rewards and remember old values
-     */
-    function updateReward(uint256 _rewardTotal) external onlyRole(ADMIN_ROLE) {
-        allProduced = produced();
-        producedTime = block.timestamp;
-        rewardTotal = _rewardTotal;
-    }
-
-    /**
-     * @dev Set start time when staking has not started yet
-     */
-    function setStartTime(uint256 _startTime) external onlyRole(ADMIN_ROLE) {
-        require(
-            block.timestamp < startTime,
-            'WQLiquidityMining: Staking time has already come'
-        );
-        startTime = _startTime;
-    }
-
-    /**
      * @dev Allows to update 'tokens per stake' parameter
      * @param _tps Specifeies the new tokens per stake value
      */
     function updateTps(uint256 _tps) external onlyRole(ADMIN_ROLE) {
         tokensPerStake = _tps;
-    }
-
-    /**
-     * @dev Allows to update the value of produced reward
-     * @param _rewardProduced Specifeies the new value of rewards produced
-     */
-    function updateRewardProduced(
-        uint256 _rewardProduced
-    ) external onlyRole(ADMIN_ROLE) {
-        rewardProduced = _rewardProduced;
     }
 
     /**
@@ -332,6 +333,19 @@ contract WQLiquidityMining is
         staker.rewardAllowed = _rewardAllowed;
         staker.rewardDebt = _rewardDebt;
         staker.distributed = _distributed;
+    }
+
+    /**
+     * @dev Updates the minimum amount available to stake
+     * @param _amount Minimal value of tokens to ba available to stake
+     */
+    function updateMinStakingAmount(uint256 _amount) external {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender),
+            'Staking: caller is not an admin'
+        );
+        require(_amount >= 0, 'Amount must be possitive');
+        minStakingAmount = _amount;
     }
 
     /**

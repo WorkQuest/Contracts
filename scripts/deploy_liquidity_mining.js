@@ -5,9 +5,8 @@ const stringify = require('dotenv-stringify');
 
 async function main() {
   dotenv.config();
-  const accounts = await ethers.getSigners();
-  const sender = accounts[0].address;
-  console.log("Sender address: ", sender);
+  const [sender] = await ethers.getSigners()
+  console.log("Sender address: ", sender.address);
 
   const network = hre.network.name;
   const envConfig = dotenv.parse(fs.readFileSync(`.env-${network}`))

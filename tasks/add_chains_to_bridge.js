@@ -1,5 +1,5 @@
 task("add_chains_to_bridge", "Add chain settings to bridge")
-    // .addParam("chain", "The chain ID")
+    .addParam("chain", "The chain ID")
     .setAction(async function (args, hre, runSuper) {
         require('dotenv').config();
         const acc = await ethers.getSigners();

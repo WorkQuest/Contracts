@@ -54,6 +54,7 @@ artifacts
 cache
 .env
 .env-goerli
+.env-sepolia
 *.addr
 .secret
 .solhint.json
@@ -63,4 +64,5 @@ cache
 *.docx
 oldContracts/
 coverage
+gas-reporter.txt
 

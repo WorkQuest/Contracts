@@ -5,11 +5,13 @@ require('@nomiclabs/hardhat-web3')
 require('hardhat-docgen')
 require('@nomiclabs/hardhat-etherscan')
 require('@openzeppelin/hardhat-upgrades')
+require('hardhat-gas-reporter')
 require('./tasks')
 require('./tasks/mint_tokens')
 require('./tasks/get_token_balance')
 require('./tasks/referral_set_factory')
 require('./tasks/token_settings_on_bridge')
+require('./tasks/liquidity_mining_stake')
 require('dotenv').config()
 const BigNumber = require('bignumber.js')
 BigNumber.config({ EXPONENTIAL_AT: 60 })
@@ -18,16 +20,16 @@ const chainIds = {
     ganache: 1337,
     goerli: 5,
     hardhat: 31337,
-    kovan: 42,
+    sepolia: 11155111,
     mainnet: 1,
-    rinkeby: 4,
-    ropsten: 3,
 }
 
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL
 const PRIVATE_KEY = process.env.PRIVATE_KEY
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 const BSC_API_KEY = process.env.BSC_API_KEY
+const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL
+const COIN_MARKET_CAP_API_KEY = process.env.COIN_MARKET_CAP_API_KEY
 
 let mnemonic
 if (!process.env.MNEMONIC) {
@@ -85,6 +87,15 @@ module.exports = {
             accounts: [PRIVATE_KEY],
             chainId: 5,
         },
+
+        sepolia: {
+            url: SEPOLIA_RPC_URL,
+            accounts: [PRIVATE_KEY],
+            chainId: 11155111,
+            gas: 'auto',
+            gasPrice: 90000000000,
+            timeout: 600000,
+        },
         // wqdevnet: {
         //     url: 'https://dev-node-fra1.workquest.co/',
         //     accounts: { mnemonic: mnemonic },
@@ -95,11 +106,11 @@ module.exports = {
             accounts: { mnemonic: mnemonic },
             chainId: 1991,
         },
-        wqmainnet: {
-            url: 'https://mainnet-gate.workquest.co/',
-            accounts: { mnemonic: mnemonic },
-            chainId: 2009,
-        },
+        // wqmainnet: {
+        //     url: 'https://mainnet-gate.workquest.co/',
+        //     accounts: { mnemonic: mnemonic },
+        //     chainId: 2009,
+        // },
         bsctestnet: {
             url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
             chainId: 97,
@@ -160,7 +171,16 @@ module.exports = {
         ],
     },
     etherscan: {
-        apiKey: BSC_API_KEY,
+        apiKey: ETHERSCAN_API_KEY,
+    },
+
+    gasReporter: {
+        enabled: true,
+        outputFile: 'gas-reporter.txt',
+        noColors: true,
+        currency: 'USD',
+        coinmarketcap: COIN_MARKET_CAP_API_KEY,
+        token: 'BNB',
     },
     mocha: {
         timeout: 20000,

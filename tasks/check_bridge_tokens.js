@@ -19,6 +19,11 @@ task('check_bridge_tokens', 'Check token settings in bridge').setAction(
             'WQBridge',
             process.env.BRIDGE
         )
+        const bridgePool = await hre.ethers.getContractAt(
+            'WQBridgePool',
+            process.env.BRIDGE_POOL
+        )
+        console.log('bridgePool', bridgePool.address)
         let token_symbols = ['ETH', 'BNB', 'WQT', 'USDT', 'USDC']
 
         console.log(

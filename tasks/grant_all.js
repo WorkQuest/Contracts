@@ -21,16 +21,42 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // }
         // console.log('Bridge Pool')
         // const pool = await ethers.getContractAt(
-        //     'WorkQuestToken',
+        //     'WQBridgePool',
         //     process.env.BRIDGE_POOL
         // )
         // console.log(pool.address)
-
-        // await pool.grantRole(await pool.DEFAULT_ADMIN_ROLE(), args.user);
-        // await pool.grantRole(await pool.ADMIN_ROLE(), args.user);
-        // await pool.grantRole( await pool.UPGRADER_ROLE(), args.user );
         // await pool.grantRole(await pool.BRIDGE_ROLE(), args.user)
-        // console.log(await pool.hasRole(await pool.BRIDGE_ROLE(), args.user))
+
+        if (!process.env.LIQUIDITY_MINING) {
+            throw new Error(
+                `Please set your LIQUIDITY_MINING in a .env-${network} file`
+            )
+        }
+        console.log('LIQUIDITY MINING')
+        const liquidityMining = await ethers.getContractAt(
+            'WQLiquidityMining',
+            process.env.LIQUIDITY_MINING
+        )
+        console.log(liquidityMining.address)
+
+        // await liquidityMining.grantRole(
+        //     await liquidityMining.ADMIN_ROLE(),
+        //     args.user
+        // )
+        // await liquidityMining.grantRole(
+        //     await liquidityMining.UPGRADER_ROLE(),
+        //     args.user
+        // )
+
+        await liquidityMining.revokeRole(
+            await liquidityMining.UPGRADER_ROLE(),
+            args.user
+        )
+
+        await liquidityMining.revokeRole(
+            await liquidityMining.ADMIN_ROLE(),
+            args.user
+        )
 
         // if (!process.env.BRIDGE) {
         //     throw new Error(`Please set your BRIDGE in a .env-${network} file`)
