@@ -27,17 +27,17 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // console.log(pool.address)
         // await pool.grantRole(await pool.BRIDGE_ROLE(), args.user)
 
-        if (!process.env.LIQUIDITY_MINING) {
-            throw new Error(
-                `Please set your LIQUIDITY_MINING in a .env-${network} file`
-            )
-        }
-        console.log('LIQUIDITY MINING')
-        const liquidityMining = await ethers.getContractAt(
-            'WQLiquidityMining',
-            process.env.LIQUIDITY_MINING
-        )
-        console.log(liquidityMining.address)
+        // if (!process.env.LIQUIDITY_MINING) {
+        //     throw new Error(
+        //         `Please set your LIQUIDITY_MINING in a .env-${network} file`
+        //     )
+        // }
+        // console.log('LIQUIDITY MINING')
+        // const liquidityMining = await ethers.getContractAt(
+        //     'WQLiquidityMining',
+        //     process.env.LIQUIDITY_MINING
+        // )
+        // console.log(liquidityMining.address)
 
         // await liquidityMining.grantRole(
         //     await liquidityMining.ADMIN_ROLE(),
@@ -48,15 +48,15 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         //     args.user
         // )
 
-        await liquidityMining.revokeRole(
-            await liquidityMining.UPGRADER_ROLE(),
-            args.user
-        )
+        // await liquidityMining.revokeRole(
+        //     await liquidityMining.UPGRADER_ROLE(),
+        //     args.user
+        // )
 
-        await liquidityMining.revokeRole(
-            await liquidityMining.ADMIN_ROLE(),
-            args.user
-        )
+        // await liquidityMining.revokeRole(
+        //     await liquidityMining.ADMIN_ROLE(),
+        //     args.user
+        // )
 
         // if (!process.env.BRIDGE) {
         //     throw new Error(`Please set your BRIDGE in a .env-${network} file`)
@@ -109,22 +109,30 @@ task('grant_all', 'Grant roles for bridge in tokens and pool')
         // await weth.grantRole(await weth.UPGRADER_ROLE(), args.user)
         // await weth.grantRole(await weth.BURNER_ROLE(), args.user)
         // await weth.grantRole(await weth.MINTER_ROLE(), args.user)
+        // const roleMint = await weth.hasRole(await weth.MINTER_ROLE(), args.user)
+        // const roleBurn = await weth.hasRole(await weth.BURNER_ROLE(), args.user)
+        // console.log('roleMint', roleMint)
+        // console.log('roleBurn', roleBurn)
 
-        // if (!process.env.BNB_TOKEN) {
-        //     throw new Error(
-        //         `Please set your BNB_TOKEN in a .env-${network} file`
-        //     )
-        // }
-        // console.log('BNB Token')
-        // const wbnb = await ethers.getContractAt(
-        //     'WorkQuestToken',
-        //     process.env.BNB_TOKEN
-        // )
+        if (!process.env.BNB_TOKEN) {
+            throw new Error(
+                `Please set your BNB_TOKEN in a .env-${network} file`
+            )
+        }
+        console.log('BNB Token')
+        const wbnb = await ethers.getContractAt(
+            'WorkQuestToken',
+            process.env.BNB_TOKEN
+        )
         // await wbnb.grantRole(await wbnb.DEFAULT_ADMIN_ROLE(), args.user)
         // await wbnb.grantRole(await wbnb.ADMIN_ROLE(), args.user)
         // await wbnb.grantRole(await wbnb.UPGRADER_ROLE(), args.user)
-        // await wbnb.grantRole(await wbnb.BURNER_ROLE(), args.user)
         // await wbnb.grantRole(await wbnb.MINTER_ROLE(), args.user)
+        // await wbnb.grantRole(await wbnb.BURNER_ROLE(), args.user)
+        const roleMint = await wbnb.hasRole(await wbnb.MINTER_ROLE(), args.user)
+        const roleBurn = await wbnb.hasRole(await wbnb.BURNER_ROLE(), args.user)
+        // console.log('roleMint', roleMint)
+        // console.log('roleBurn', roleBurn)
 
         // if (!process.env.USDT_TOKEN) {
         //     throw new Error(

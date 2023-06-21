@@ -112,7 +112,7 @@ contract WorkQuestFactory is
     ) external view returns (address[] memory page) {
         address[] storage quests = workquests[employer];
         if (limit > quests.length - offset) {
-            limit = quests.length - offset;
+            limit = quests.length - offset; 
         }
         page = new address[](limit);
         for (uint256 i = 0; i < limit; i++) {
