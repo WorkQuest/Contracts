@@ -53,6 +53,12 @@ contract WorkQuestFactory is
     /// @notice Settings of tokens
     mapping(string => TokenSettings) public assets;
 
+    /// @notice Address of usdc token
+    IERC20Upgradeable public usdc;
+
+    /// @notice Address of usdt token
+    IERC20Upgradeable public usdt;
+
     /**
      * @notice Event emited when new workquest contract created
      */
@@ -223,5 +229,21 @@ contract WorkQuestFactory is
             'WorkQuest Factory: Symbol length must be greater than 0'
         );
         assets[_symbol] = TokenSettings(IERC20Upgradeable(_token), _enabled);
+    }
+
+    /**
+     * @notice Set address of usdc token
+     * @param _usdc  Address of usdc token
+     */
+    function setUsdc(address _usdc) external onlyRole(ADMIN_ROLE) {
+        usdc = IERC20Upgradeable(_usdc);
+    }
+
+    /**
+     * @notice Set address of usdt token
+     * @param _usdt  Address of usdt token
+     */
+    function setUsdt(address _usdt) external onlyRole(ADMIN_ROLE) {
+        usdt = IERC20Upgradeable(_usdt);
     }
 }
